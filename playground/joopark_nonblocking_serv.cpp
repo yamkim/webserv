@@ -84,7 +84,10 @@ int main(void)
                     usleep(1000 * 1000); // 연결 상태가 아니라면 임의로 딜레이를 부여해야 함.
                 } else {
                     std::cout << "connect count : " << fdList.size() << std::endl;
-                    result = select(fdList.back() + 1, &readfdSet, 0, 0, &pollingTime);
+					for (std::vector<int>::iterator iter = fdList.begin(); iter != fdList.end(); iter++) {
+						FD_SET(*iter, &readfdSet);
+					}
+                    result = select(fdList.back() + 1, &readfdSet, NULL, NULL, &pollingTime);
                     if (result == -1) {
                         std::cout << "err : " << std::strerror(errno) << std::endl;
                         std::cout << "at : " << "select (2)" << std::endl;
@@ -114,7 +117,6 @@ int main(void)
             }
         } else {
             std::cout << "fd INSERT" << std::endl;
-            FD_SET(clientSocket, &readfdSet);
             fdList.push_back(clientSocket);
             std::sort(fdList.begin(), fdList.end());
         }
