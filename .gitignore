@@ -1,2 +1,4 @@
+*.gch
 *.out
 *DS_Store*
+*vscode*
