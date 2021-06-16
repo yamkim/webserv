@@ -14,7 +14,23 @@ CGISession & CGISession::operator=(const CGISession & cgisession) {
 	return (*this);
 }
 
-CGISession::~CGISession() {}
+CGISession::~CGISession() {
+	if (_pid > 0) {
+		if (kill(_pid, SIGKILL) == -1) {
+			throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _pid");
+		}
+	}
+	if (_inputStream > 0) {
+		if (close(_inputStream) == -1) {
+			throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _inputStream");
+		}
+	}
+	if (_outputStream > 0) {
+		if (close(_outputStream) == -1) {
+			throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _outputStream");
+		}
+	}
+}
 
 int & CGISession::getInputStream(void) {
 	return (_inputStream);
@@ -36,30 +52,27 @@ void CGISession::makeCGIProcess() {
 	int pairForI[2];
 	int pairForO[2];
 
-	// 새 프로세스와 통신할 파이프를 만듭니다.
 	if (pipe(pairForI) == -1 || pipe(pairForO) == -1) {
-		_pid = -1;
-		return ;
+		throw ErrorHandler("Can't make Pipe", ErrorHandler::ALERT, "CGISession::makeCGIProcess");
 	}
 	_inputStream = pairForI[1];
 	_outputStream = pairForO[0];
 	if ((_pid = fork()) < 0) {
-		return ;
+		throw ErrorHandler("Can't make Process", ErrorHandler::ALERT, "CGISession::makeCGIProcess");
 	}
 	if (_pid == 0) {
-		if ((dup2(pairForI[0], STDIN_FILENO) < 0)
-			|| (dup2(pairForO[1], STDOUT_FILENO) < 0)
-			|| (close(pairForI[1]) < 0)
-			|| (close(pairForO[0]) < 0)) {
-			std::exit(1);
+		if ((dup2(pairForI[0], STDIN_FILENO) == -1) || (dup2(pairForO[1], STDOUT_FILENO) == -1)) {
+			throw ErrorHandler("Can't duplicate File Descriptor", ErrorHandler::ALERT, "CGISession::makeCGIProcess");
+		}
+		if ((close(pairForI[1]) == -1) || (close(pairForO[0]) == -1)) {
+			throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "CGISession::makeCGIProcess");
 		}
 		if (execve(_arg[0], _arg, _env) == -1) {
-			std::exit(1);
+			throw ErrorHandler("Can't duplicate File Descriptor", ErrorHandler::NORMAL, "CGISession::makeCGIProcess");
 		}
 	} else {
-		if ((close(pairForI[0]) < 0)
-			|| (close(pairForO[1]) < 0)) {
-			_pid = -1;
+		if ((close(pairForI[0]) == -1) || (close(pairForO[1]) == -1)) {
+			throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "CGISession::makeCGIProcess");
 		}
 	}
 }
