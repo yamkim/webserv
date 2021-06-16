@@ -35,9 +35,9 @@ class Array {
 
 		void removeElement(unsigned int pos) {
 			T * newArr = new T[_size - 1]();
-			for (int i = 0; i < pos; i++)
+			for (unsigned int i = 0; i < pos; i++)
 				newArr[i] = _arr[i];
-			for (int i = pos + 1; i < _size; i++)
+			for (unsigned int i = pos + 1; i < _size; i++)
 				newArr[i - 1] = _arr[i];
 			delete [] _arr;
 			_size--;
@@ -46,12 +46,17 @@ class Array {
 
 		void appendElement(T & element) {
 			T * newArr = new T[_size + 1]();
-			for (int i = 0; i < _size; i++)
+			for (unsigned int i = 0; i < _size; i++)
 				newArr[i] = _arr[i];
 			newArr[_size] = element;
 			delete [] _arr;
 			_size++;
 			_arr = newArr;
+		}
+
+		void showArray() {
+			for (unsigned int i = 0; i < _size; i++)
+				std::cout << _arr[i] << std::endl;
 		}
 };
 
