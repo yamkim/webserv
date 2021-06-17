@@ -27,13 +27,6 @@ int Polling::run(const std::string &httpResStr) {
                         // std::cout << "tmp fd: " << tmp.fd << std::endl;
                         connectionSockets[tmp.fd] = connectionSocket;
                         pollfds.appendElement(tmp);
-                        #if 0
-                        std::map<int, ConnectionSocket *>::iterator iter;
-                        for(iter = connectionSockets.begin(); iter != connectionSockets.end() ; iter++){
-                            std::cout << "[" << iter->first << ", " << iter->second << "]" << " ";
-                        }
-                        std::cout << std::endl;
-                        #endif
                     } else {
                         #if 1
                         char buffer[1024];
@@ -57,35 +50,6 @@ int Polling::run(const std::string &httpResStr) {
                         std::cout << std::endl;
                         #endif
 
-                        #if 0
-                        (void)httpResStr;
-                        char buffer[1024];
-                        CGISession *pyCGI;
-                        pyCGI = new CGISession;
-                        #define PYTHON_BIN "/usr/bin/python3"
-                        #define CGI_PATH "/Users/yamkim/Documents/42Projects/webserv/main/pycgi.py" 
-						try {
-						    pyCGI->setCGIargs(const_cast<char*>(PYTHON_BIN), const_cast<char*>(CGI_PATH), const_cast<char*>("data=test"), NULL);
-						    pyCGI->makeCGIProcess();
-						} catch (const ErrorHandler& e) {
-						    std::cerr << e.what() << '\n';
-						    if (e.getErrorcode() == ErrorHandler::CRITICAL) {
-						        // TODO : 에러 발생 시 500 server error로 핸들링
-						        std::exit(1);
-						    }
-						}
-						int readLength = read(pollfds[i].fd, buffer, 1024);
-						std::cout << "recv data\n" << std::string(buffer, readLength) << std::endl;
-						write(pollfds[i].fd, "HTTP/1.1 200 OK\n", 16);
-						readLength = read(pyCGI->getOutputStream(), buffer, 1024);
-						write(pollfds[i].fd, buffer, readLength);
-						close(pollfds[i].fd);
-						try {
-							delete pyCGI;
-						} catch(const std::exception& e) {
-							std::cerr << e.what() << '\n';
-						}
-                        #endif
                     }
                 }
             }

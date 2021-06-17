@@ -36,9 +36,54 @@ int main(void)
     if (server.runSocket())
         return (1);
 
-    Polling serverPolling(server.getSocket());
+    struct pollfd tmp;
+    tmp.fd = server.getSocket();
+    tmp.events = POLLIN;
+    pollfds.appendElement(tmp); 
+    ConnectionSocket *connectionSocket;
+    std::string httpResStr = genHttpString();
+    std::map<int, ConnectionSocket *> connectionSockets;
     try {
-        serverPolling.run(genHttpString());
+        while (true) {
+            int result;
+            result = poll(pollfds.getArray(), pollfds.size(), 1000);
+            if (result == -1) {
+                throw ErrorHandler("Error: poll operation error.", ErrorHandler::CRITICAL, "Polling::run");
+            } else if (result == 0) {
+                std::cout << "waiting..." << std::endl;
+            } else {
+                for (unsigned int i = 0; i < pollfds.size(); i++) {
+                    if (pollfds[i].revents & POLLIN) {
+                        if (pollfds[i].fd == server.getSocket()) {
+                            connectionSocket = new ConnectionSocket(server.getSocket());
+                            struct pollfd tmp = connectionSocket->getPollfd();
+                            // std::cout << "pollfds[" << i << "]: " << pollfds[i].fd << std::endl;
+                            // std::cout << "tmp fd: " << tmp.fd << std::endl;
+                            connectionSockets[tmp.fd] = connectionSocket;
+                            pollfds.appendElement(tmp);
+                        } else {
+                            #if 1
+                            char buffer[1024];
+                            int readLength;
+                            readLength = read(pollfds[i].fd, buffer, 1024);
+                            std::cout << "data : " << std::string(buffer, readLength) << std::endl;
+
+                            write(pollfds[i].fd, httpResStr.data(), httpResStr.length());
+
+                            delete connectionSockets[pollfds[i].fd];
+                            connectionSockets.erase(pollfds[i].fd);
+                            std::cout << pollfds[i].fd << "is eleminated" << std::endl;
+                            close(pollfds[i].fd);
+                            pollfds.removeElement(i);
+                            i--;
+                            std::cout << std::endl;
+                            #endif
+
+                        }
+                    }
+                }
+            }
+        }
     } catch (const std::exception &error) {
         std::cout << error.what() << std::endl;
         return (1);
@@ -46,3 +91,13 @@ int main(void)
     return (0);
 }
 
+
+#if 0
+Polling serverPolling(server.getSocket());
+try {
+    serverPolling.run(genHttpString());
+} catch (const std::exception &error) {
+    std::cout << error.what() << std::endl;
+    return (1);
+}
+#endif
