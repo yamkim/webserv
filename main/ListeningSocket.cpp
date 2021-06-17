@@ -57,3 +57,17 @@ void ListeningSocket::fcntlSocket() {
         throw ErrorHandler("Error: server socket fcntl error.", ErrorHandler::CRITICAL, "ListeningSocket::fcntlSocket");
     }
 }
+
+int ListeningSocket::runSocket() {
+    try {
+        this->setSocket();
+        this->setSocketAddress();
+        this->bindSocket();
+        this->listenSocket();
+        this->fcntlSocket();
+    } catch (const std::exception &error) {
+        std::cout << error.what() << std::endl;
+        return (1);
+    }
+    return (0);
+}

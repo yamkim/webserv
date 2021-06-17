@@ -8,6 +8,7 @@
 #include <cstring>
 #include <poll.h>
 #include "ErrorHandler.hpp"
+#include <iostream>
 
 class Socket {
     protected:

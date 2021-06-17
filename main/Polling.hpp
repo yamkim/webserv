@@ -4,6 +4,7 @@
 #include "Array.hpp"
 #include <poll.h>
 #include <iostream>
+#include <map>
 #include "ListeningSocket.hpp"
 #include "ConnectionSocket.hpp"
 #include "CGISession.hpp"
@@ -14,12 +15,7 @@ class Polling {
         int _serverSocket;
 
     public:
-        Polling(int serverSocket) : _serverSocket(serverSocket) {
-            struct pollfd tmp;
-            tmp.fd = this->_serverSocket;
-            tmp.events = POLLIN;
-            pollfds.appendElement(tmp); 
-        };
+        Polling(int serverSocket);
         int run(const std::string &httpResStr);
 };
 

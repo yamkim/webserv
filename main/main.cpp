@@ -30,17 +30,11 @@ std::string genHttpString() {
 
 int main(void)
 {
-    ListeningSocket server(4422, 42);
-    try {
-        server.setSocket();
-        server.setSocketAddress();
-        server.bindSocket();
-        server.listenSocket();
-        server.fcntlSocket();
-    } catch (const std::exception &error) {
-        std::cout << error.what() << std::endl;
+    Array<struct pollfd> pollfds;
+    //ListeningSocket server(4422, 42);
+    ListeningSocket server(4200, 42);
+    if (server.runSocket())
         return (1);
-    }
 
     Polling serverPolling(server.getSocket());
     try {

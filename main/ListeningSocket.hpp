@@ -21,5 +21,6 @@ class ListeningSocket : public Socket {
         void bindSocket();
         void listenSocket();
         void fcntlSocket();
+        int runSocket();
 };
 #endif
