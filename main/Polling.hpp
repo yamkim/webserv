@@ -9,18 +9,18 @@
 #include "CGISession.hpp"
 
 class Polling {
-private:
-    Array<struct pollfd> pollfds;
-    int _serverSocket;
+    private:
+        Array<struct pollfd> pollfds;
+        int _serverSocket;
 
-public:
-    Polling(int serverSocket) : _serverSocket(serverSocket) {
-	struct pollfd tmp;
-	tmp.fd = this->_serverSocket;
-	tmp.events = POLLIN;
-	pollfds.appendElement(tmp); 
-    };
-    int run(const std::string &httpResStr);
+    public:
+        Polling(int serverSocket) : _serverSocket(serverSocket) {
+            struct pollfd tmp;
+            tmp.fd = this->_serverSocket;
+            tmp.events = POLLIN;
+            pollfds.appendElement(tmp); 
+        };
+        int run(const std::string &httpResStr);
 };
 
 

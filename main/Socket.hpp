@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <cstring>
 #include <poll.h>
+#include "ErrorHandler.hpp"
 
 class Socket {
 protected:

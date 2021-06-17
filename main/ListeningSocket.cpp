@@ -15,7 +15,7 @@ int ListeningSocket::getSocket() const {
 void ListeningSocket::setSocket() {
     this->_socket = socket(PF_INET, SOCK_STREAM, 0);
     if (this->_socket == -1) {
-        throw "Error: server socket open error.";
+        throw ErrorHandler("Error: server socket open error.", ErrorHandler::CRITICAL, "ListeningSocket::setSocket");
     }
 }
 
@@ -27,16 +27,19 @@ void ListeningSocket::setSocketAddress(int portNum) {
 }
 
 void ListeningSocket::bindSocket() {
-    if ((bind(this->_socket, (struct sockaddr *) &_socketAddr, sizeof(this->_socketAddr)) == -1))
-        throw "Error: server socket bind error.";
+    if ((bind(this->_socket, (struct sockaddr *) &_socketAddr, sizeof(this->_socketAddr)) == -1)) {
+        throw ErrorHandler("Error: server socket bind error.", ErrorHandler::CRITICAL, "ListeningSocket::bindSocket");
+    }
 }
 
 void ListeningSocket::listenSocket() {
-    if ((listen(_socket, 42) == -1))
-        throw "Error: server socket listen error.";
+    if ((listen(_socket, 42) == -1)) {
+        throw ErrorHandler("Error: server socket listen error.", ErrorHandler::CRITICAL, "ListeningSocket::listenSocket");
+    }
 }
 
 void ListeningSocket::fcntlSocket() {
-    if (fcntl(_socket, F_SETFL, O_NONBLOCK) == -1)
-        throw "Error: server socket fcntl error.";
+    if (fcntl(_socket, F_SETFL, O_NONBLOCK) == -1) {
+        throw ErrorHandler("Error: server socket fcntl error.", ErrorHandler::CRITICAL, "ListeningSocket::fcntlSocket");
+    }
 }

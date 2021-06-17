@@ -5,7 +5,7 @@ int Polling::run(const std::string &httpResStr) {
         int result;
         result = poll(pollfds.getArray(), pollfds.size(), 1000);
         if (result == -1) {
-            throw "Error: poll operation error.";
+            throw ErrorHandler("Error: poll operation error.", ErrorHandler::CRITICAL, "Polling::run");
         } else if (result == 0) {
             std::cout << "waiting..." << std::endl;
         } else {
