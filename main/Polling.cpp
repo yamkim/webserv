@@ -9,6 +9,7 @@ int Polling::run(const std::string &httpResStr) {
         } else if (result == 0) {
             std::cout << "waiting..." << std::endl;
         } else {
+            std::cout << "DEBUG========================" << std::endl;
             for (unsigned int i = 0; i < pollfds.size(); i++) {
                 if (pollfds[i].revents & POLLIN) {
                     if (pollfds[i].fd == this->_serverSocket) {
@@ -16,6 +17,7 @@ int Polling::run(const std::string &httpResStr) {
                         struct pollfd tmp = connectionSocket.getPollfd();
                         pollfds.appendElement(tmp);
                     } else {
+                        #if 0
                         (void)httpResStr;
                         char buffer[1024];
                         CGISession *pyCGI;
@@ -43,7 +45,8 @@ int Polling::run(const std::string &httpResStr) {
 						} catch(const std::exception& e) {
 							std::cerr << e.what() << '\n';
 						}
-                        #if 0
+                        #endif
+                        #if 1
                         char buffer[1024];
                         int readLength;
                         readLength = read(pollfds[i].fd, buffer, 1024);

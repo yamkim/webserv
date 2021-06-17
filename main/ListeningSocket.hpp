@@ -4,15 +4,22 @@
 #include "Socket.hpp"
 
 class ListeningSocket : public Socket {
-public:
-    ListeningSocket();
-    virtual ~ListeningSocket();
+    private:
+        int _backlog;
+        int _portNum;
+        const char* _ip;
 
-    int getSocket() const;
-    void setSocket();
-    void setSocketAddress(int portNum);
-    void bindSocket();
-    void listenSocket();
-    void fcntlSocket();
+    public:
+        ListeningSocket();
+        ListeningSocket(int portNum, int backlog);
+        ListeningSocket(int portNum, int backlog, const char* ip);
+        virtual ~ListeningSocket();
+
+        int getSocket() const;
+        void setSocket();
+        void setSocketAddress();
+        void bindSocket();
+        void listenSocket();
+        void fcntlSocket();
 };
 #endif

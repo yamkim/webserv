@@ -1,11 +1,25 @@
 #include "ListeningSocket.hpp"
 
-ListeningSocket::ListeningSocket() {
+ListeningSocket::ListeningSocket() : Socket(-1) {
+    _ip = NULL;
+    _portNum = 4200;
+    _backlog = 42;
+}
+
+ListeningSocket::ListeningSocket(int portNum, int backlog) : Socket(-1) {
+    _ip = NULL;
+    _portNum = portNum;
+    _backlog = backlog;
+}
+
+ListeningSocket::ListeningSocket(int portNum, int backlog, const char* ip) : Socket(-1) {
+    _ip = ip;
+    _portNum = portNum;
+    _backlog = backlog;
 }
 
 // TODO close allow function인지 확인하기..
 ListeningSocket::~ListeningSocket() {
-    close(_socket);
 }
 
 int ListeningSocket::getSocket() const {
@@ -19,11 +33,11 @@ void ListeningSocket::setSocket() {
     }
 }
 
-void ListeningSocket::setSocketAddress(int portNum) {
+void ListeningSocket::setSocketAddress() {
     std::memset(&(this->_socketAddr), 0, sizeof(this->_socketAddr));
     this->_socketAddr.sin_family = AF_INET;
     this->_socketAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    this->_socketAddr.sin_port = htons(portNum);
+    this->_socketAddr.sin_port = htons(this->_portNum);
 }
 
 void ListeningSocket::bindSocket() {
@@ -33,7 +47,7 @@ void ListeningSocket::bindSocket() {
 }
 
 void ListeningSocket::listenSocket() {
-    if ((listen(_socket, 42) == -1)) {
+    if ((listen(_socket, _backlog) == -1)) {
         throw ErrorHandler("Error: server socket listen error.", ErrorHandler::CRITICAL, "ListeningSocket::listenSocket");
     }
 }

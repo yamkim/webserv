@@ -30,23 +30,23 @@ std::string genHttpString() {
 
 int main(void)
 {
-    ListeningSocket server;
+    ListeningSocket server(4422, 42);
     try {
         server.setSocket();
-        server.setSocketAddress(4200);
+        server.setSocketAddress();
         server.bindSocket();
         server.listenSocket();
         server.fcntlSocket();
-    } catch (const char *error) {
-        std::cout << error << std::endl;
+    } catch (const std::exception &error) {
+        std::cout << error.what() << std::endl;
         return (1);
     }
 
     Polling serverPolling(server.getSocket());
     try {
         serverPolling.run(genHttpString());
-    } catch (const char *error) {
-        std::cout << error << std::endl;
+    } catch (const std::exception &error) {
+        std::cout << error.what() << std::endl;
         return (1);
     }
     return (0);

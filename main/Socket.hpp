@@ -10,10 +10,14 @@
 #include "ErrorHandler.hpp"
 
 class Socket {
-protected:
-    struct pollfd _pollfd;
-    struct sockaddr_in _socketAddr;
-    int _socket;
-    socklen_t _socketLen;
+    protected:
+        struct pollfd _pollfd;
+        struct sockaddr_in _socketAddr;
+        int _socket;
+        socklen_t _socketLen;
+
+    public:
+        Socket(int socket);
+        virtual ~Socket();
 };
 #endif

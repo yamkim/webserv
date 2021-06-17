@@ -1,7 +1,9 @@
 #include "ConnectionSocket.hpp"
 
-ConnectionSocket::ConnectionSocket(int serverSocket) {
+#include <iostream>
+ConnectionSocket::ConnectionSocket(int serverSocket) : Socket(-1) {
     this->_socket = accept(serverSocket, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
+    std::cout << "this->socket: " << this->_socket << std::endl;
     if (this->_socket == -1) {
         throw ErrorHandler("Error: connection socket error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
