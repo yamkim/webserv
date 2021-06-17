@@ -3,9 +3,10 @@
 
 #include <cstdlib>
 #include <unistd.h>
+#include <signal.h>
+#include "ErrorHandler.hpp"
 
 // CGI Session (draft) by joopark
-// TODO: 일부 에러상황 Exception으로 핸들링
 
 class CGISession {
 	private:

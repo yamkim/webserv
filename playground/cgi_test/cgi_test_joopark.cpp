@@ -6,6 +6,7 @@
 #include "CGISession.hpp"
 #include "Server.hpp"
 #include "Array.hpp"
+#include "ErrorHandler.hpp"
 
 #define PYTHON_BIN "/usr/bin/python3"
 // 환경에 맞게 py 파일의 절대 경로로 수정해야 합니다.
@@ -63,15 +64,28 @@ int main(int argc, char **argv, char **envp) {
 						fdPollList.appendElement(tmp);
 					} else {
 						pyCGI = new CGISession;
-						pyCGI->setCGIargs(const_cast<char*>(PYTHON_BIN), const_cast<char*>(CGI_PATH), const_cast<char*>("data=test"), envp);
-						pyCGI->makeCGIProcess();
+						try {
+							pyCGI->setCGIargs(const_cast<char*>(PYTHON_BIN), const_cast<char*>(CGI_PATH), const_cast<char*>("data=test"), envp);
+							pyCGI->makeCGIProcess();
+						} catch (const ErrorHandler& e) {
+							std::cerr << e.what() << '\n';
+							if (e.getErrorcode() == ErrorHandler::CRITICAL) {
+								// TODO : 에러 발생 시 500 server error로 핸들링
+								std::exit(1);
+							}
+						}
 						readLength = read(fdPollList[i].fd, buffer, 1024);
 						std::cout << "recv data\n" << std::string(buffer, readLength) << std::endl;
 						write(fdPollList[i].fd, "HTTP/1.1 200 OK\n", 16);
 						readLength = read(pyCGI->getOutputStream(), buffer, 1024);
 						write(fdPollList[i].fd, buffer, readLength);
 						close(fdPollList[i].fd);
-						delete pyCGI;
+						try {
+							delete pyCGI;
+						} catch(const std::exception& e) {
+							std::cerr << e.what() << '\n';
+						}
+						
 						fdPollList.removeElement(i);
 					}
 					break ; // 벡터 원소 변형 후 for문 마저 돌리면 문제 발생하므로 break
