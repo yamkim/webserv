@@ -10,7 +10,7 @@ public:
 
     int getSocket() const;
     void setSocket();
-    void setSocketAddress();
+    void setSocketAddress(int portNum);
     void bindSocket();
     void listenSocket();
     void fcntlSocket();

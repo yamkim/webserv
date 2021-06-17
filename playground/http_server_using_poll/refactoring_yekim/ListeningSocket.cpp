@@ -19,11 +19,11 @@ void ListeningSocket::setSocket() {
     }
 }
 
-void ListeningSocket::setSocketAddress() {
+void ListeningSocket::setSocketAddress(int portNum) {
     std::memset(&(this->_socketAddr), 0, sizeof(this->_socketAddr));
     this->_socketAddr.sin_family = AF_INET;
     this->_socketAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    this->_socketAddr.sin_port = htons(4242);
+    this->_socketAddr.sin_port = htons(portNum);
 }
 
 void ListeningSocket::bindSocket() {
