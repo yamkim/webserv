@@ -18,7 +18,14 @@ class Socket {
         socklen_t _socketLen;
 
     public:
-        Socket(int socket);
+        Socket(int socket_);
         virtual ~Socket();
+        void setPollFd(int events_);
+        void setPollFd(struct pollfd pollfd_);
+        int getSocket() const;
+        struct pollfd getPollFd() const;
+
+        virtual int runSocket() = 0;
 };
+std::ostream &operator<<(std::ostream &out, Socket& socket_);
 #endif

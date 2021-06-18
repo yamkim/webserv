@@ -8,8 +8,11 @@ private:
     ConnectionSocket();
 
 public:
-    ConnectionSocket(int serverSocket);
+    ConnectionSocket(int listeningSocket);
+    virtual ~ConnectionSocket();
+
     struct pollfd getPollfd() const;
+    int runSocket();
 };
 
 #endif

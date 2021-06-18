@@ -8,9 +8,9 @@ class ListeningSocket : public Socket {
         int _backlog;
         int _portNum;
         const char* _ip;
+        ListeningSocket();
 
     public:
-        ListeningSocket();
         ListeningSocket(int portNum, int backlog);
         ListeningSocket(int portNum, int backlog, const char* ip);
         virtual ~ListeningSocket();

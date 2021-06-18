@@ -22,10 +22,6 @@ ListeningSocket::ListeningSocket(int portNum, int backlog, const char* ip) : Soc
 ListeningSocket::~ListeningSocket() {
 }
 
-int ListeningSocket::getSocket() const {
-    return (this->_socket);
-}
-
 void ListeningSocket::setSocket() {
     this->_socket = socket(PF_INET, SOCK_STREAM, 0);
     if (this->_socket == -1) {
