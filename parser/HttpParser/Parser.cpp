@@ -16,6 +16,9 @@ Parser::Parser(const std::string fileName) : _fileName(fileName) {
     readFile.close();
 }
 
+Parser::~Parser(){
+}
+
 void Parser::showRawData() const {
     std::cout << this->_rawData << std::endl;
 }
@@ -27,24 +30,4 @@ std::string Parser::getStringHeadByDelimiter(const std::string &buf, std::size_t
     std::string strHead = buf.substr(pos, found - pos);
     pos = found + needle.size();
     return strHead;
-}
-
-void Parser::setConfigurationMap() {
-    std::size_t pos = 0;
-
-    std::string method = getStringHeadByDelimiter(_rawData, pos, "\n");
-    this->_configMap["First-Line"] = method;
-
-    std::string key, value;
-    while ((key = getStringHeadByDelimiter(_rawData, pos, ": ")) != "") {
-        value = getStringHeadByDelimiter(_rawData, pos, "\n");
-        this->_configMap[key] = value;
-    }
-}
-
-void Parser::showConfigurationMap() {
-    std::map<std::string, std::string>::iterator iter;
-    for (iter = this->_configMap.begin(); iter != this->_configMap.end(); ++iter) {
-        std::cout << "[" << iter->first << "]: " << iter->second << std::endl;
-    }
 }

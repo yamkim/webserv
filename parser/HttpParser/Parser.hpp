@@ -6,19 +6,19 @@
 #include <map>
 
 class Parser {
-private:
+protected:
+    Parser();
     std::string _rawData;
     std::string _fileName;
     std::map<std::string, std::string> _configMap; 
 
 public:
     Parser(const std::string fileName);
-
-    void setConfigurationMap();
+    virtual ~Parser();
 
     std::string getStringHeadByDelimiter(const std::string &buf, std::size_t &pos, const std::string &needle);
     void showRawData() const;
-    void showConfigurationMap();
+    virtual void showConfigurationMap() = 0;
 };
 
 #endif
