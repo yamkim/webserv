@@ -13,20 +13,6 @@
 #include "ConnectionSocket.hpp"
 #include <vector>
 
-std::string genHttpString() {
-    std::string httpStr;
-    httpStr += "HTTP/1.1 200 OK\r\n";
-    httpStr += "Content-Type: text/html\r\n";
-    httpStr += "\r\n";
-    httpStr += "<html>";
-    httpStr += "<head><title>hi</title></head>";
-    httpStr += "<body>";
-    httpStr += "<b><center> HI! </center></b>";
-    httpStr += "</body>";
-    httpStr += "</html>";
-    return httpStr;
-}
-
 int main(void)
 {
     PairArray pollfds;
@@ -77,15 +63,27 @@ int main(void)
                             Socket* cSocket = new ConnectionSocket(curSocket->getSocket());
                             pollfds.appendElement(cSocket, PairArray::CONNECTION);
                         } else {
-                            char buffer[1024];
-                            int readLength = read(pollfds[i].first->getPollFd().fd, buffer, 1024);
-                            std::string httpResStr = genHttpString();
-                            std::cout << "data : " << std::string(buffer, readLength) << std::endl;
-                            write(pollfds[i].first->getPollFd().fd, httpResStr.data(), httpResStr.length());
-
+                            ConnectionSocket* cs = dynamic_cast<ConnectionSocket *>(curSocket);
+                            cs->_proc.first->process();
+                            if (cs->_proc.first->isFinish()) {
+                                if (cs->_proc.first->isConnectionCloseByClient()) {
+                                    std::cout << "[CLOSE BY CLIENT]" << std::endl;
+                                    close(curSocket->getPollFd().fd);
+                                    pollfds.removeElement(i--);
+                                } else {
+                                    std::cout << "[REQ]" << std::endl;
+                                    cs->_proc.second = new HTTPResponseHandler(curSocket->getPollFd().fd, cs->_proc.first->getURI());
+                                    curSocket->setPollFd(POLLOUT);
+                                }
+                            }
+                        }
+                    } else if (curSocket->getPollFd().revents & POLLOUT) {
+                        ConnectionSocket* cs = dynamic_cast<ConnectionSocket *>(pollfds[i].first);
+                        cs->_proc.second->process();
+                        if (cs->_proc.second->isFinish()) {
+                            std::cout << "[RES]" << std::endl;
                             close(pollfds[i].first->getPollFd().fd);
                             pollfds.removeElement(i--);
-                            std::cout << std::endl;
                         }
                     }
                 }

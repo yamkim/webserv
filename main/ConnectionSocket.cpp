@@ -8,10 +8,14 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd) : Socket(-1) {
     if (this->_socket == -1) {
         throw ErrorHandler("Error: connection socket error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
+    _proc.first = new HTTPRequestHandler(_socket);
+    _proc.second = NULL;
     this->setPollFd(POLLIN);
 }
 
 ConnectionSocket::~ConnectionSocket(){
+    delete _proc.first;
+    delete _proc.second;
 }
 
 struct pollfd ConnectionSocket::getPollfd() const {
