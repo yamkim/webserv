@@ -52,7 +52,7 @@ int main(void)
             } else if (result == 0) {
                 std::cout << "waiting..." << std::endl;
             } else {
-                pollfds.renewVector();
+                //pollfds.renewVector();
                 pollfds.showVector();
                 for (size_t i = 0; i < pollfds.getSize(); ++i) {
                     // TODO 타입을 Socket 안에 넣는 것도 고려

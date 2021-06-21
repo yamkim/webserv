@@ -1,13 +1,9 @@
 #include "HTTPResponseHandler.hpp"
 
-HTTPResponseHandler::HTTPResponseHandler() {}
-
 // FIXME : 리스폰스에 URI 외에 더 다양한 아규먼트를 집어넣어야 하는데 어떤 형식으로 집어넣을지 고민 중입니다. 추후에 수정하겠습니다.
-HTTPResponseHandler::HTTPResponseHandler(int sessionFd, std::string arg) {
+HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HTTPHandler(connectionFd) {
     _phase = FILEOPEN;
-    _finish = false;
-    _sessionFd = sessionFd;
-    _fileURI = arg;
+    _URI = arg;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
     _root = std::string("./html");
 }
@@ -18,8 +14,8 @@ void HTTPResponseHandler::process(void) {
     if (_phase == FILEOPEN) {
         // NOTE : 서버 자원에 대한 요청이 유효한지를 검사하는 로직이고 자원(파일)이 존재하면 파일을 엽니다. 추후 cgi 관련 핸들링도 추가 예정입니다.
         std::string absolutePath = _root;
-        absolutePath += _fileURI;
-        if (_fileURI.at(_fileURI.length() - 1) == '/') {
+        absolutePath += _URI;
+        if (_URI.at(_URI.length() - 1) == '/') {
             // NOTE : 추후 .conf 파일에 기재된 autoindex 여부와 index 파일 처리 여부에 따라 달라집니다.
             absolutePath += std::string("index.html");
         }
@@ -30,7 +26,7 @@ void HTTPResponseHandler::process(void) {
         if (file.isOpen()) {
             // NOTE : 이 부분도 서버의 상태나 request 된 내용 등을 참조해서 다양하게 처리해야 합니다.
             buildGeneralHeader("HTTP/1.1 200 OK");
-            std::string extension = getExtenstion(_fileURI);
+            std::string extension = getExtenstion(_URI);
             if (extension.empty()) {
                 buildOKHeader("text/html", file.length());
             } else {
@@ -44,7 +40,7 @@ void HTTPResponseHandler::process(void) {
             _phase = NOTFOUND;
         }
         convertHeaderMapToString();
-        size_t writeLength = send(_sessionFd, _headerString.data(), _headerString.length(), 0);
+        size_t writeLength = send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         if (writeLength != _headerString.length()) {
             // FIXME : 서버가 한번에 버퍼 사이즈만큼 다 못보낼수도 있음. 수정 필요
             throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
@@ -53,27 +49,25 @@ void HTTPResponseHandler::process(void) {
         char buf[RESPONSE_BUFFER_SIZE];
         int length = file.read(buf, RESPONSE_BUFFER_SIZE);
         if (length != 0) {
-            int writeLength = send(_sessionFd, buf, length, 0);
+            int writeLength = send(_connectionFd, buf, length, 0);
             if (writeLength != length) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
         } else {
-            //_phase = FIN;
-            _finish = true;
+            _phase = FINISH;
         }
     } else if (_phase == NOTFOUND) {
-        size_t writeLength = send(_sessionFd, _internalHTMLString.c_str(), _internalHTMLString.length(), 0);
+        size_t writeLength = send(_connectionFd, _internalHTMLString.c_str(), _internalHTMLString.length(), 0);
         if (writeLength != _internalHTMLString.length()) {
             throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
         } else {
-            //_phase = FIN;
-            _finish = true;
+            _phase = FINISH;
         }
     }
 }
 
 bool HTTPResponseHandler::isFinish(void) {
-    return (_finish);
+    return (_phase == FINISH);
 }
 
 void HTTPResponseHandler::buildGeneralHeader(std::string status) {
