@@ -34,7 +34,7 @@ void HTTPResponseHandler::process(void) {
             if (extension.empty()) {
                 buildOKHeader("text/html", file.length());
             } else {
-                buildOKHeader(getMINE(extension), file.length());
+                buildOKHeader(getMIME(extension), file.length());
             }
             _phase = OK;
         } else {
@@ -44,7 +44,7 @@ void HTTPResponseHandler::process(void) {
             _phase = NOTFOUND;
         }
         convertHeaderMapToString();
-        size_t writeLength = write(_sessionFd, _headerString.data(), _headerString.length());
+        size_t writeLength = send(_sessionFd, _headerString.data(), _headerString.length(), 0);
         if (writeLength != _headerString.length()) {
             // FIXME : 서버가 한번에 버퍼 사이즈만큼 다 못보낼수도 있음. 수정 필요
             throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
@@ -53,7 +53,7 @@ void HTTPResponseHandler::process(void) {
         char buf[RESPONSE_BUFFER_SIZE];
         int length = file.read(buf, RESPONSE_BUFFER_SIZE);
         if (length != 0) {
-            int writeLength = write(_sessionFd, buf, length);
+            int writeLength = send(_sessionFd, buf, length, 0);
             if (writeLength != length) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
@@ -62,7 +62,7 @@ void HTTPResponseHandler::process(void) {
             _finish = true;
         }
     } else if (_phase == NOTFOUND) {
-        size_t writeLength = write(_sessionFd, _internalHTMLString.c_str(), _internalHTMLString.length());
+        size_t writeLength = send(_sessionFd, _internalHTMLString.c_str(), _internalHTMLString.length(), 0);
         if (writeLength != _internalHTMLString.length()) {
             throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
         } else {
@@ -122,7 +122,7 @@ std::string& HTTPResponseHandler::get404Body(void) {
     return (httpString);
 }
 
-std::string HTTPResponseHandler::getMINE(std::string extension) {
+std::string HTTPResponseHandler::getMIME(std::string extension) {
     // FIXME : 추후에 nginx.conf 파일에서 파싱해 와야 합니다. map 형식의 키-벨류 형식을 그대로 유지해야 할 듯 합니다.
     std::map<std::string, std::string> mine;
 

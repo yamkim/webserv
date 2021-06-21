@@ -21,8 +21,8 @@ class FileController {
         void open(std::string& fileName, std::ios_base::openmode mode);
         bool isOpen(void);
         int length(void);
-        int read(char* buf, int bugLength);
-        int write(char* buf, int bugLength);
+        int read(char* buf, int bufLength);
+        int write(char* buf, int bufLength);
 };
 
 #endif

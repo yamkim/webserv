@@ -15,9 +15,9 @@ HTTPRequestHandler::~HTTPRequestHandler() {}
 
 void HTTPRequestHandler::process(void) {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
-    char buffer;
+    char temp;
 
-    if (recv(_connectFd, &buffer, 1, MSG_PEEK) == 0) {
+    if (recv(_connectFd, &temp, 1, MSG_PEEK) == 0) {
         // NOTE : 브라우저가 처음 접속할 때 핸드쉐이킹만 할 때 혹은 req 도중 갑자기 연결이 끊어질 때에 대한 핸들링입니다.
         _phase = CONNECTIONCLOSE;
         _finish = true;
@@ -68,17 +68,17 @@ bool HTTPRequestHandler::readBufferTillNewLine(void) {
     char buffer[REQUEST_BUFFER_SIZE + 1];
 
     int readLength = recv(_connectFd, buffer, REQUEST_BUFFER_SIZE, MSG_PEEK);
-    if (readLength == -1) {
+    if (readLength == RECV_ERROR) {
         throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::readBufferTillNewLine");
     }
     buffer[readLength] = '\0';
     int newLinePosition = findNewLine(buffer);
-    if (newLinePosition == -1) {
-            readLength = recv(_connectFd, buffer, REQUEST_BUFFER_SIZE, 0);
+    if (newLinePosition < 0) {
+        readLength = recv(_connectFd, buffer, REQUEST_BUFFER_SIZE, 0);
         _buffer += std::string(buffer, readLength);
         return (false);
     } else {
-            readLength = recv(_connectFd, buffer, newLinePosition, 0);
+        readLength = recv(_connectFd, buffer, newLinePosition, 0);
         _buffer += std::string(buffer, readLength);
         return (true);
     }

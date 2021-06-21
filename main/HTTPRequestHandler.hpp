@@ -23,6 +23,7 @@ class HTTPRequestHandler {
         std::map<std::string, std::string> _headers;
     private:
         typedef enum e_Phase {PARSESTARTLINE, PARSEHEADER, OK, FAIL, CONNECTIONCLOSE} Phase;
+        static const ssize_t RECV_ERROR = -1;
         Phase _phase;
         int _connectFd;
         std::string _buffer;
