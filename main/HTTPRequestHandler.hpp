@@ -23,7 +23,10 @@ class HTTPRequestHandler : public HTTPHandler {
         const std::map<std::string, std::string>& getHeaders(void) const;
     private:
         std::string getStringHeadByDelimiter(const std::string &buf, std::size_t &pos, const std::string &needle);
-        bool readBufferTillNewLine(void);
+        bool setHeaderString(void);
+        void setMethod(void);
+        void setURI(void);
+        void setProtocol(void);
         int findNewLine(const char *buffer);
         bool getHeaderStartLine(void);
         bool getHeader(void);

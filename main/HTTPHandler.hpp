@@ -24,6 +24,5 @@ class HTTPHandler {
 	public:
 		HTTPHandler(int connectionFd);
 		virtual ~HTTPHandler();
-        virtual bool isFinish(void) = 0;
 };
 #endif
