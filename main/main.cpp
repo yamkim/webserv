@@ -52,37 +52,18 @@ int main(void)
             } else if (result == 0) {
                 std::cout << "waiting..." << std::endl;
             } else {
-                //pollfds.renewVector();
-                pollfds.showVector();
+                pollfds.renewVector();
+                //pollfds.showVector();
                 for (size_t i = 0; i < pollfds.getSize(); ++i) {
                     // TODO 타입을 Socket 안에 넣는 것도 고려
                     Socket* curSocket = pollfds[i].first;
                     int curSocketType = pollfds[i].second;
-                    if (curSocket->getPollFd().revents & POLLIN) {
-                        if (curSocketType == PairArray::LISTENING) {
-                            Socket* cSocket = new ConnectionSocket(curSocket->getSocket());
-                            pollfds.appendElement(cSocket, PairArray::CONNECTION);
-                        } else {
-                            ConnectionSocket* cs = dynamic_cast<ConnectionSocket *>(curSocket);
-                            cs->_proc.first->process();
-                            if (cs->_proc.first->isFinish()) {
-                                if (cs->_proc.first->isConnectionCloseByClient()) {
-                                    std::cout << "[CLOSE BY CLIENT]" << std::endl;
-                                    close(curSocket->getPollFd().fd);
-                                    pollfds.removeElement(i--);
-                                } else {
-                                    std::cout << "[REQ]" << std::endl;
-                                    cs->_proc.second = new HTTPResponseHandler(curSocket->getPollFd().fd, cs->_proc.first->getURI());
-                                    curSocket->setPollFd(POLLOUT);
-                                }
-                            }
-                        }
-                    } else if (curSocket->getPollFd().revents & POLLOUT) {
-                        ConnectionSocket* cs = dynamic_cast<ConnectionSocket *>(pollfds[i].first);
-                        cs->_proc.second->process();
-                        if (cs->_proc.second->isFinish()) {
-                            std::cout << "[RES]" << std::endl;
-                            close(pollfds[i].first->getPollFd().fd);
+                    if ((curSocketType == PairArray::LISTENING) && (curSocket->getPollFd().revents & POLLIN)) {
+                        Socket* cSocket = new ConnectionSocket(curSocket->getSocket());
+                        pollfds.appendElement(cSocket, PairArray::CONNECTION);
+                    } else if (curSocket->getPollFd().revents & (POLLIN | POLLOUT)) {
+                        ConnectionSocket* cs = dynamic_cast<ConnectionSocket *>(curSocket);
+                        if (cs->HTTPProcess() == false) {
                             pollfds.removeElement(i--);
                         }
                     }
