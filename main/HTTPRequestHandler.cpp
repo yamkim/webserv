@@ -2,36 +2,37 @@
 
 HTTPRequestHandler::HTTPRequestHandler(int connectionFd) : HTTPHandler(connectionFd) {
     // REVIEW : accept에서 클라이언트의 IP와 포트도 받을 수 있도록 하면 좋을것 같습니다.
-    _phase = PARSESTARTLINE;
+    _phase = PARSE_STARTLINE;
 }
 
 HTTPRequestHandler::~HTTPRequestHandler() {}
 
-void HTTPRequestHandler::process(void) {
+HTTPRequestHandler::Phase HTTPRequestHandler::process() {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
     char temp;
 
     if (recv(_connectionFd, &temp, 1, MSG_PEEK) == 0) {
         // NOTE : 브라우저가 처음 접속할 때 핸드쉐이킹만 할 때 혹은 req 도중 갑자기 연결이 끊어질 때에 대한 핸들링입니다.
-        _phase = CONNECTIONCLOSE;
-        return ;
+        return CONNECTION_CLOSE;
     }
-    if (_phase == PARSESTARTLINE) {
+
+    if (_phase == PARSE_STARTLINE) {
         if (getHeaderStartLine() == true) {
             std::cout << "[DEBUG] HTTPRequestHandler.URI : " << _URI << std::endl;
-            _phase = PARSEHEADER;
+            _phase = PARSE_HEADER;
+        } else {
+            _phase = PARSE_STARTLINE;
         }
-    } else if (_phase == PARSEHEADER) {
+    } else if (_phase == PARSE_HEADER) {
         // TODO : 클라이언트가 이상한 헤더를 보낼 때 적절한 처리가 필요합니다. exception을 여기서 잡거나. 아직 자세히 안봤지만 Nginx는 400 Bad Request 같은거로 핸들링하는거 같습니다. 추후에 적용하겠습니다.
         if (getHeader() == true) {
             _phase = FINISH;
             // TODO : POST일 경우 임시 파일 만들어서 저장하는 로직 추가 예정
+        } else {
+            _phase = PARSE_HEADER;
         }
     }
-}
-
-bool HTTPRequestHandler::isFinish(void) {
-    return ((_phase == CONNECTIONCLOSE) || (_phase == FINISH));
+    return _phase;
 }
 
 HTTPRequestHandler::Method HTTPRequestHandler::getMethod(void) const {
@@ -92,6 +93,7 @@ bool HTTPRequestHandler::getHeaderStartLine(void) {
     if (readBufferTillNewLine() == false) {
         return (false);
     }
+
     chunk = getStringHeadByDelimiter(_headerString, delimiterLength, " ");
     if (chunk == std::string("GET")) {
         _method = HTTPRequestHandler::GET;
@@ -102,6 +104,7 @@ bool HTTPRequestHandler::getHeaderStartLine(void) {
     } else {
         throw ErrorHandler("Error: weird method.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
     }
+
     chunk = getStringHeadByDelimiter(_headerString, delimiterLength, " ");
     if (chunk.size() != 0) {
         _URI = chunk;
@@ -144,8 +147,4 @@ bool HTTPRequestHandler::getHeader(void) {
     _headers[key] = value;
     _headerString.clear();
     return (false);
-}
-
-bool HTTPRequestHandler::isConnectionCloseByClient(void) {
-    return ((_phase == CONNECTIONCLOSE));
 }
