@@ -31,7 +31,10 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process() {
         } else {
             _phase = PARSE_HEADER;
         }
-    }
+    } // TODO: yekim : 리퀘스트 바디 받아서 임시 파일에 저장하기
+    // 1. 적당히 랜덤한 이름으로 tmp/[랜덤].tmp 파일로 저장
+    // 2. 저장이 끝나면 임시 파일명을 리스폰스 생성자로 넘기기
+    // - content_length가 없으면 종료, 있으면 length만큼 읽어오고 종료
     return _phase;
 }
 

@@ -46,6 +46,7 @@ int main(void)
 
     try {
         while (true) {
+            //TODO: joopark - 커널큐로 테스트 해보기 (코드 반영 x)
             int result = poll(pollfds.getArray(), pollfds.getSize(), 1000);
             if (result == -1) {
                 throw ErrorHandler("Error: poll operation error.", ErrorHandler::CRITICAL, "Polling::run");

@@ -19,10 +19,9 @@ ConnectionSocket::~ConnectionSocket(){
 }
 
 bool ConnectionSocket::HTTPProcess(void) {
-    HTTPRequestHandler::Phase phase;
-
-    phase = _req->process();
     if (_res == NULL) {
+        HTTPRequestHandler::Phase phase;
+        phase = _req->process();
         if (phase == HTTPRequestHandler::CONNECTION_CLOSE) {
             std::cout << "[DEBUG] Connection CLOSED BY CLIENT" << std::endl;
             close(_socket);
@@ -33,8 +32,9 @@ bool ConnectionSocket::HTTPProcess(void) {
             setPollFd(POLLOUT);
         }
     } else {
-        _res->process();
-        if (_res->isFinish()) {
+        HTTPResponseHandler::Phase phase;
+        phase = _res->process();
+        if (phase == HTTPResponseHandler::FINISH) {
             std::cout << "[DEBUG] Connection CLOSE" << std::endl;
             close(_socket);
             return (false);

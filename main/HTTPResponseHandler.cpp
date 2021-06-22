@@ -2,7 +2,7 @@
 
 // FIXME : 리스폰스에 URI 외에 더 다양한 아규먼트를 집어넣어야 하는데 어떤 형식으로 집어넣을지 고민 중입니다. 추후에 수정하겠습니다.
 HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HTTPHandler(connectionFd) {
-    _phase = FILEOPEN;
+    _phase = RESOURCE_OPEN;
     _URI = arg;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
     _root = std::string("./html");
@@ -10,8 +10,9 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
 
 HTTPResponseHandler::~HTTPResponseHandler() {}
 
-void HTTPResponseHandler::process(void) {
-    if (_phase == FILEOPEN) {
+HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
+    if (_phase == RESOURCE_OPEN) {
+        // TODO: joopark - CGI 처리 로직 추가해보기 (리팩토링은 추후에)
         // NOTE : 서버 자원에 대한 요청이 유효한지를 검사하는 로직이고 자원(파일)이 존재하면 파일을 엽니다. 추후 cgi 관련 핸들링도 추가 예정입니다.
         std::string absolutePath = _root;
         absolutePath += _URI;
@@ -21,8 +22,8 @@ void HTTPResponseHandler::process(void) {
         }
         file.open(absolutePath, std::ios_base::in);
         std::cout << "[DEBUG] Request URI : " << absolutePath << std::endl;
-        _phase = ASSEMBLEHEADER;
-    } else if (_phase == ASSEMBLEHEADER) {
+        _phase = ASSEMBLE_HEADER;
+    } else if (_phase == ASSEMBLE_HEADER) {
         if (file.isOpen()) {
             // NOTE : 이 부분도 서버의 상태나 request 된 내용 등을 참조해서 다양하게 처리해야 합니다.
             buildGeneralHeader("HTTP/1.1 200 OK");
@@ -37,7 +38,7 @@ void HTTPResponseHandler::process(void) {
             buildGeneralHeader("HTTP/1.1 404 Not Found");
             _internalHTMLString = get404Body();
             buildOKHeader("text/html", _internalHTMLString.length());
-            _phase = NOTFOUND;
+            _phase = NOT_FOUND;
         }
         convertHeaderMapToString();
         size_t writeLength = send(_connectionFd, _headerString.data(), _headerString.length(), 0);
@@ -56,7 +57,7 @@ void HTTPResponseHandler::process(void) {
         } else {
             _phase = FINISH;
         }
-    } else if (_phase == NOTFOUND) {
+    } else if (_phase == NOT_FOUND) {
         size_t writeLength = send(_connectionFd, _internalHTMLString.c_str(), _internalHTMLString.length(), 0);
         if (writeLength != _internalHTMLString.length()) {
             throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
@@ -64,10 +65,6 @@ void HTTPResponseHandler::process(void) {
             _phase = FINISH;
         }
     }
-}
-
-bool HTTPResponseHandler::isFinish(void) {
-    return (_phase == FINISH);
 }
 
 void HTTPResponseHandler::buildGeneralHeader(std::string status) {
