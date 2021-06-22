@@ -8,12 +8,13 @@
 class ConnectionSocket : public Socket {
 private:
     ConnectionSocket();
+    HTTPRequestHandler *_req;
+    HTTPResponseHandler *_res;
 
 public:
-    std::pair<HTTPRequestHandler *, HTTPResponseHandler *> _proc;
     ConnectionSocket(int listeningSocket);
     virtual ~ConnectionSocket();
-
+    bool HTTPProcess(void);
     struct pollfd getPollfd() const;
     int runSocket();
 };
