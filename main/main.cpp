@@ -12,16 +12,24 @@
 #include "ListeningSocket.hpp"
 #include "ConnectionSocket.hpp"
 #include <vector>
+#include "KernelQueue.hpp"
 
 int main(void)
 {
-    PairArray pollfds;
+    KernelQueue kq;
 #if 1
-    Socket* lSocket1 = new ListeningSocket(4200, 42);
-    if (lSocket1->runSocket())
+    // NOTE: 여러 개의 소켓 관리도 간편하게 가능
+    ListeningSocket* lSocket4200 = new ListeningSocket(4200, 42);
+    if (lSocket4200->runSocket())
         return (1);
-    lSocket1->setPollFd(POLLIN);
-    pollfds.appendElement(lSocket1, PairArray::LISTENING);
+    lSocket4200->setPollFd(POLLIN);
+    kq.addReadEvent(lSocket4200->getSocket(), reinterpret_cast<void*>(lSocket4200));
+    ListeningSocket* lSocket8080 = new ListeningSocket(8080, 42);
+    if (lSocket8080->runSocket())
+        return (1);
+    lSocket8080->setPollFd(POLLIN);
+    kq.addReadEvent(lSocket8080->getSocket(), reinterpret_cast<void*>(lSocket8080));
+    //pollfds.appendElement(lSocket1, PairArray::LISTENING);
 #endif
 
 #if 0
@@ -47,16 +55,44 @@ int main(void)
     try {
         while (true) {
             //TODO: joopark - 커널큐로 테스트 해보기 (코드 반영 x)
-            int result = poll(pollfds.getArray(), pollfds.getSize(), 1000);
-            if (result == -1) {
-                throw ErrorHandler("Error: poll operation error.", ErrorHandler::CRITICAL, "Polling::run");
-            } else if (result == 0) {
+            //int result = poll(pollfds.getArray(), pollfds.getSize(), 1000);
+            int result = kq.getEventsIndex();
+            if (result == 0) {
                 std::cout << "waiting..." << std::endl;
             } else {
-                pollfds.renewVector();
-                //pollfds.showVector();
-                for (size_t i = 0; i < pollfds.getSize(); ++i) {
+                for (int i = 0; i < result; ++i) {
                     // TODO 타입을 Socket 안에 넣는 것도 고려
+                    Socket* instance = reinterpret_cast<Socket*>(kq.getInstance(i));
+                    if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
+                        ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket());
+                        std::cout << "socket " << cSocket->getSocket() << " gen" << std::endl;
+                        kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
+                    } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
+                        ConnectionSocket* cSocket = dynamic_cast<ConnectionSocket*>(instance);
+                        if (kq.isClose(i)) {
+                            std::cout << "연결 종료" << std::endl;
+                            delete cSocket;
+                        } else if (kq.isReadEvent(i)) {
+                            std::cout << "EVFILT_READ" << std::endl;
+                            if (cSocket->HTTPProcess() == false) {
+                                std::cout << "to EVFILT_WRITE" << std::endl;
+                                kq.modEventToWriteEvent(i);
+                            }
+                        } else if (kq.isWriteEvent(i)) {
+                            std::cout << "EVFILT_WRITE" << std::endl;
+                            if (cSocket->HTTPProcess() == false) {
+                                std::cout << "CONNECT CLOSE" << std::endl;
+                                delete cSocket;
+                            }
+                        } else {
+                            std::cout << "발생하면 안되는 상황" << std::endl;
+                            std::exit(1);
+                        }
+                    } else {
+                        std::cout << "발생하면 안되는 상황" << std::endl;
+                        std::exit(1);
+                    }
+                    #if (0)
                     Socket* curSocket = pollfds[i].first;
                     int curSocketType = pollfds[i].second;
                     if ((curSocketType == PairArray::LISTENING) && (curSocket->getPollFd().revents & POLLIN)) {
@@ -68,6 +104,7 @@ int main(void)
                             pollfds.removeElement(i--);
                         }
                     }
+                    #endif
                 }
             }
         }
