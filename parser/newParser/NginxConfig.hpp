@@ -5,20 +5,24 @@
 
 class NginxConfig : public NginxParser {
     private:
-        struct noneBlock {
+        struct nginxBlock {
+            std::string rawData;
+
+        };
+        struct noneBlock : nginxBlock {
             std::string user;
             std::string worker_processes;
         };
-        struct locationBlock {
+        struct locationBlock : nginxBlock {
             std::string locationPath;
             std::vector<std::string> locationReturn;
         };
-        struct serverBlock {
+        struct serverBlock : nginxBlock{
             std::string listen;
             std::string server_name;
             struct locationBlock location[2];
         };
-        struct httpBlock {
+        struct httpBlock : nginxBlock{
             std::string charset;
             std::string include;
             std::string default_type;
@@ -44,8 +48,8 @@ class NginxConfig : public NginxParser {
                 std::size_t delimitPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, delimitPos, " ");
                 if (tmpDir == "http") {
-                    std::string blockContent = getBlockContent(_rawData, delimitPos);
-                    _http = setHttpBlock(blockContent);
+                    _http.rawData = getBlockContent(_rawData, delimitPos);
+                    setHttpBlock(_http);
                     pos = delimitPos; // 블록 이후의 pos
                 } else if (tmpDir == "user") {
                     _none.user = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
@@ -63,12 +67,48 @@ class NginxConfig : public NginxParser {
             std::cout << "_http::server::server_name -> " << _http.server[0].server_name << std::endl;
             std::cout << "_http::server::location::path -> " << _http.server[0].location[0].locationPath << std::endl;
         }
-    public:
-        struct locationBlock setLocationBlock(const std::string& buf, std::string locationPath) {
-            std::size_t pos = 0;
-            struct locationBlock ret;
 
-            ret.locationPath = locationPath;
+    public:
+
+        // void setHttp(void* block, std::string tmpDir, std::string tmpLine, std::size_t &pos) {
+        //     struct httpBlock* tmpHttpBlock = (reinterpret_cast<struct httpBlock*>(block));
+        //     std::string buf = tmpHttpBlock->rawData;
+        //     std::size_t delimitPos = 0;
+        //     if (tmpDir == "charset") {
+        //         tmpHttpBlock->charset = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
+        //     } else if (tmpDir == "include") {
+        //         tmpHttpBlock->include = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
+        //     } else if (tmpDir == "default_type") {
+        //         tmpHttpBlock->default_type = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
+        //     } else if (tmpDir == "server") {
+        //         std::string blockContent = sideSpaceTrim(getBlockContent(buf, pos));
+        //         setBlock(&(tmpHttpBlock->server[0]), NULL);
+        //     }
+        // }
+
+        // void setBlock(nginxBlock* block, void* fp()) {
+        //     std::size_t pos = 0;
+
+        //     if (fp == nullptr) {
+        //         throw std::string("Error: fp Error");
+        //     }
+        //     std::string buf = block->rawData;
+        //     while (buf[pos]) {
+        //         std::string tmpLine = getIdentifier(buf, pos, "\n");
+        //         if (tmpLine.empty()) {
+        //             continue ;
+        //         }
+        //         std::size_t delimitPos = 0;
+        //         std::string tmpDir = getIdentifier(tmpLine, delimitPos, " ");
+        //         // std::cout << "identifier[http]: " << tmpDir << std::endl;
+        //         setBlock(block, tmpDir, tmpLine, pos);
+        //     }
+        // }
+
+        void setLocationBlock(struct locationBlock& block) {
+            std::size_t pos = 0;
+
+            std::string buf = block.rawData;
             while (buf[pos]) {
                 // line 위치 기록중
                 std::string tmpLine = getIdentifier(buf, pos, "\n");
@@ -77,21 +117,19 @@ class NginxConfig : public NginxParser {
                 }
                 std::size_t delimitPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, delimitPos, " ");
-                if (tmpDir == "listen") {
-                    ret.locationReturn.push_back(leftSpaceTrim(getIdentifier(tmpLine, delimitPos, " ")));
-                    ret.locationReturn.push_back(leftSpaceTrim(getIdentifier(tmpLine, delimitPos, ";")));
+                if (tmpDir == "return") {
+                    block.locationReturn.push_back(leftSpaceTrim(getIdentifier(tmpLine, delimitPos, " ")));
+                    block.locationReturn.push_back(leftSpaceTrim(getIdentifier(tmpLine, delimitPos, ";")));
                 } 
                 // std::cout << "identifier[location]: " << tmpDir << std::endl;
             }
-            // std::cout << "location.locationPath: " << ret.locationPath << std::endl;
-            return ret;
         }
 
         // 기본적으로, new line의 위치를 기록하며 따라가다가, block directive 때는 건너뜀
-        struct serverBlock setServerBlock(const std::string& buf) {
+        void setServerBlock(struct serverBlock& block) {
             std::size_t pos = 0;
-            struct serverBlock ret;
 
+            std::string buf = block.rawData;
             while (buf[pos]) {
                 std::string tmpLine = getIdentifier(buf, pos, "\n");
                 if (tmpLine.empty()) {
@@ -100,28 +138,27 @@ class NginxConfig : public NginxParser {
                 std::size_t delimitPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, delimitPos, " ");
                 if (tmpDir == "listen") {
-                    ret.listen = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
+                    block.listen = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
                 } else if (tmpDir == "server_name") {
-                    ret.server_name = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
+                    block.server_name = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
                 } else if (tmpDir == "location") {
-                    std::string locationPath = getIdentifier(tmpLine, delimitPos, " ");
-                    std::string blockContent = getBlockContent(buf, delimitPos);
+                    block.location[0].locationPath = getIdentifier(tmpLine, delimitPos, " ");
+                    block.location[0].rawData = getBlockContent(buf, delimitPos);
                     pos = delimitPos;
 
-                    ret.location[0] = setLocationBlock(blockContent, locationPath);
+                    setLocationBlock(block.location[0]);
                 }
                 // std::cout << "identifier[server]: " << tmpDir << std::endl;
             }
             // std::cout << "server.listen: " << ret.listen << std::endl;
             // std::cout << "server.server_name: " << ret.server_name << std::endl;
-            return ret;
         }
 
         // 독립적으로 사용됨. pos를 받고 진행 상황을 기록할 필요 없음
-        struct httpBlock setHttpBlock(const std::string& buf) {
-            struct httpBlock ret;
+        void setHttpBlock(struct httpBlock& block) {
             std::size_t pos = 0;
 
+            std::string buf = block.rawData;
             while (buf[pos]) {
                 std::string tmpLine = getIdentifier(buf, pos, "\n");
                 if (tmpLine.empty()) {
@@ -130,22 +167,22 @@ class NginxConfig : public NginxParser {
                 std::size_t delimitPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, delimitPos, " ");
                 if (tmpDir == "charset") {
-                    ret.charset = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
+                    block.charset = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
                 } else if (tmpDir == "include") {
-                    ret.include = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
+                    block.include = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
                 } else if (tmpDir == "default_type") {
-                    ret.default_type = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
+                    block.default_type = sideSpaceTrim(getIdentifier(tmpLine, delimitPos, ";"));
                 } else if (tmpDir == "server") {
-                    std::string blockContent = sideSpaceTrim(getBlockContent(buf, delimitPos));
+                    block.server[0].rawData = sideSpaceTrim(getBlockContent(buf, delimitPos));
                     pos = delimitPos;
-                    ret.server[0] = setServerBlock(blockContent);
+
+                    setServerBlock(block.server[0]);
                 }
                 // std::cout << "identifier[http]: " << tmpDir << std::endl;
             }
 
             // std::cout << "http charset: " << ret.charset << std::endl;
             // std::cout << "http include: " << ret.include << std::endl;
-            return ret;
         }
 };
 #endif
