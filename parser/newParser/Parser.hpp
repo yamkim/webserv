@@ -1,3 +1,6 @@
+#ifndef PARSER_HPP
+#define PARSER_HPP
+
 #include <fstream>
 #include <map>
 #include <vector>
@@ -78,3 +81,4 @@ class Parser {
             return false;
         } 
 };
+#endif

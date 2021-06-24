@@ -3,13 +3,13 @@
 #include <map>
 #include <vector>
 #include <stack>
-#include "NginxParser.hpp"
+#include "NginxConfig.hpp"
 
 
 int main() {
     // std::cout << nginx.getRawData() << std::endl;
 
-    NginxParser nginx("nginx.conf");
+    NginxConfig nginx("nginx.conf");
     
     return (0);
 }
