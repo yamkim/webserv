@@ -61,50 +61,38 @@ int main(void)
                 std::cout << "waiting..." << std::endl;
             } else {
                 for (int i = 0; i < result; ++i) {
-                    // TODO 타입을 Socket 안에 넣는 것도 고려
                     Socket* instance = reinterpret_cast<Socket*>(kq.getInstance(i));
-                    if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
+                    if (dynamic_cast<KernelQueue::PairQueue*>(instance) != NULL) {
+                        // NOTE: CGI Event 발생
+                        KernelQueue::PairQueue* pairQueue = reinterpret_cast<KernelQueue::PairQueue*>(instance);
+                        pairQueue->stopSlave();
+                    } else if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
+                        // NOTE: Listening Socket Event 발생
                         ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket());
-                        std::cout << "socket " << cSocket->getSocket() << " gen" << std::endl;
                         kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
                     } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
+                        // NOTE: Connection Socket Event 발생
                         ConnectionSocket* cSocket = dynamic_cast<ConnectionSocket*>(instance);
                         if (kq.isClose(i)) {
-                            std::cout << "연결 종료" << std::endl;
+                            // NOTE: 연결 종료 여부 확인
                             delete cSocket;
                         } else if (kq.isReadEvent(i)) {
-                            std::cout << "EVFILT_READ" << std::endl;
-                            if (cSocket->HTTPProcess() == false) {
-                                std::cout << "to EVFILT_WRITE" << std::endl;
+                            // NOTE: Read Event
+                            if (cSocket->HTTPRequestProcess() == HTTPRequestHandler::FINISH) {
+                                // NOTE: to Write Event
                                 kq.modEventToWriteEvent(i);
                             }
                         } else if (kq.isWriteEvent(i)) {
-                            std::cout << "EVFILT_WRITE" << std::endl;
-                            if (cSocket->HTTPProcess() == false) {
-                                std::cout << "CONNECT CLOSE" << std::endl;
+                            // NOTE: Write Event
+                            HTTPResponseHandler::Phase phase = cSocket->HTTPResponseProcess();
+                            if (phase == HTTPResponseHandler::FINISH) {
+                                kq.deletePairEvent(i);
                                 delete cSocket;
+                            } else if (phase == HTTPResponseHandler::CGI_REQ) {
+                                kq.setPairEvent(i, cSocket->getCGIfd());
                             }
-                        } else {
-                            std::cout << "발생하면 안되는 상황" << std::endl;
-                            std::exit(1);
-                        }
-                    } else {
-                        std::cout << "발생하면 안되는 상황" << std::endl;
-                        std::exit(1);
-                    }
-                    #if (0)
-                    Socket* curSocket = pollfds[i].first;
-                    int curSocketType = pollfds[i].second;
-                    if ((curSocketType == PairArray::LISTENING) && (curSocket->getPollFd().revents & POLLIN)) {
-                        Socket* cSocket = new ConnectionSocket(curSocket->getSocket());
-                        pollfds.appendElement(cSocket, PairArray::CONNECTION);
-                    } else if (curSocket->getPollFd().revents & (POLLIN | POLLOUT)) {
-                        ConnectionSocket* cs = dynamic_cast<ConnectionSocket *>(curSocket);
-                        if (cs->HTTPProcess() == false) {
-                            pollfds.removeElement(i--);
                         }
                     }
-                    #endif
                 }
             }
         }

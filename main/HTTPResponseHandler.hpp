@@ -17,8 +17,9 @@ class HTTPResponseHandler : public HTTPHandler {
         HTTPResponseHandler(int coneectionFd, std::string arg);
         virtual ~HTTPResponseHandler();
 
-        typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, FINISH} Phase;
+        typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, FINISH} Phase;
         virtual HTTPResponseHandler::Phase process(void);
+        int getCGIfd(void);
     private:
         void setGeneralHeader(std::string status);
         void setTypeHeader(std::string type);

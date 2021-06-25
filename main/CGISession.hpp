@@ -26,7 +26,7 @@ class CGISession {
 		CGISession & operator=(const CGISession & cgisession);
 		int & getInputStream(void);
 		int & getOutputStream(void);
-		void setCGIargs(char *binary, char *filename, char *cgiarg, std::map<std::string, std::string> env);
+		void setCGIargs(std::string& binary, std::string& filename, std::string& cgiarg, std::map<std::string, std::string> env);
 		void makeCGIProcess();
 };
 

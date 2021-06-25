@@ -33,22 +33,24 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
         // FIXME: 폴더를 열어서 폴더의 목록을 뿌려줄 수 있어야 합니다.
         _phase = NOT_FOUND;
     } else if (_phase == CGI_RUN) {
-        std::map<std::string, std::string> arg;
+        std::map<std::string, std::string> env;
 
-        arg[std::string("USER")] = std::string(std::getenv("USER"));
-        arg[std::string("PATH")] = std::string(std::getenv("PATH"));
-        arg[std::string("LANG")] = std::string(std::getenv("LANG"));
-        arg[std::string("CONTENT_TYPE")] = std::string("application/x-www-form-urlencoded");
-        arg[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
-        _cgi.setCGIargs(
-            const_cast<char*>("/usr/bin/python3"),
-            const_cast<char*>("/Users/joohongpark/Desktop/webserv/webserv/main/html/pycgi.py"),
-            const_cast<char*>("data=test"), arg);
+        env[std::string("USER")] = std::string(std::getenv("USER"));
+        env[std::string("PATH")] = std::string(std::getenv("PATH"));
+        env[std::string("LANG")] = std::string(std::getenv("LANG"));
+        env[std::string("CONTENT_TYPE")] = std::string("application/x-www-form-urlencoded");
+        env[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
+        std::string path = std::string("/usr/bin/python3");
+        std::string args = std::string("data=test");
+        _cgi.setCGIargs(path, _absolutePath, args, env);
         _cgi.makeCGIProcess();
         fcntl(_cgi.getOutputStream(), F_SETFL, O_NONBLOCK);
         setGeneralHeader("HTTP/1.1 200 OK");
         convertHeaderMapToString(true);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+        _phase = CGI_REQ;
+    } else if (_phase == CGI_REQ) {
+        // FIXME: 만약 리퀘스트 바디가 있을때
         _phase = CGI_SEND_LOOP;
     } else if (_phase == GET_FILE) {
         _file.open(_absolutePath, std::ios_base::in);
@@ -88,8 +90,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
         }
     } else if (_phase == CGI_SEND_LOOP) {
         char buf[RESPONSE_BUFFER_SIZE];
-        // REVIEW : Busy-Waiting 이 발생할 소지가 있는데... cgi의 fd도 kqueue에서 관리하는게 나을까요?
-        usleep(1000 * 200);
 
         int length = read(_cgi.getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
         if (length != 0) {
@@ -303,4 +303,8 @@ bool HTTPResponseHandler::isCGI(std::string& URI) {
     } else {
         return (false);
     }
+}
+
+int HTTPResponseHandler::getCGIfd(void) {
+    return (_cgi.getOutputStream());
 }

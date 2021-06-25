@@ -48,10 +48,14 @@ int & CGISession::getOutputStream(void) {
 	return (_outputStream);
 }
 
-void CGISession::setCGIargs(char *binary, char *filename, char *cgiarg, std::map<std::string, std::string> env) {
-	_arg[0] = binary;
-	_arg[1] = filename;
-	_arg[2] = cgiarg;
+void CGISession::setCGIargs(std::string& binary, std::string& filename, std::string& cgiarg, std::map<std::string, std::string> env) {
+	_arg[0] = const_cast<char*>(binary.c_str());
+	_arg[1] = const_cast<char*>(filename.c_str());
+    if (cgiarg.empty()) {
+        _arg[2] = NULL;
+    } else {
+        _arg[2] = const_cast<char*>(cgiarg.c_str());
+    }
 	_arg[3] = NULL;
 	_env = generateEnvp(env);
 }
