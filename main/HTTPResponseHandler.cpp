@@ -65,6 +65,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
             _phase = FINISH;
         }
     }
+    return _phase;
 }
 
 void HTTPResponseHandler::buildGeneralHeader(std::string status) {
