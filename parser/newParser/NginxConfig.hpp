@@ -7,7 +7,6 @@ class NginxConfig : public NginxParser {
     private:
         struct nginxBlock {
             std::string rawData;
-
         };
         struct noneBlock : nginxBlock {
             std::string user;
@@ -20,18 +19,23 @@ class NginxConfig : public NginxParser {
         };
         struct locationBlock : nginxBlock {
             std::string locationPath;
-            std::vector<std::string> locationReturn;
+            std::string try_files;
+            std::string deny;
+            std::string locationReturn;
         };
         struct serverBlock : nginxBlock{
             std::string listen;
             std::string server_name;
-            struct locationBlock location[2];
+            std::string root;
+            std::string index;
+            struct locationBlock location[10];
         };
         struct httpBlock : nginxBlock{
             std::string charset;
             std::string include;
             std::string default_type;
             std::string keeplive_timeout;
+            std::string sendfile;
 
             struct serverBlock server[2];
             struct typesBlock types;
@@ -66,6 +70,8 @@ class NginxConfig : public NginxParser {
                     _none.user = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "worker_processes") {
                     _none.worker_processes = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                } else {
+                    throw std::string("Error: " + tmpDir + " is not in block[none] list.");
                 }
                 lineBegPos = lineEndPos;
             }
@@ -76,9 +82,16 @@ class NginxConfig : public NginxParser {
             std::cout << "_http::include -> " << _http.include << std::endl;
             std::cout << "_http::default_type -> " << _http.default_type << std::endl;
             std::cout << "_http::keepalive_timeout -> " << _http.keeplive_timeout << std::endl;
-            std::cout << "_http::server::listen -> " << _http.server[0].listen << std::endl;
-            std::cout << "_http::server::server_name -> " << _http.server[0].server_name << std::endl;
-            std::cout << "_http::server::location::path -> " << _http.server[0].location[0].locationPath << std::endl;
+            std::cout << "_http::server[0]::listen -> " << _http.server[0].listen << std::endl;
+            std::cout << "_http::server[0]::server_name -> " << _http.server[0].server_name << std::endl;
+            std::cout << "_http::server[0]::location[0]::path -> " << _http.server[0].location[0].locationPath << std::endl;
+            std::cout << "_http::server[1]::listen -> " << _http.server[1].listen << std::endl;
+            std::cout << "_http::server[1]::root -> " << _http.server[1].root << std::endl;
+            std::cout << "_http::server[1]::index -> " << _http.server[1].index << std::endl;
+            std::cout << "_http::server[1]::location[0]::path -> " << _http.server[1].location[0].locationPath << std::endl;
+            std::cout << "_http::server[1]::location[0]::try_files -> " << _http.server[1].location[0].try_files << std::endl;
+            std::cout << "_http::server[1]::location[1]::path -> " << _http.server[1].location[1].locationPath << std::endl;
+            std::cout << "_http::server[1]::location[2]::path -> " << _http.server[1].location[2].locationPath << std::endl;
             std::cout << "_http::types::html -> " << _http.types.html << std::endl;
             std::cout << "_http::types::css -> " << _http.types.css << std::endl;
         }
@@ -87,8 +100,6 @@ class NginxConfig : public NginxParser {
 
         void setTypesBlock(struct typesBlock& block) {
             std::size_t pos = 0;
-
-            std::cout << "TypesBlock: [" << block.rawData << "]" << std::endl;
 
             std::string buf = block.rawData;
             while (buf[pos]) {
@@ -105,38 +116,44 @@ class NginxConfig : public NginxParser {
                     block.css = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "text/xml") {
                     block.xml = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                } 
+                } else {
+                    throw std::string("Error: " + tmpDir + " is not in block[types] list.");
+                }
                 // std::cout << "identifier[types]: " << tmpDir << std::endl;
             }
         }
 
         void setLocationBlock(struct locationBlock& block) {
-            std::size_t pos = 0;
-
             std::string buf = block.rawData;
+
+            std::size_t pos = 0;
             while (buf[pos]) {
-                // line 위치 기록중
                 std::string tmpLine = getIdentifier(buf, pos, "\n");
-                if (tmpLine.empty()) {
+                if (sideSpaceTrim(tmpLine).empty()) {
                     continue ;
                 }
-                std::size_t delimitPos = 0;
-                std::string tmpDir = getIdentifier(tmpLine, delimitPos, " ");
+                std::size_t tmpPos = 0;
+                std::string tmpDir = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, " "));
+                // std::cout << "identifier[location]: [" << tmpDir << "]" << std::endl;
                 if (tmpDir == "return") {
-                    block.locationReturn.push_back(leftSpaceTrim(getIdentifier(tmpLine, delimitPos, " ")));
-                    block.locationReturn.push_back(leftSpaceTrim(getIdentifier(tmpLine, delimitPos, ";")));
-                } 
-                // std::cout << "identifier[location]: " << tmpDir << std::endl;
+                    block.locationReturn = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    std::cout << block.locationReturn << std::endl;
+                } else if (tmpDir == "try_files") {
+                    block.try_files = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";")); 
+                } else if (tmpDir == "deny") {
+                    block.deny = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";")); 
+                } else {
+                    throw std::string("Error: " + tmpDir + " is not in block[location] list.");
+                }
             }
         }
 
-        // 기본적으로, new line의 위치를 기록하며 따라가다가, block directive 때는 건너뜀
         void setServerBlock(struct serverBlock& block) {
-            std::size_t pos = 0;
-
             std::string buf = block.rawData;
-            std::size_t lineBegPos = 0;
-            std::size_t lineEndPos = 0;
+
+            std::size_t pos = 0;
+            std::size_t blockPos = 0;
+            std::size_t locationBlockIdx = 0;
             while (buf[pos]) {
                 std::string tmpLine = getIdentifier(buf, pos, "\n");
                 if (sideSpaceTrim(tmpLine).empty()) {
@@ -144,41 +161,50 @@ class NginxConfig : public NginxParser {
                 }
                 std::size_t tmpPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, tmpPos, " ");
+                // std::cout << "identifier[server]: [" << tmpDir << "]" << std::endl;
                 if (tmpDir == "listen") {
                     block.listen = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "server_name") {
                     block.server_name = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                } else if (tmpDir == "root") {
+                    block.root = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                } else if (tmpDir == "index") {
+                    block.index = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "location") {
-                    lineEndPos = pos;
-                    block.location[0].locationPath = getIdentifier(tmpLine, tmpPos, " ");
-                    block.location[0].rawData = getBlockContent(buf, lineBegPos);
-                    pos = lineBegPos;
-                    setLocationBlock(block.location[0]);
+                    block.location[locationBlockIdx].locationPath = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, "{"));
+                    block.location[locationBlockIdx].rawData = getBlockContent(buf, blockPos);
+                    setLocationBlock(block.location[locationBlockIdx]);
+                    locationBlockIdx++;
+                    pos = blockPos;
+                } else {
+                    throw std::string("Error: " + tmpDir + " is not in block[server] list.");
                 }
-                lineBegPos = lineEndPos;
-                // std::cout << "identifier[server]: " << tmpDir << std::endl;
             }
-            // std::cout << "server.listen: " << ret.listen << std::endl;
-            // std::cout << "server.server_name: " << ret.server_name << std::endl;
         }
 
-        // 독립적으로 사용됨. pos를 받고 진행 상황을 기록할 필요 없음
+        // 1. 한 줄을 읽어옵니다.
+        // 2. 한 줄에서 " " 기준으로 directive를 임시(tmpDir)로 읽어옵니다.
+        // 3. 만약, tmpDir이 block 구조체에 포함된 멤버 변수라면 할당하고 그렇지 않으면 오류를 반환합니다.
+        // 4. tmpDir이 block directive인 경우:
+        //    - blockPos 다음 인덱스부터 가장 가까운 블록을 찾습니다.(blockPos는 getBlockContent에서 자동갱신)
+        //    - block을 찾은 후에는 pos를 blockPos로 갱신합니다.
+        // 5. tmpDir이 그냥 directive인 경우:
+        //    - ";" 앞의 요소를 가지고 옵니다.
+        //    - tmpDir을 구할 때 tmpPos가 이동해있으므로 directive 뒤의 " "와 ";" 사이의 값을 읽어오는 셈입니다.
         void setHttpBlock(struct httpBlock& block) {
-            std::size_t pos = 0;
-
             std::string buf = block.rawData;
-            std::size_t lineBegPos = 0;
-            std::size_t lineEndPos = 0;
+
+            std::size_t pos = 0;
+            std::size_t blockPos = 0;
+            std::size_t serverBlockIdx = 0;
             while (buf[pos]) {
                 std::string tmpLine = getIdentifier(buf, pos, "\n");
-                std::cout << "pos[HTTP]: " << pos << std::endl;
                 if (sideSpaceTrim(tmpLine).empty()) {
                     continue ;
                 }
-
                 std::size_t tmpPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, tmpPos, " ");
-                std::cout << "identifier[http]: [" << tmpDir << "]" << std::endl;
+                // std::cout << "identifier[http]: [" << tmpDir << "]" << std::endl;
                 if (tmpDir == "charset") {
                     block.charset = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "include") {
@@ -187,21 +213,20 @@ class NginxConfig : public NginxParser {
                     block.default_type = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "keepalive_timeout") {
                     block.keeplive_timeout = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                } else if (tmpDir == "sendfile") {
+                    block.sendfile = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "server") {
-                    lineEndPos = pos;
-                    block.server[0].rawData = getBlockContent(buf, lineBegPos);
-                    pos = lineBegPos;
-                    setServerBlock(block.server[0]);
-                    return ;
+                    block.server[serverBlockIdx].rawData = getBlockContent(buf, blockPos);
+                    setServerBlock(block.server[serverBlockIdx]);
+                    serverBlockIdx++;
+                    pos = blockPos;
                 } else if (tmpDir == "types") {
-                    lineEndPos = pos;
-                    block.types.rawData = getBlockContent(buf, lineBegPos);
-                    pos = lineBegPos;
+                    block.types.rawData = getBlockContent(buf, blockPos);
                     setTypesBlock(block.types);
+                    pos = blockPos;
                 } else {
-                    throw std::string("Error: not in block list.");
+                    throw std::string("Error: " + tmpDir + " is not in block[http] list.");
                 }
-                lineBegPos = pos;
             }
         }
 };
@@ -241,6 +266,6 @@ void setBlock(nginxBlock* block, void (*fp)(void*, std::string, std::string, std
         fp(block, tmpDir, tmpLine, pos);
         // std::cout << "identifier[http]: " << tmpDir << std::endl;
         //setBlock(block, setHttp);
-    }
+    // }
 }
 #endif

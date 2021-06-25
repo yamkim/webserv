@@ -9,7 +9,11 @@
 int main() {
     // std::cout << nginx.getRawData() << std::endl;
 
-    NginxConfig nginx("nginx.conf");
+    try {
+        NginxConfig nginx("nginx.conf");
+    } catch (const std::string& e) {
+        std::cout << e << std::endl;
+    }
     
     return (0);
 }
