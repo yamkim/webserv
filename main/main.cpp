@@ -1,14 +1,4 @@
 #include <iostream>
-//#include <cstring>
-//#include <string>
-//#include <arpa/inet.h>
-// #include <sys/socket.h>
-// #include <sys/errno.h>
-// #include <sys/time.h>
-// #include <fcntl.h>
-// #include <unistd.h>
-// #include <poll.h>
-#include "PairArray.hpp"
 #include "ListeningSocket.hpp"
 #include "ConnectionSocket.hpp"
 #include <vector>
@@ -22,12 +12,10 @@ int main(void)
     ListeningSocket* lSocket4200 = new ListeningSocket(4200, 42);
     if (lSocket4200->runSocket())
         return (1);
-    lSocket4200->setPollFd(POLLIN);
     kq.addReadEvent(lSocket4200->getSocket(), reinterpret_cast<void*>(lSocket4200));
     ListeningSocket* lSocket8080 = new ListeningSocket(8080, 42);
     if (lSocket8080->runSocket())
         return (1);
-    lSocket8080->setPollFd(POLLIN);
     kq.addReadEvent(lSocket8080->getSocket(), reinterpret_cast<void*>(lSocket8080));
     //pollfds.appendElement(lSocket1, PairArray::LISTENING);
 #endif

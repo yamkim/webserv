@@ -10,7 +10,6 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd) : Socket(-1) {
     }
     _req = new HTTPRequestHandler(_socket);
     _res = NULL;
-    this->setPollFd(POLLIN);
 }
 
 ConnectionSocket::~ConnectionSocket(){
@@ -31,10 +30,6 @@ HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
     HTTPResponseHandler::Phase phase;
     phase = _res->process();
     return (phase);
-}
-
-struct pollfd ConnectionSocket::getPollfd() const {
-    return (this->_pollfd);
 }
 
 int ConnectionSocket::runSocket() {

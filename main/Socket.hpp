@@ -7,7 +7,6 @@
 #include <arpa/inet.h>
 #include <cstring>
 #include "ErrorHandler.hpp"
-#include "NginxConfig.hpp"
 #include <iostream>
 
 class Socket {
