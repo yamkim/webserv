@@ -5,12 +5,15 @@
 #include "KernelQueue.hpp"
 #include <cstdlib>
 
-int main(void)
+int main(int argc, char *argv[])
 {
     KernelQueue kq;
     NginxConfig nginxConfig("nginx.conf");
-    for (int i = 0; i < 2; i++) {
-        ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
+    // for (int i = 0; i < 2; i++) {
+        // ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
+    for (int i = 1; i < argc; i++) {
+        std::cout << "[DEBUG] argv[" << i << "]: " << std::atoi(argv[i]) << std::endl;
+        ListeningSocket* lSocket = new ListeningSocket(std::atoi(argv[i]), 42);
         if (lSocket->runSocket())
             return (1);
         kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
