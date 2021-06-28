@@ -4,47 +4,47 @@
 #include "NginxParser.hpp"
 
 class NginxConfig : public NginxParser {
-    private:
-        struct nginxBlock {
+    public:
+        struct NginxBlock {
             std::string rawData;
         };
-        struct noneBlock : nginxBlock {
+        struct NoneBlock : NginxBlock {
             std::string user;
             std::string worker_processes;
         };
-        struct typesBlock : nginxBlock{
+        struct TypesBlock : NginxBlock{
             std::string html;
             std::string css;
             std::string xml;
         };
-        struct locationBlock : nginxBlock {
+        struct LocationBlock : NginxBlock {
             // FIXME: yekim: cgi 파라미터 관련 요소 (cgi_pass) 추가
             std::string locationPath;
             std::string try_files;
             std::string deny;
             std::string locationReturn;
         };
-        struct serverBlock : nginxBlock{
+        struct ServerBlock : NginxBlock{
             std::string listen;
             std::string server_name;
             std::string root;
             std::string index;
-            struct locationBlock location[10];
+            struct LocationBlock location[10];
         };
-        struct httpBlock : nginxBlock{
+        struct HttpBlock : NginxBlock{
             std::string charset;
             std::string include;
             std::string default_type;
             std::string keeplive_timeout;
             std::string sendfile;
 
-            struct serverBlock server[2];
-            struct typesBlock types;
+            struct ServerBlock server[2];
+            struct TypesBlock types;
         };
 
     public:
-        struct noneBlock _none;
-        struct httpBlock _http;
+        struct NoneBlock _none;
+        struct HttpBlock _http;
 
         NginxConfig(const std::string& fileName) : NginxParser(fileName) {
             std::size_t pos = 0;
@@ -99,7 +99,7 @@ class NginxConfig : public NginxParser {
 
     public:
 
-        void setTypesBlock(struct typesBlock& block) {
+        void setTypesBlock(struct TypesBlock& block) {
             std::size_t pos = 0;
 
             std::string buf = block.rawData;
@@ -124,7 +124,7 @@ class NginxConfig : public NginxParser {
             }
         }
 
-        void setLocationBlock(struct locationBlock& block) {
+        void setLocationBlock(struct LocationBlock& block) {
             std::string buf = block.rawData;
 
             std::size_t pos = 0;
@@ -149,7 +149,7 @@ class NginxConfig : public NginxParser {
             }
         }
 
-        void setServerBlock(struct serverBlock& block) {
+        void setServerBlock(struct ServerBlock& block) {
             std::string buf = block.rawData;
 
             std::size_t pos = 0;
@@ -192,7 +192,7 @@ class NginxConfig : public NginxParser {
         // 5. tmpDir이 그냥 directive인 경우:
         //    - ";" 앞의 요소를 가지고 옵니다.
         //    - tmpDir을 구할 때 tmpPos가 이동해있으므로 directive 뒤의 " "와 ";" 사이의 값을 읽어오는 셈입니다.
-        void setHttpBlock(struct httpBlock& block) {
+        void setHttpBlock(struct HttpBlock& block) {
             std::string buf = block.rawData;
 
             std::size_t pos = 0;
