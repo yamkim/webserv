@@ -10,6 +10,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd) : Socket(-1) {
     }
     _req = new HTTPRequestHandler(_socket);
     _res = NULL;
+    this->setPollFd(POLLIN);
 }
 
 ConnectionSocket::~ConnectionSocket(){
@@ -17,25 +18,35 @@ ConnectionSocket::~ConnectionSocket(){
     delete _res;
 }
 
-HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
-    HTTPRequestHandler::Phase phase;
-    phase = _req->process();
-    if (phase == HTTPRequestHandler::FINISH) {
-        _res = new HTTPResponseHandler(_socket, _req->getURI());
+bool ConnectionSocket::HTTPProcess(void) {
+    if (_res == NULL) {
+        HTTPRequestHandler::Phase phase;
+        phase = _req->process();
+        if (phase == HTTPRequestHandler::CONNECTION_CLOSE) {
+            std::cout << "[DEBUG] Connection CLOSED BY CLIENT" << std::endl;
+            close(_socket);
+            return (false);
+        } else if (phase == HTTPRequestHandler::FINISH) {
+            std::cout << "[DEBUG] to RESPONSE" << std::endl;
+            _res = new HTTPResponseHandler(_socket, _req->getURI());
+            setPollFd(POLLOUT);
+        }
+    } else {
+        HTTPResponseHandler::Phase phase;
+        phase = _res->process();
+        if (phase == HTTPResponseHandler::FINISH) {
+            std::cout << "[DEBUG] Connection CLOSE" << std::endl;
+            close(_socket);
+            return (false);
+        }
     }
-    return (phase);
+    return (true);
 }
 
-HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
-    HTTPResponseHandler::Phase phase;
-    phase = _res->process();
-    return (phase);
+struct pollfd ConnectionSocket::getPollfd() const {
+    return (this->_pollfd);
 }
 
 int ConnectionSocket::runSocket() {
     return (0);
-}
-
-int ConnectionSocket::getCGIfd(void) {
-    return (_res->getCGIfd());
 }
