@@ -27,7 +27,7 @@ class FileController {
     private:
         int _fd;
         Type _type;
-        const Mode _mode;
+        Mode _mode;
         std::string _path;
         FileMetaData* _metaData;
         std::vector<FileMetaData*> _filesMetaData;
@@ -39,7 +39,11 @@ class FileController {
     public:
         FileController(std::string path, Mode mode);
         ~FileController();
-        static Type typeCheck(std::string path);
+        FileController& operator=(const FileController& ref);
+
+
+
+        static Type checkType(std::string path);
         int getFilesSize(void) const;
         FileMetaData* getFiles(int i) const;
         Type getType(void) const;
