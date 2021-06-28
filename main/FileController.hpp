@@ -23,8 +23,6 @@ class FileController {
         int length(void);
         int read(char* buf, int bufLength);
         int write(char* buf, int bufLength);
-        static bool isExist(std::string& fileName);
-        static bool isFolder(std::string& fileName);
 };
 
 #endif

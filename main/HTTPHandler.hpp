@@ -7,7 +7,7 @@
 #include "ErrorHandler.hpp"
 
 #define REQUEST_BUFFER_SIZE 100
-#define RESPONSE_BUFFER_SIZE 1000
+#define RESPONSE_BUFFER_SIZE 100
 
 class HTTPHandler {
 	private:

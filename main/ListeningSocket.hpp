@@ -15,6 +15,7 @@ class ListeningSocket : public Socket {
         ListeningSocket(int portNum, int backlog, const char* ip);
         virtual ~ListeningSocket();
 
+        int getSocket() const;
         void setSocket();
         void setSocketAddress();
         void bindSocket();
