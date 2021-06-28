@@ -1,27 +1,27 @@
 #include <iostream>
-//#include <cstring>
-//#include <string>
-//#include <arpa/inet.h>
-// #include <sys/socket.h>
-// #include <sys/errno.h>
-// #include <sys/time.h>
-// #include <fcntl.h>
-// #include <unistd.h>
-// #include <poll.h>
-#include "PairArray.hpp"
 #include "ListeningSocket.hpp"
 #include "ConnectionSocket.hpp"
 #include <vector>
+#include "KernelQueue.hpp"
+#include <cstdlib>
 
 int main(void)
 {
-    PairArray pollfds;
-#if 1
-    Socket* lSocket1 = new ListeningSocket(4200, 42);
-    if (lSocket1->runSocket())
+    KernelQueue kq;
+    NginxConfig nginxConfig("nginx.conf");
+    for (int i = 0; i < 2; i++) {
+        ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
+        if (lSocket->runSocket())
+            return (1);
+        kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
+    }
+#if 0
+    // NOTE: 여러 개의 소켓 관리도 간편하게 가능
+    ListeningSocket* lSocket8080 = new ListeningSocket(8080, 42);
+    if (lSocket8080->runSocket())
         return (1);
-    lSocket1->setPollFd(POLLIN);
-    pollfds.appendElement(lSocket1, PairArray::LISTENING);
+    kq.addReadEvent(lSocket8080->getSocket(), reinterpret_cast<void*>(lSocket8080));
+    //pollfds.appendElement(lSocket1, PairArray::LISTENING);
 #endif
 
 #if 0
@@ -47,25 +47,42 @@ int main(void)
     try {
         while (true) {
             //TODO: joopark - 커널큐로 테스트 해보기 (코드 반영 x)
-            int result = poll(pollfds.getArray(), pollfds.getSize(), 1000);
-            if (result == -1) {
-                throw ErrorHandler("Error: poll operation error.", ErrorHandler::CRITICAL, "Polling::run");
-            } else if (result == 0) {
+            //int result = poll(pollfds.getArray(), pollfds.getSize(), 1000);
+            int result = kq.getEventsIndex();
+            if (result == 0) {
                 std::cout << "waiting..." << std::endl;
             } else {
-                pollfds.renewVector();
-                //pollfds.showVector();
-                for (size_t i = 0; i < pollfds.getSize(); ++i) {
-                    // TODO 타입을 Socket 안에 넣는 것도 고려
-                    Socket* curSocket = pollfds[i].first;
-                    int curSocketType = pollfds[i].second;
-                    if ((curSocketType == PairArray::LISTENING) && (curSocket->getPollFd().revents & POLLIN)) {
-                        Socket* cSocket = new ConnectionSocket(curSocket->getSocket());
-                        pollfds.appendElement(cSocket, PairArray::CONNECTION);
-                    } else if (curSocket->getPollFd().revents & (POLLIN | POLLOUT)) {
-                        ConnectionSocket* cs = dynamic_cast<ConnectionSocket *>(curSocket);
-                        if (cs->HTTPProcess() == false) {
-                            pollfds.removeElement(i--);
+                for (int i = 0; i < result; ++i) {
+                    Socket* instance = reinterpret_cast<Socket*>(kq.getInstance(i));
+                    if (dynamic_cast<KernelQueue::PairQueue*>(instance) != NULL) {
+                        // NOTE: CGI Event 발생
+                        KernelQueue::PairQueue* pairQueue = reinterpret_cast<KernelQueue::PairQueue*>(instance);
+                        pairQueue->stopSlave();
+                    } else if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
+                        // NOTE: Listening Socket Event 발생
+                        ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket());
+                        kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
+                    } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
+                        // NOTE: Connection Socket Event 발생
+                        ConnectionSocket* cSocket = dynamic_cast<ConnectionSocket*>(instance);
+                        if (kq.isClose(i)) {
+                            // NOTE: 연결 종료 여부 확인
+                            delete cSocket;
+                        } else if (kq.isReadEvent(i)) {
+                            // NOTE: Read Event
+                            if (cSocket->HTTPRequestProcess() == HTTPRequestHandler::FINISH) {
+                                // NOTE: to Write Event
+                                kq.modEventToWriteEvent(i);
+                            }
+                        } else if (kq.isWriteEvent(i)) {
+                            // NOTE: Write Event
+                            HTTPResponseHandler::Phase phase = cSocket->HTTPResponseProcess();
+                            if (phase == HTTPResponseHandler::FINISH) {
+                                kq.deletePairEvent(i);
+                                delete cSocket;
+                            } else if (phase == HTTPResponseHandler::CGI_REQ) {
+                                kq.setPairEvent(i, cSocket->getCGIfd());
+                            }
                         }
                     }
                 }

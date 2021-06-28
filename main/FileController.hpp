@@ -1,28 +1,49 @@
 #ifndef FILECONTROLLER_HPP
 #define FILECONTROLLER_HPP
-// NOTE : FileController : 파일 입/출력을 위한 클래스
-/**
- * HTTP Request : 임시 파일 혹은 파일 업로드 시 파일 작성 (현재 미구현)
- * HTTP Response : 요청 파일을 읽어오는 데 사용
- * 현재 문제점 : C++ 표준 파일 입출력 클래스가 파일과 폴더를 구분하지 못함
- *            index 파일이 없을 때 autoindex 기능을 켜면 폴더를 조회해야 하는데 못함 (해당기능이 없음)
- *
- **/
 
-#include <fstream>
 #include <string>
+#include <ctime>
+#include <vector>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <pwd.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 
 class FileController {
-    private:
-        std::fstream _file;
     public:
+        typedef enum e_Type {FILE, DIRECTORY, NOTFOUND} Type;
+        typedef enum e_Mode {READ, WRITE} Mode;
+        typedef struct s_FileMetaData {
+            std::string name;
+            std::string userid;
+            FileController::Type type;
+            std::string generateTime;
+            long size;
+        } FileMetaData;
+    private:
+        int _fd;
+        Type _type;
+        const Mode _mode;
+        std::string _path;
+        FileMetaData* _metaData;
+        std::vector<FileMetaData*> _filesMetaData;
         FileController();
+        static inline void getFilesOfFolder(std::string& path, std::vector<FileMetaData*>& vector);
+        static inline std::string& toAbsolutePath(std::string& path);
+        static inline Type modeToType(mode_t mode);
+        static FileMetaData* getMetaData(std::string path);
+    public:
+        FileController(std::string path, Mode mode);
         ~FileController();
-        void open(std::string& fileName, std::ios_base::openmode mode);
-        bool isOpen(void);
-        int length(void);
-        int read(char* buf, int bufLength);
-        int write(char* buf, int bufLength);
+        static Type typeCheck(std::string path);
+        int getFilesSize(void) const;
+        FileMetaData* getFiles(int i) const;
+        Type getType(void) const;
+        int getFd(void) const;
+        long length(void) const;
+        bool del(void);
 };
 
 #endif

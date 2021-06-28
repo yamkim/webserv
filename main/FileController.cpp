@@ -1,38 +1,158 @@
 #include "FileController.hpp"
 
-FileController::FileController() {}
+FileController::FileController(std::string path, Mode mode) : _mode(mode) {
+    _fd = -1;
+    _metaData = NULL;
+    _path = toAbsolutePath(path);
+    if (_path.empty()) {
+        return ; // err
+    }
+    if (_mode == READ) {
+        _type = typeCheck(_path);
+        if (_type == FileController::FILE) {
+            _metaData = getMetaData(_path);
+            _fd = open(_path.c_str(), O_RDONLY);
+        } else if (_type == FileController::DIRECTORY) {
+            _metaData = getMetaData(_path);
+            getFilesOfFolder(_path, _filesMetaData);
+        } else {
+            return ; // err
+        }
+    } else {
+        _type = FileController::FILE;
+        _fd = open(_path.c_str(), O_WRONLY | O_CREAT, S_IRWXU | S_IRWXG);
+    }
+}
 
 FileController::~FileController() {
-    _file.close();
-}
-
-void FileController::open(std::string& fileName, std::ios_base::openmode mode) {
-    _file.open(fileName, mode | std::ios::binary);
-}
-
-bool FileController::isOpen(void) {
-    return (_file.is_open());
-}
-
-int FileController::length(void) {
-    int size = -1;
-    if (_file.is_open()) {
-        _file.seekg (0, _file.end);
-        size = _file.tellg();
-        _file.seekg (0, _file.beg);
+    delete _metaData;
+    std::vector<FileMetaData*>::iterator iter;
+    for (iter = _filesMetaData.begin(); iter != _filesMetaData.end(); ++iter) {
+        delete *(iter);
     }
-    return (size);
+    if (_fd != -1) {
+        close(_fd);
+    }
 }
 
-int FileController::read(char* buffer, int bufferLength) {
-    _file.read(buffer, bufferLength);
-    return (_file.gcount());
+void FileController::getFilesOfFolder(std::string& path, std::vector<FileMetaData*>& vector) {
+    struct dirent* dp;
+    DIR* dir = opendir(path.c_str());
+    while ((dp = readdir(dir)) != NULL) {
+        std::string subpath;
+        if (path.at(path.length() - 1) == '/') {
+            subpath = path + std::string(dp->d_name, dp->d_namlen);
+        } else {
+            subpath = path + "/" + std::string(dp->d_name, dp->d_namlen);
+        }
+        vector.push_back(getMetaData(subpath));
+    }
+    closedir(dir);
 }
 
-int FileController::write(char* buffer, int bufferLength) {
-    _file.write(buffer, bufferLength);
-    if (_file.fail()) {
+std::string& FileController::toAbsolutePath(std::string& path) {
+    if (path.empty() == false) {
+        if (path.at(0) != '/') {
+            char* pwd = getcwd(NULL, 0);
+            path = std::string(pwd) + "/" + path;
+            delete pwd;
+        }
+    }
+    return (path);
+}
+
+FileController::Type FileController::modeToType(mode_t mode) {
+    if (S_ISREG(mode)) {
+        return (FILE);
+    } else if (S_ISDIR(mode)) {
+        return (DIRECTORY);
+    } else {
+        return (NOTFOUND);
+    }
+}
+
+FileController::Type FileController::typeCheck(std::string path) {
+    int rtn;
+    struct stat buf;
+    rtn = stat(path.c_str(), &buf);
+    if (rtn == -1) {
+        return (NOTFOUND);
+    }
+    return (modeToType(buf.st_mode));
+}
+
+FileController::FileMetaData* FileController::getMetaData(std::string path) {
+    char timeBuffer[20];
+    FileController::FileMetaData* rtn = NULL;
+    struct stat buf;
+    struct passwd* udata;
+    struct tm *timeinfo;
+    if (stat(path.c_str(), &buf) == -1 || !(S_ISREG(buf.st_mode) || S_ISDIR(buf.st_mode))) {
+        return (NULL);
+    }
+    rtn = new FileController::FileMetaData;
+    udata = getpwuid(buf.st_uid);
+	timeinfo = std::localtime(&(buf.st_mtimespec.tv_sec));
+	std::strftime(timeBuffer, 20, "%Y/%m/%d %H:%M:%S", timeinfo);
+    size_t find = path.rfind("/");
+    if (find == std::string::npos) {
+        rtn->name = path;
+    } else {
+        rtn->name = path.substr(find + 1);    
+    }
+    if (udata != NULL) {
+        rtn->userid = std::string(udata->pw_name);
+    } else {
+        rtn->userid = std::string("");
+    }
+    rtn->type = modeToType(buf.st_mode);
+    rtn->generateTime = std::string(timeBuffer);
+    rtn->size = buf.st_size;
+    return (rtn);
+}
+
+int FileController::getFilesSize(void) const {
+    if (_mode == READ) {
+        return (_filesMetaData.size());
+    } else {
         return (-1);
     }
-    return (bufferLength);
+}
+
+FileController::FileMetaData* FileController::getFiles(int i) const {
+    if (i < 0) {
+        return (_metaData);
+    } else if (_filesMetaData.size() <= size_t(i)) {
+        return (NULL);
+    } else {
+        return (_filesMetaData[i]);
+    }
+}
+
+FileController::Type FileController::getType(void) const {
+    return (_type);
+}
+
+int FileController::getFd(void) const {
+    return (_fd);
+}
+long FileController::length(void) const {
+    if (_mode == READ) {
+        return (_metaData->size);
+    } else {
+        return (-1);
+    }
+}
+
+bool FileController::del(void) {
+    if (_type != NOTFOUND && _fd != -1) {
+        close(_fd);
+        _fd = -1;
+        if (unlink(_path.c_str()) != -1) {
+            return (true);
+        } else {
+            // error
+        }
+    }
+    return (false);
 }

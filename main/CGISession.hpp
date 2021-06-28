@@ -2,6 +2,9 @@
 #define CGISESSION_H
 
 #include <cstdlib>
+#include <cstring>
+#include <string>
+#include <map>
 #include <unistd.h>
 #include <signal.h>
 #include "ErrorHandler.hpp"
@@ -15,6 +18,7 @@ class CGISession {
 		int _outputStream;
 		char **_env;
 		char *_arg[4];
+        char** generateEnvp(std::map<std::string, std::string>& arg);
 	public:
 		CGISession();
 		CGISession(const CGISession & cgisession);
@@ -22,7 +26,7 @@ class CGISession {
 		CGISession & operator=(const CGISession & cgisession);
 		int & getInputStream(void);
 		int & getOutputStream(void);
-		void setCGIargs(char *binary, char *filename, char *cgiarg, char **env);
+		void setCGIargs(std::string& binary, std::string& filename, std::string& cgiarg, std::map<std::string, std::string> env);
 		void makeCGIProcess();
 };
 

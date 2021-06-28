@@ -4,9 +4,13 @@
 #include <ctime>
 #include <sstream>
 #include <iostream>
+#include <fcntl.h>
 
 #include "FileController.hpp"
 #include "HTTPHandler.hpp"
+#include "CGISession.hpp"
+
+#include "NginxConfig.hpp"
 
 class HTTPResponseHandler : public HTTPHandler {
     private:
@@ -15,20 +19,30 @@ class HTTPResponseHandler : public HTTPHandler {
         HTTPResponseHandler(int coneectionFd, std::string arg);
         virtual ~HTTPResponseHandler();
 
-        typedef enum e_Phase {RESOURCE_OPEN, ASSEMBLE_HEADER, OK, NOT_FOUND, FINISH} Phase;
+        typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, FINISH} Phase;
         virtual HTTPResponseHandler::Phase process(void);
+        int getCGIfd(void);
     private:
-        void buildGeneralHeader(std::string status);
-        void buildOKHeader(std::string type, long contentLength);
-        void convertHeaderMapToString(void);
-        static std::string& get404Body(void);
-        std::string getMIME(std::string extension);
+        void setGeneralHeader(std::string status);
+        void setTypeHeader(std::string type);
+        void setLengthHeader(long contentLength);
+        void convertHeaderMapToString(bool isCGI);
+        static std::string get404Body(void);
+        static std::string getAutoIndexBody(std::string root, std::string path);
+        std::string getMIME(std::string& extension);
         std::string getExtenstion(std::string& URI);
+        bool isCGI(std::string& URI);
+        std::string getIndex(void);
     private:
         Phase _phase;
         std::string _root;
         std::string _internalHTMLString;
-        FileController file;
+        std::string _absolutePath;
+        std::string _extension;
+        std::string _staticHtml;
+        FileController* _file;
+        CGISession _cgi;
+        NginxConfig _nginxConfig;
 };
 
 #endif
