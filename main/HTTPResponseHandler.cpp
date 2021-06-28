@@ -9,27 +9,67 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
     _root = _nginxConfig._http.server[1].root;
     // NOTE[yekim]: 언제 사용되는 건가여?
     _file = NULL;
+
+    // NOTE: 생성시 경로관련 세팅 미리 정해두기
+    _absolutePath = _root + _URI;
+    _extension = getExtenstion(_URI);
+    _type = FileController::checkType(_absolutePath);
+    _serverIndex = getServerIndex(_nginxConfig._http.server[1]);
 }
 
 HTTPResponseHandler::~HTTPResponseHandler() {
     delete _file;
 }
 
+std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server) {
+    // FIXME: yekim: 로직 수정
+    std::string indeces = server.index + ";";
+    std::size_t pos = 0;
+    std::string tmpServerIndex[3];
+    tmpServerIndex[0] = NginxParser::getIdentifier(indeces, pos, " ");
+    tmpServerIndex[1] = NginxParser::getIdentifier(indeces, pos, ";");
+    for (int i = 0; i < 2; i++) {
+        std::cout << "[DEBUG] _serverIndex before file check: " << _absolutePath + tmpServerIndex[i] << std::endl;
+        if (FileController::checkType(_absolutePath + tmpServerIndex[i]) == FileController::FILE) {
+            return (tmpServerIndex[i]);
+        }
+    }
+    std::cout << "[DEBUG] INVALID _serverIndex=====================" << std::endl;
+    return (std::string(""));
+}
+
+void HTTPResponseHandler::responseNotFound(void) {
+    std::string notFoundType = std::string("html");
+    _staticHtml = get404Body();
+    setTypeHeader(getMIME(notFoundType));
+    setLengthHeader(_staticHtml.length());
+    convertHeaderMapToString(false);
+    send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+    _phase = DATA_SEND_LOOP;
+}
+
+void HTTPResponseHandler::responseAutoIndex(void) {
+    std::string autoIndexType = std::string("html");
+    _staticHtml = getAutoIndexBody(_root, _URI);
+    setTypeHeader(getMIME(autoIndexType));
+    setLengthHeader(_staticHtml.length());
+    convertHeaderMapToString(false);
+    send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+    _phase = DATA_SEND_LOOP;
+}
+
 HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
     // FIXME: joopark : 전반적인 로직 수정
     if (_phase == FIND_RESOURCE) {
-        // NOTE: 클라이언트가 요청한 자원의 타입을 파악하고 그 자원이 존재하는지 확인합니다.
-        _absolutePath = _root + _URI;
-        _extension = getExtenstion(_URI);
-        _type = FileController::checkType(_absolutePath);
         if (_type != FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 200 OK");
+
             if (_type == FileController::DIRECTORY) {
-                std::string tmp = getIndex();
-                if (tmp.empty()) {
+                std::cout << "[DEBUG] _serverIndex: " << _serverIndex << std::endl;
+                if (_serverIndex.empty()) { // 만약 serverIndex가 없다면 바로 auto index로 띄우기
                     _phase = AUTOINDEX;
-                } else {
-                    _absolutePath = tmp;
+                } else {                    // 만약 dierctory이고 server index가 있다면 절대 경로에 index 더하기
+                    _absolutePath = _absolutePath + _serverIndex;
                     _phase = GET_FILE;
                 }
             } else if (isCGI(_extension)) {
@@ -41,35 +81,18 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
             setGeneralHeader("HTTP/1.1 404 Not Found");
             _phase = NOT_FOUND;
         }
-    } else if (_phase == AUTOINDEX) {
-        std::string autoIndexType = std::string("html");
-        _staticHtml = getAutoIndexBody(_root, _URI);
-        setTypeHeader(getMIME(autoIndexType));
-        setLengthHeader(_staticHtml.length());
-        convertHeaderMapToString(false);
-        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-        _phase = DATA_SEND_LOOP;
-    } else if (_phase == CGI_RUN) {
-        std::map<std::string, std::string> env;
+    } 
 
-        env[std::string("USER")] = std::string(std::getenv("USER"));
-        env[std::string("PATH")] = std::string(std::getenv("PATH"));
-        env[std::string("LANG")] = std::string(std::getenv("LANG"));
-        env[std::string("CONTENT_TYPE")] = std::string("application/x-www-form-urlencoded");
-        env[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
-        std::string path = std::string("/usr/bin/python3");
-        std::string args = std::string("data=test");
-        _cgi.setCGIargs(path, _absolutePath, args, env);
-        _cgi.makeCGIProcess();
-        fcntl(_cgi.getOutputStream(), F_SETFL, O_NONBLOCK);
-        setGeneralHeader("HTTP/1.1 200 OK");
-        convertHeaderMapToString(true);
-        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-        _phase = CGI_REQ;
-    } else if (_phase == CGI_REQ) {
-        // FIXME: 만약 리퀘스트 바디가 있을때
-        _phase = CGI_SEND_LOOP;
-    } else if (_phase == GET_FILE) {
+    if (_phase == NOT_FOUND) {
+        responseNotFound();
+    }
+
+    if (_phase == AUTOINDEX) {
+        responseAutoIndex();
+    }
+    
+    
+    if (_phase == GET_FILE) {
         _extension = getExtenstion(_absolutePath);
         std::cout << "_absolutePath: " << _absolutePath << std::endl;
         _file = new FileController(_absolutePath, FileController::READ);
@@ -78,15 +101,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
         convertHeaderMapToString(false);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
-    } else if (_phase == NOT_FOUND) {
-        std::string notFoundType = std::string("html");
-        _staticHtml = get404Body();
-        setTypeHeader(getMIME(notFoundType));
-        setLengthHeader(_staticHtml.length());
-        convertHeaderMapToString(false);
-        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-        _phase = DATA_SEND_LOOP;
-    } else if (_phase == DATA_SEND_LOOP) {
+    }
+    
+    if (_phase == DATA_SEND_LOOP) {
         // FIXME: 조금 더 이쁘장하게 수정해야 할 듯 합니다...
         if (_staticHtml.empty() == false) {
             size_t writeLength = send(_connectionFd, _staticHtml.c_str(), _staticHtml.length(), 0);
@@ -107,7 +124,33 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
                 _phase = FINISH;
             }
         }
-    } else if (_phase == CGI_SEND_LOOP) {
+    } 
+
+    if (_phase == CGI_RUN) {
+        std::map<std::string, std::string> env;
+
+        env[std::string("USER")] = std::string(std::getenv("USER"));
+        env[std::string("PATH")] = std::string(std::getenv("PATH"));
+        env[std::string("LANG")] = std::string(std::getenv("LANG"));
+        env[std::string("CONTENT_TYPE")] = std::string("application/x-www-form-urlencoded");
+        env[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
+        std::string path = std::string("/usr/bin/python3");
+        std::string args = std::string("data=test");
+        _cgi.setCGIargs(path, _absolutePath, args, env);
+        _cgi.makeCGIProcess();
+        fcntl(_cgi.getOutputStream(), F_SETFL, O_NONBLOCK);
+        setGeneralHeader("HTTP/1.1 200 OK");
+        convertHeaderMapToString(true);
+        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+        _phase = CGI_REQ;
+    }
+    
+    if (_phase == CGI_REQ) {
+        // FIXME: 만약 리퀘스트 바디가 있을때
+        _phase = CGI_SEND_LOOP;
+    }
+    
+    if (_phase == CGI_SEND_LOOP) {
         char buf[RESPONSE_BUFFER_SIZE];
 
         int length = read(_cgi.getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
@@ -358,23 +401,6 @@ bool HTTPResponseHandler::isCGI(std::string& URI) {
     } else {
         return (false);
     }
-}
-
-std::string HTTPResponseHandler::getIndex(void) {
-    // FIXME: yekim: 로직 수정
-    std::string indeces = _nginxConfig._http.server[1].index + ";";
-    std::size_t pos = 0;
-    std::string tmpIndex[3];
-    tmpIndex[0] = NginxParser::getIdentifier(indeces, pos, " ");
-    tmpIndex[1] = NginxParser::getIdentifier(indeces, pos, ";");
-    for (int i = 0; i < 2; i++) {
-        std::string tmp = _absolutePath + tmpIndex[i];
-        std::cout << "tmp: " << tmp << std::endl;
-        if (FileController::checkType(tmp) == FileController::FILE) {
-            return (tmp);
-        }
-    }
-    return (std::string(""));
 }
 
 int HTTPResponseHandler::getCGIfd(void) {

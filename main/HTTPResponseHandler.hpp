@@ -15,12 +15,18 @@
 class HTTPResponseHandler : public HTTPHandler {
     private:
         HTTPResponseHandler();
+        std::string _serverIndex;
     public:
         HTTPResponseHandler(int coneectionFd, std::string arg);
         virtual ~HTTPResponseHandler();
 
         typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, FINISH} Phase;
         virtual HTTPResponseHandler::Phase process(void);
+
+        void responseNotFound(void);
+        void responseAutoIndex(void);
+
+
         int getCGIfd(void);
     private:
         void setGeneralHeader(std::string status);
@@ -32,7 +38,8 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string getMIME(std::string& extension);
         std::string getExtenstion(std::string& URI);
         bool isCGI(std::string& URI);
-        std::string getIndex(void);
+        std::string getServerIndex(NginxConfig::ServerBlock server);
+
     private:
         Phase _phase;
         std::string _root;
