@@ -61,25 +61,24 @@ void HTTPResponseHandler::responseAutoIndex(void) {
 HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
     // FIXME: joopark : 전반적인 로직 수정
     if (_phase == FIND_RESOURCE) {
-        if (_type != FileController::NOTFOUND) {
+        if (_type == FileController::NOTFOUND) {
+            setGeneralHeader("HTTP/1.1 404 Not Found");
+            _phase = NOT_FOUND;
+        } else if (_type == FileController::DIRECTORY) {
             setGeneralHeader("HTTP/1.1 200 OK");
-
-            if (_type == FileController::DIRECTORY) {
-                std::cout << "[DEBUG] _serverIndex: " << _serverIndex << std::endl;
-                if (_serverIndex.empty()) { // 만약 serverIndex가 없다면 바로 auto index로 띄우기
-                    _phase = AUTOINDEX;
-                } else {                    // 만약 dierctory이고 server index가 있다면 절대 경로에 index 더하기
-                    _absolutePath = _absolutePath + _serverIndex;
-                    _phase = GET_FILE;
-                }
-            } else if (isCGI(_extension)) {
+            if (_serverIndex.empty()) { // 만약 _serverIndex가 없다면 바로 auto index로 띄우기
+                _phase = AUTOINDEX;
+            } else {                    // 만약 dierctory이고 server index가 있다면 절대 경로에 index 더하기
+                _absolutePath = _absolutePath + _serverIndex;
+                _phase = GET_FILE;
+            }
+        } else if (_type == FileController::FILE) {
+            setGeneralHeader("HTTP/1.1 200 OK");
+            if (isCGI(_extension)) {
                 _phase = CGI_RUN;
             } else {
                 _phase = GET_FILE;
             }
-        } else {
-            setGeneralHeader("HTTP/1.1 404 Not Found");
-            _phase = NOT_FOUND;
         }
     } 
 
