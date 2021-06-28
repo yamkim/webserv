@@ -2,7 +2,7 @@
 
 // FIXME : 리스폰스에 URI 외에 더 다양한 아규먼트를 집어넣어야 하는데 어떤 형식으로 집어넣을지 고민 중입니다. 추후에 수정하겠습니다.
 HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HTTPHandler(connectionFd) {
-    _phase = RESOURCE_OPEN;
+    _phase = FIND_RESOURCE;
     _URI = arg;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
     _root = std::string("./html");
@@ -11,44 +11,87 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
 HTTPResponseHandler::~HTTPResponseHandler() {}
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
-    if (_phase == RESOURCE_OPEN) {
-        // TODO: joopark - CGI 처리 로직 추가해보기 (리팩토링은 추후에)
-        // NOTE : 서버 자원에 대한 요청이 유효한지를 검사하는 로직이고 자원(파일)이 존재하면 파일을 엽니다. 추후 cgi 관련 핸들링도 추가 예정입니다.
-        std::string absolutePath = _root;
-        absolutePath += _URI;
-        if (_URI.at(_URI.length() - 1) == '/') {
-            // NOTE : 추후 .conf 파일에 기재된 autoindex 여부와 index 파일 처리 여부에 따라 달라집니다.
-            absolutePath += std::string("index.html");
-        }
-        file.open(absolutePath, std::ios_base::in);
-        std::cout << "[DEBUG] Request URI : " << absolutePath << std::endl;
-        _phase = ASSEMBLE_HEADER;
-    } else if (_phase == ASSEMBLE_HEADER) {
-        if (file.isOpen()) {
-            // NOTE : 이 부분도 서버의 상태나 request 된 내용 등을 참조해서 다양하게 처리해야 합니다.
-            buildGeneralHeader("HTTP/1.1 200 OK");
-            std::string extension = getExtenstion(_URI);
-            if (extension.empty()) {
-                buildOKHeader("text/html", file.length());
+    if (_phase == FIND_RESOURCE) {
+        // NOTE: 클라이언트가 요청한 자원의 타입을 파악하고 그 자원이 존재하는지 확인합니다.
+        _absolutePath = _root + _URI;
+        _extension = getExtenstion(_URI);
+        std::cout << _absolutePath << std::endl;
+        if (FileController::isExist(_absolutePath)) {
+            setGeneralHeader("HTTP/1.1 200 OK");
+            if (FileController::isFolder(_absolutePath)) {
+                _phase = AUTOINDEX;
+            } else if (isCGI(_extension)) {
+                _phase = CGI_RUN;
             } else {
-                buildOKHeader(getMIME(extension), file.length());
+                _phase = GET_FILE;
             }
-            _phase = OK;
         } else {
-            buildGeneralHeader("HTTP/1.1 404 Not Found");
-            _internalHTMLString = get404Body();
-            buildOKHeader("text/html", _internalHTMLString.length());
+            setGeneralHeader("HTTP/1.1 404 Not Found");
             _phase = NOT_FOUND;
         }
-        convertHeaderMapToString();
-        size_t writeLength = send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-        if (writeLength != _headerString.length()) {
-            // FIXME : 서버가 한번에 버퍼 사이즈만큼 다 못보낼수도 있음. 수정 필요
-            throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+    } else if (_phase == AUTOINDEX) {
+        // FIXME: 폴더를 열어서 폴더의 목록을 뿌려줄 수 있어야 합니다.
+        _phase = NOT_FOUND;
+    } else if (_phase == CGI_RUN) {
+        std::map<std::string, std::string> env;
+
+        env[std::string("USER")] = std::string(std::getenv("USER"));
+        env[std::string("PATH")] = std::string(std::getenv("PATH"));
+        env[std::string("LANG")] = std::string(std::getenv("LANG"));
+        env[std::string("CONTENT_TYPE")] = std::string("application/x-www-form-urlencoded");
+        env[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
+        std::string path = std::string("/usr/bin/python3");
+        std::string args = std::string("data=test");
+        _cgi.setCGIargs(path, _absolutePath, args, env);
+        _cgi.makeCGIProcess();
+        fcntl(_cgi.getOutputStream(), F_SETFL, O_NONBLOCK);
+        setGeneralHeader("HTTP/1.1 200 OK");
+        convertHeaderMapToString(true);
+        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+        _phase = CGI_REQ;
+    } else if (_phase == CGI_REQ) {
+        // FIXME: 만약 리퀘스트 바디가 있을때
+        _phase = CGI_SEND_LOOP;
+    } else if (_phase == GET_FILE) {
+        _file.open(_absolutePath, std::ios_base::in);
+        setTypeHeader(getMIME(_extension));
+        setLengthHeader(_file.length());
+        convertHeaderMapToString(false);
+        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+        _phase = DATA_SEND_LOOP;
+    } else if (_phase == NOT_FOUND) {
+        std::string notFoundType = std::string("html");
+        _staticHtml = get404Body();
+        setTypeHeader(getMIME(notFoundType));
+        setLengthHeader(_staticHtml.length());
+        convertHeaderMapToString(false);
+        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+        _phase = DATA_SEND_LOOP;
+    } else if (_phase == DATA_SEND_LOOP) {
+        // FIXME: 조금 더 이쁘장하게 수정해야 할 듯 합니다...
+        if (_staticHtml.empty() == false) {
+            size_t writeLength = send(_connectionFd, _staticHtml.c_str(), _staticHtml.length(), 0);
+            if (writeLength != _staticHtml.length()) {
+                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+            } else {
+                _phase = FINISH;
+            }
+        } else {
+            char buf[RESPONSE_BUFFER_SIZE];
+            int length = _file.read(buf, RESPONSE_BUFFER_SIZE);
+            if (length != 0) {
+                int writeLength = send(_connectionFd, buf, length, 0);
+                if (writeLength != length) {
+                    throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                }
+            } else {
+                _phase = FINISH;
+            }
         }
-    } else if (_phase == OK) {
+    } else if (_phase == CGI_SEND_LOOP) {
         char buf[RESPONSE_BUFFER_SIZE];
-        int length = file.read(buf, RESPONSE_BUFFER_SIZE);
+
+        int length = read(_cgi.getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
         if (length != 0) {
             int writeLength = send(_connectionFd, buf, length, 0);
             if (writeLength != length) {
@@ -57,17 +100,11 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
         } else {
             _phase = FINISH;
         }
-    } else if (_phase == NOT_FOUND) {
-        size_t writeLength = send(_connectionFd, _internalHTMLString.c_str(), _internalHTMLString.length(), 0);
-        if (writeLength != _internalHTMLString.length()) {
-            throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
-        } else {
-            _phase = FINISH;
-        }
     }
+    return (_phase);
 }
 
-void HTTPResponseHandler::buildGeneralHeader(std::string status) {
+void HTTPResponseHandler::setGeneralHeader(std::string status) {
     static char timeBuffer[48];
     time_t rawtime;
 
@@ -88,15 +125,18 @@ void HTTPResponseHandler::buildGeneralHeader(std::string status) {
     _headers["Connection"] = std::string("close");
 }
 
-void HTTPResponseHandler::buildOKHeader(std::string type, long contentLength) {
+void HTTPResponseHandler::setTypeHeader(std::string type) {
+    _headers["Content-Type"] = type;
+}
+
+void HTTPResponseHandler::setLengthHeader(long contentLength) {
     std::stringstream ssLength;
 
     ssLength << contentLength;
-    _headers["Content-Type"] = type;
     _headers["Content-Length"] = ssLength.str();
 }
 
-void HTTPResponseHandler::convertHeaderMapToString(void) {
+void HTTPResponseHandler::convertHeaderMapToString(bool isCGI) {
     std::map<std::string, std::string>::iterator iter;
     for (iter = _headers.begin(); iter != _headers.end(); ++iter) {
         _headerString += iter->first;
@@ -104,16 +144,26 @@ void HTTPResponseHandler::convertHeaderMapToString(void) {
         _headerString += iter->second;
         _headerString += "\r\n";
     }
-    _headerString += "\r\n";
+    if (isCGI == false) {
+        _headerString += "\r\n";
+    }
 }
 
-std::string& HTTPResponseHandler::get404Body(void) {
-    // FIXME : += 연산자 쓰면 자꾸 append 되는데 이거 말고 더 좋은 방법이 있을까요...? ㅠㅠ 아니면 다른곳에 두는것도 좋은거 같습니다.
-    static std::string httpString = "<html><head><title>404 Not Found</title></head><body><center><h1>404 Not Found</h1></center><hr><center>webserv/0.0.1</center></body></html>";
-    return (httpString);
+std::string HTTPResponseHandler::get404Body(void) {
+    // REVIEW : 다른데다 옮기는것도...
+    return (std::string("<html>" \
+                            "<head>" \
+                                "<title>404 Not Found</title>" \
+                            "</head>" \
+                        "<body>" \
+                            "<center><h1>404 Not Found</h1></center>" \
+                            "<hr>" \
+                            "<center>webserv/0.0.1</center>" \
+                        "</body>" \
+                        "</html>"));
 }
 
-std::string HTTPResponseHandler::getMIME(std::string extension) {
+std::string HTTPResponseHandler::getMIME(std::string& extension) {
     // FIXME : 추후에 nginx.conf 파일에서 파싱해 와야 합니다. map 형식의 키-벨류 형식을 그대로 유지해야 할 듯 합니다.
     std::map<std::string, std::string> mine;
 
@@ -226,7 +276,7 @@ std::string HTTPResponseHandler::getMIME(std::string extension) {
     mine[std::string("wmv")] = std::string("video/x-ms-wmv");
     mine[std::string("avi")] = std::string("video/x-msvideo");
 
-    if(mine.find(extension) == mine.end()) {
+    if(extension == std::string("") || mine.find(extension) == mine.end()) {
         return (std::string("application/octet-stream"));
     } else {
         return (mine[extension]);
@@ -244,4 +294,17 @@ std::string HTTPResponseHandler::getExtenstion(std::string& URI) {
     } else {
         return (URI.substr(foundDot + 1));
     }
+}
+
+bool HTTPResponseHandler::isCGI(std::string& URI) {
+    // FIXME: nginx.conf 파일 파싱 결과를 토대로 이 확장명이 CGI인지 판단해야 합니다.
+    if (URI == std::string("py")) {
+        return (true);
+    } else {
+        return (false);
+    }
+}
+
+int HTTPResponseHandler::getCGIfd(void) {
+    return (_cgi.getOutputStream());
 }
