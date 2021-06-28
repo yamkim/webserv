@@ -82,10 +82,8 @@ FileController::Type FileController::modeToType(mode_t mode) {
 }
 
 FileController::Type FileController::checkType(std::string path) {
-    int rtn;
     struct stat buf;
-    rtn = stat(path.c_str(), &buf);
-    if (rtn == -1) {
+    if (stat(path.c_str(), &buf) == -1) {
         return (NOTFOUND);
     }
     return (modeToType(buf.st_mode));

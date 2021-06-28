@@ -41,8 +41,6 @@ class FileController {
         ~FileController();
         FileController& operator=(const FileController& ref);
 
-
-
         static Type checkType(std::string path);
         int getFilesSize(void) const;
         FileMetaData* getFiles(int i) const;
