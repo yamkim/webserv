@@ -11,6 +11,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "ErrorHandler.hpp"
+
 class FileController {
     public:
         typedef enum e_Type {FILE, DIRECTORY, NOTFOUND} Type;
