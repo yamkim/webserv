@@ -16,7 +16,7 @@ FileController::FileController(std::string path, Mode mode) : _mode(mode) {
             _metaData = getMetaData(_path);
             getFilesOfFolder(_path, _filesMetaData);
         } else {
-            return ; // err
+            throw ErrorHandler("Error: File Not Found.", ErrorHandler::ALERT, "FileController::FileController");
         }
     } else {
         _type = FileController::FILE;
@@ -151,7 +151,7 @@ bool FileController::del(void) {
         if (unlink(_path.c_str()) != -1) {
             return (true);
         } else {
-            // error
+            throw ErrorHandler("Error: File Delete Eror.", ErrorHandler::ALERT, "FileController::FileController");
         }
     }
     return (false);
