@@ -7,6 +7,7 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
     //_root = std::string("./html");
     _root = _nginxConfig._http.server[1].root;
+    // NOTE[yekim]: 언제 사용되는 건가여?
     _file = NULL;
 }
 
@@ -20,11 +21,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
         // NOTE: 클라이언트가 요청한 자원의 타입을 파악하고 그 자원이 존재하는지 확인합니다.
         _absolutePath = _root + _URI;
         _extension = getExtenstion(_URI);
-        std::cout << _absolutePath << std::endl;
-        FileController::Type type = FileController::typeCheck(_absolutePath);
-        if (type != FileController::NOTFOUND) {
+        _type = FileController::checkType(_absolutePath);
+        if (_type != FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 200 OK");
-            if (type == FileController::DIRECTORY) {
+            if (_type == FileController::DIRECTORY) {
                 std::string tmp = getIndex();
                 if (tmp.empty()) {
                     _phase = AUTOINDEX;
@@ -32,7 +32,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
                     _absolutePath = tmp;
                     _phase = GET_FILE;
                 }
-                
             } else if (isCGI(_extension)) {
                 _phase = CGI_RUN;
             } else {
@@ -371,7 +370,7 @@ std::string HTTPResponseHandler::getIndex(void) {
     for (int i = 0; i < 2; i++) {
         std::string tmp = _absolutePath + tmpIndex[i];
         std::cout << "tmp: " << tmp << std::endl;
-        if (FileController::typeCheck(tmp) == FileController::FILE) {
+        if (FileController::checkType(tmp) == FileController::FILE) {
             return (tmp);
         }
     }
