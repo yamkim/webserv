@@ -5,7 +5,6 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
     _phase = FIND_RESOURCE;
     _URI = arg;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
-    //_root = std::string("./html");
     _root = _nginxConfig._http.server[1].root;
     // NOTE[yekim]: 언제 사용되는 건가여?
     _file = NULL;
@@ -15,6 +14,8 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
     _extension = getExtension();
     _type = FileController::checkType(_absolutePath);
     _serverIndex = getServerIndex(_nginxConfig._http.server[1]);
+
+    _cgi = new CGISession(_absolutePath);
 }
 
 HTTPResponseHandler::~HTTPResponseHandler() {
@@ -42,9 +43,10 @@ std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server)
 void HTTPResponseHandler::responseNotFound(void) {
     std::string notFoundType = std::string("html");
     _staticHtml = get404Body();
-    setTypeHeader(getMIME(notFoundType));
-    setLengthHeader(_staticHtml.length());
-    convertHeaderMapToString(false);
+    setHTMLHeader("html", _staticHtml.length());
+    // setTypeHeader(getMIME(notFoundType));
+    // setLengthHeader(_staticHtml.length());
+    // convertHeaderMapToString(false);
     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
     _phase = DATA_SEND_LOOP;
 }
@@ -52,11 +54,18 @@ void HTTPResponseHandler::responseNotFound(void) {
 void HTTPResponseHandler::responseAutoIndex(void) {
     std::string autoIndexType = std::string("html");
     _staticHtml = getAutoIndexBody(_root, _URI);
-    setTypeHeader(getMIME(autoIndexType));
-    setLengthHeader(_staticHtml.length());
-    convertHeaderMapToString(false);
+    setHTMLHeader("html", _staticHtml.length());
+    // setTypeHeader(getMIME(autoIndexType));
+    // setLengthHeader(_staticHtml.length());
+    // convertHeaderMapToString(false);
     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
     _phase = DATA_SEND_LOOP;
+}
+
+void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long contentLength) {
+    setTypeHeader(getMIME(extension));
+    setLengthHeader(contentLength);
+    convertHeaderMapToString(false);
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
@@ -91,16 +100,16 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
     }
     
     if (_phase == GET_FILE) {
-        _extension = getExtension();
-        std::cout << "_absolutePath: " << _absolutePath << std::endl;
         _file = new FileController(_absolutePath, FileController::READ);
-        setTypeHeader(getMIME(_extension));
-        setLengthHeader(_file->length());
-        convertHeaderMapToString(false);
+        setHTMLHeader(_extension, _file->length());
+        // setTypeHeader(getMIME(_extension));
+        // setLengthHeader(_file->length());
+        // convertHeaderMapToString(false);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
     }
     
+    #if 1 // HTML Part
     if (_phase == DATA_SEND_LOOP) {
         // FIXME: 조금 더 이쁘장하게 수정해야 할 듯 합니다...
         if (_staticHtml.empty() == false) {
@@ -123,10 +132,13 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
             }
         }
     } 
+    #endif
 
+    #if 1 // CGI Part
     if (_phase == CGI_RUN) {
+        // FIXME[yekim]: _cgi를 처음에 절대 경로와 함께 생성하는데, 이를 그대로 사용하면 cgi가 동작하지 않습니다 ㅠㅠ
+        delete _cgi;
         _cgi = new CGISession(_absolutePath);
-
         _cgi->makeCGIProcess();
         fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
         convertHeaderMapToString(true);
@@ -152,6 +164,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
             _phase = FINISH;
         }
     }
+    #endif
     return (_phase);
 }
 
@@ -219,7 +232,7 @@ int HTTPResponseHandler::getCGIfd(void) {
     return (_cgi->getOutputStream());
 }
 
-std::string HTTPResponseHandler::getMIME(std::string& extension) {
+std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     // FIXME : yekim : types 블록에 대해 map 타입으로 파싱해야 합니다.
     std::map<std::string, std::string> mine;
 

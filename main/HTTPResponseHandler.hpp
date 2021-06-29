@@ -26,14 +26,14 @@ class HTTPResponseHandler : public HTTPHandler {
         void responseNotFound(void);
         void responseAutoIndex(void);
 
-
         int getCGIfd(void);
     private:
         static std::string get404Body(void);
         static std::string getAutoIndexBody(std::string root, std::string path);
-        std::string getMIME(std::string& extension);
+        std::string getMIME(const std::string& extension) const;
         bool isCGI(std::string& URI);
         std::string getServerIndex(NginxConfig::ServerBlock server);
+        void setHTMLHeader(const std::string& extension, const long contentLength);
 
     private:
         Phase _phase;
