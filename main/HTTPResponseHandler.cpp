@@ -69,7 +69,8 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
     convertHeaderMapToString(false);
 }
 
-HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
+HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPHandler::ConnectionData& data) {
+    (void) data;
     if (_phase == FIND_RESOURCE) {
         if (_type == FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 404 Not Found");

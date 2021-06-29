@@ -11,9 +11,8 @@ HTTPRequestHandler::~HTTPRequestHandler() {
     delete _fileController;
 }
 
-HTTPRequestHandler::Phase HTTPRequestHandler::process() {
+HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPHandler::ConnectionData& data) {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
-
     if (_phase == PARSE_STARTLINE) {
         if (getHeaderStartLine() == true) {
             std::cout << "[DEBUG] HTTPRequestHandler.URI : " << _URI << std::endl;
@@ -34,10 +33,10 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process() {
                 for (int j = 0; j < 10; j++) {
                     tmp[j] = char(std::rand() % ('Z' - 'A') + 'A');
                 }
+                data.postFilePath = std::string(tmp, 10);
                 _fileController = new FileController(std::string(tmp, 10), FileController::WRITE);
                 _phase = PARSE_BODY;
             }
-            // TODO : POST일 경우 임시 파일 만들어서 저장하는 로직 추가 예정
         } else {
             _phase = PARSE_HEADER;
         }
@@ -56,10 +55,6 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process() {
             readLength = write(_fileController->getFd(), buffer, readLength);
         }
     }
-     // TODO: yekim : 리퀘스트 바디 받아서 임시 파일에 저장하기
-    // 1. 적당히 랜덤한 이름으로 tmp/[랜덤].tmp 파일로 저장
-    // 2. 저장이 끝나면 임시 파일명을 리스폰스 생성자로 넘기기
-    // - content_length가 없으면 종료, 있으면 length만큼 읽어오고 종료
     return _phase;
 }
 

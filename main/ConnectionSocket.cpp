@@ -19,7 +19,7 @@ ConnectionSocket::~ConnectionSocket(){
 
 HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     HTTPRequestHandler::Phase phase;
-    phase = _req->process();
+    phase = _req->process(_connectionData);
     if (phase == HTTPRequestHandler::FINISH) {
         _res = new HTTPResponseHandler(_socket, _req->getURI());
     }
@@ -28,7 +28,7 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
 
 HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
     HTTPResponseHandler::Phase phase;
-    phase = _res->process();
+    phase = _res->process(_connectionData);
     return (phase);
 }
 
