@@ -4,10 +4,19 @@
 
 
 ConnectionSocket::ConnectionSocket(int listeningSocketFd) : Socket(-1) {
+    struct sockaddr_in myAddr;
     this->_socket = accept(listeningSocketFd, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
     if (this->_socket == -1) {
         throw ErrorHandler("Error: connection socket error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
+    if(getsockname(this->_socket, (struct sockaddr *) &myAddr, &this->_socketLen) == -1) {
+        throw ErrorHandler("Error: getsockname error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
+    }
+    // NOTE: 포트를 문자열로 변환해서 받는 것도 좋은 것 같습니다.
+    _connectionData.ClientIP = std::string(inet_ntoa(_socketAddr.sin_addr));
+    _connectionData.ClientPort = ntohs(_socketAddr.sin_port);
+    _connectionData.HostIP = std::string(inet_ntoa(myAddr.sin_addr));
+    _connectionData.HostPort = ntohs(myAddr.sin_port);
     _req = new HTTPRequestHandler(_socket);
     _res = NULL;
 }
