@@ -3,7 +3,9 @@
 
 #include <cstring>
 #include <unistd.h>
+#include <ctime>
 #include "HTTPHandler.hpp"
+#include "FileController.hpp"
 
 #include <iostream> // NOTE : 디버깅용 (추후에 제거 예정)
 
@@ -15,7 +17,7 @@ class HTTPRequestHandler : public HTTPHandler {
         HTTPRequestHandler(int connectionFd);
         virtual ~HTTPRequestHandler();
 
-        typedef enum e_Phase {PARSE_STARTLINE, PARSE_HEADER, CONNECTION_CLOSE, FINISH} Phase;
+        typedef enum e_Phase {PARSE_STARTLINE, PARSE_HEADER, PARSE_BODY, FINISH} Phase;
         virtual HTTPRequestHandler::Phase process();
     public: // REVIEW getter로 파싱된 항목 가지고 오게 하는게 좋을지 더 좋은 방법이 있는지 고민 중입니다.
         Method getMethod(void) const;
@@ -29,6 +31,8 @@ class HTTPRequestHandler : public HTTPHandler {
         bool getHeader(void);
 
         Phase _phase;
+        long _contentLength;
+        FileController* _fileController;
 
         // TODO: 추후 만들 함수
         void setMethod(void);
