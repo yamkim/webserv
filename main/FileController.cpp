@@ -8,7 +8,7 @@ FileController::FileController(std::string path, Mode mode) : _mode(mode) {
         return ; // err
     }
     if (_mode == READ) {
-        _type = typeCheck(_path);
+        _type = checkType(_path);
         if (_type == FileController::FILE) {
             _metaData = getMetaData(_path);
             _fd = open(_path.c_str(), O_RDONLY);
@@ -33,6 +33,16 @@ FileController::~FileController() {
     if (_fd != -1) {
         close(_fd);
     }
+}
+
+FileController& FileController::operator=(const FileController& ref) {
+    _fd = ref._fd;
+    _type = ref._type;
+    _mode = ref._mode;
+    *_metaData = *ref._metaData;
+    _filesMetaData = ref._filesMetaData;
+
+    return (*this);
 }
 
 void FileController::getFilesOfFolder(std::string& path, std::vector<FileMetaData*>& vector) {
@@ -71,11 +81,9 @@ FileController::Type FileController::modeToType(mode_t mode) {
     }
 }
 
-FileController::Type FileController::typeCheck(std::string path) {
-    int rtn;
+FileController::Type FileController::checkType(std::string path) {
     struct stat buf;
-    rtn = stat(path.c_str(), &buf);
-    if (rtn == -1) {
+    if (stat(path.c_str(), &buf) == -1) {
         return (NOTFOUND);
     }
     return (modeToType(buf.st_mode));
