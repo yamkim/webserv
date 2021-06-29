@@ -18,6 +18,7 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
 }
 
 HTTPResponseHandler::~HTTPResponseHandler() {
+    delete _cgi;
     delete _file;
 }
 
@@ -59,7 +60,6 @@ void HTTPResponseHandler::responseAutoIndex(void) {
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
-    // FIXME: joopark : 전반적인 로직 수정
     if (_phase == FIND_RESOURCE) {
         if (_type == FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 404 Not Found");
@@ -126,18 +126,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
     } 
 
     if (_phase == CGI_RUN) {
-        std::map<std::string, std::string> env;
+        _cgi = new CGISession(_absolutePath);
 
-        env[std::string("USER")] = std::string(std::getenv("USER"));
-        env[std::string("PATH")] = std::string(std::getenv("PATH"));
-        env[std::string("LANG")] = std::string(std::getenv("LANG"));
-        env[std::string("CONTENT_TYPE")] = std::string("application/x-www-form-urlencoded");
-        env[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
-        std::string path = std::string("/usr/bin/python3");
-        std::string args = std::string("data=test");
-        _cgi.setCGIargs(path, _absolutePath, args, env);
-        _cgi.makeCGIProcess();
-        fcntl(_cgi.getOutputStream(), F_SETFL, O_NONBLOCK);
+        _cgi->makeCGIProcess();
+        fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
         setGeneralHeader("HTTP/1.1 200 OK");
         convertHeaderMapToString(true);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
@@ -152,7 +144,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
     if (_phase == CGI_SEND_LOOP) {
         char buf[RESPONSE_BUFFER_SIZE];
 
-        int length = read(_cgi.getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
+        int length = read(_cgi->getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
         if (length != 0) {
             int writeLength = send(_connectionFd, buf, length, 0);
             if (writeLength != length) {
@@ -403,5 +395,5 @@ bool HTTPResponseHandler::isCGI(std::string& URI) {
 }
 
 int HTTPResponseHandler::getCGIfd(void) {
-    return (_cgi.getOutputStream());
+    return (_cgi->getOutputStream());
 }

@@ -19,14 +19,16 @@ class CGISession {
 		char **_env;
 		char *_arg[4];
         char** generateEnvp(std::map<std::string, std::string>& arg);
-	public:
 		CGISession();
+
+	public:
+		CGISession(const std::string& absolutePath);
 		CGISession(const CGISession & cgisession);
 		~CGISession();
 		CGISession & operator=(const CGISession & cgisession);
 		int & getInputStream(void);
 		int & getOutputStream(void);
-		void setCGIargs(std::string& binary, std::string& filename, std::string& cgiarg, std::map<std::string, std::string> env);
+		// void setCGIargs(std::string& binary, const std::string& filename, std::string& cgiarg, std::map<std::string, std::string> env);
 		void makeCGIProcess();
 };
 

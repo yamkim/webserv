@@ -32,7 +32,7 @@ public:
     };
     virtual ~NginxConfig(){};
 
-    struct NoneBlock {
+    struct NginxBlock {
 	std::string user;
        std::string worker_processes;
     };
@@ -56,7 +56,7 @@ public:
         std::string location;
     };
 
-    struct NoneBlock noneBlock;
+    struct NginxBlock noneBlock;
     struct EventsBlock eventsBlock;
     struct HttpBlock httpBlock;
     struct UpstreamBlock upstreamBlock;

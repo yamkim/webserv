@@ -50,7 +50,7 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string _extension;
         std::string _staticHtml;
         FileController* _file;
-        CGISession _cgi;
+        CGISession* _cgi;
         NginxConfig _nginxConfig;
 };
 

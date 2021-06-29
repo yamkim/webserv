@@ -5,41 +5,41 @@
 
 class NginxConfig : public NginxParser {
     private:
-        struct nginxBlock {
+        struct NginxBlock {
             std::string rawData;
 
         };
-        struct noneBlock : nginxBlock {
+        struct NoneBlock : NginxBlock {
             std::string user;
             std::string worker_processes;
         };
-        struct typesBlock : nginxBlock{
+        struct TypesBlock : NginxBlock{
             std::string html;
             std::string css;
             std::string xml;
         };
-        struct locationBlock : nginxBlock {
+        struct LocationBlock : NginxBlock {
             std::string locationPath;
             std::vector<std::string> locationReturn;
         };
-        struct serverBlock : nginxBlock{
+        struct ServerBlock : NginxBlock{
             std::string listen;
             std::string server_name;
-            struct locationBlock location[2];
+            struct LocationBlock location[2];
         };
-        struct httpBlock : nginxBlock{
+        struct HttpBlock : NginxBlock{
             std::string charset;
             std::string include;
             std::string default_type;
             std::string keeplive_timeout;
 
-            struct serverBlock server[2];
-            struct typesBlock types;
+            struct ServerBlock server[2];
+            struct TypesBlock types;
         };
 
     public:
-        struct noneBlock _none;
-        struct httpBlock _http;
+        struct NoneBlock _none;
+        struct HttpBlock _http;
 
         NginxConfig(const std::string& fileName) : NginxParser(fileName) {
             std::size_t pos = 0;
@@ -85,7 +85,7 @@ class NginxConfig : public NginxParser {
 
     public:
 
-        void setTypesBlock(struct typesBlock& block) {
+        void setTypesBlock(struct TypesBlock& block) {
             std::size_t pos = 0;
 
             std::cout << "TypesBlock: [" << block.rawData << "]" << std::endl;
@@ -110,7 +110,7 @@ class NginxConfig : public NginxParser {
             }
         }
 
-        void setLocationBlock(struct locationBlock& block) {
+        void setLocationBlock(struct LocationBlock& block) {
             std::size_t pos = 0;
 
             std::string buf = block.rawData;
@@ -131,7 +131,7 @@ class NginxConfig : public NginxParser {
         }
 
         // 기본적으로, new line의 위치를 기록하며 따라가다가, block directive 때는 건너뜀
-        void setServerBlock(struct serverBlock& block) {
+        void setServerBlock(struct ServerBlock& block) {
             std::size_t pos = 0;
 
             std::string buf = block.rawData;
@@ -163,7 +163,7 @@ class NginxConfig : public NginxParser {
         }
 
         // 독립적으로 사용됨. pos를 받고 진행 상황을 기록할 필요 없음
-        void setHttpBlock(struct httpBlock& block) {
+        void setHttpBlock(struct HttpBlock& block) {
             std::size_t pos = 0;
 
             std::string buf = block.rawData;

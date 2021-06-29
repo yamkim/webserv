@@ -1,8 +1,30 @@
 #include "CGISession.hpp"
 
-// CGI Session (draft) by joopark
+CGISession::CGISession(const std::string& absolutePath) : _pid(-2), _inputStream(-1), _outputStream(-1) {
+    // NOTE: python에 대한 설정이지만, 고정적인 부분이면 생성자 생성시 확장자를 받아오고 분기하는 것이 좋을 거 같습니다!
+    std::string _binary;
+    std::string _cgiArg;
+    std::map<std::string, std::string> _envMap;
 
-CGISession::CGISession() : _pid(-2), _inputStream(-1), _outputStream(-1), _env(NULL) {}
+    _envMap[std::string("USER")] = std::string(std::getenv("USER"));
+    _envMap[std::string("PATH")] = std::string(std::getenv("PATH"));
+    _envMap[std::string("LANG")] = std::string(std::getenv("LANG"));
+    _envMap[std::string("CONTENT_TYPE")] = std::string("application/x-www-form-urlencoded");
+    _envMap[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
+    _binary = std::string("/usr/bin/python3");
+    _cgiArg = std::string("data=test");
+
+    // setCGIargs(binary, absolutePath, cgiArg, envMap);
+    _arg[0] = const_cast<char*>(_binary.c_str());
+	_arg[1] = const_cast<char*>(absolutePath.c_str());
+    if (_cgiArg.empty()) {
+        _arg[2] = NULL;
+    } else {
+        _arg[2] = const_cast<char*>(_cgiArg.c_str());
+    }
+	_arg[3] = NULL;
+	_env = generateEnvp(_envMap);
+}
 
 CGISession::CGISession(const CGISession & cgisession) {
 	if (this != &cgisession)
@@ -15,20 +37,14 @@ CGISession & CGISession::operator=(const CGISession & cgisession) {
 }
 
 CGISession::~CGISession() {
-	if (_pid > 0) {
-		if (kill(_pid, SIGKILL) == -1) {
-			throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _pid");
-		}
+	if (_pid > 0 && kill(_pid, SIGKILL) == -1) {
+		throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _pid");
 	}
-	if (_inputStream > 0) {
-		if (close(_inputStream) == -1) {
-			throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _inputStream");
-		}
+	if (_inputStream > 0 && close(_inputStream) == -1) {
+		throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _inputStream");
 	}
-	if (_outputStream > 0) {
-		if (close(_outputStream) == -1) {
-			throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _outputStream");
-		}
+	if (_outputStream > 0 && close(_outputStream) == -1) {
+		throw ErrorHandler("Can't close File Descriptor", ErrorHandler::ALERT, "~CGISession @ _outputStream");
 	}
     if (_env != NULL) {
         int i = 0;
@@ -48,7 +64,8 @@ int & CGISession::getOutputStream(void) {
 	return (_outputStream);
 }
 
-void CGISession::setCGIargs(std::string& binary, std::string& filename, std::string& cgiarg, std::map<std::string, std::string> env) {
+#if 0
+void CGISession::setCGIargs(std::string& binary, const std::string& filename, std::string& cgiarg, std::map<std::string, std::string> env) {
 	_arg[0] = const_cast<char*>(binary.c_str());
 	_arg[1] = const_cast<char*>(filename.c_str());
     if (cgiarg.empty()) {
@@ -59,6 +76,7 @@ void CGISession::setCGIargs(std::string& binary, std::string& filename, std::str
 	_arg[3] = NULL;
 	_env = generateEnvp(env);
 }
+#endif
 
 void CGISession::makeCGIProcess() {
 	int pairForI[2];
