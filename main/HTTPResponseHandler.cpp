@@ -12,7 +12,7 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
 
     // NOTE: 생성시 경로관련 세팅 미리 정해두기
     _absolutePath = _root + _URI;
-    _extension = getExtenstion(_URI);
+    _extension = getExtension();
     _type = FileController::checkType(_absolutePath);
     _serverIndex = getServerIndex(_nginxConfig._http.server[1]);
 }
@@ -90,9 +90,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
         responseAutoIndex();
     }
     
-    
     if (_phase == GET_FILE) {
-        _extension = getExtenstion(_absolutePath);
+        _extension = getExtension();
         std::cout << "_absolutePath: " << _absolutePath << std::endl;
         _file = new FileController(_absolutePath, FileController::READ);
         setTypeHeader(getMIME(_extension));
@@ -130,7 +129,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
 
         _cgi->makeCGIProcess();
         fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
-        setGeneralHeader("HTTP/1.1 200 OK");
         convertHeaderMapToString(true);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = CGI_REQ;
@@ -157,50 +155,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
     return (_phase);
 }
 
-void HTTPResponseHandler::setGeneralHeader(std::string status) {
-    static char timeBuffer[48];
-    time_t rawtime;
-
-    std::time(&rawtime);
-    struct tm* timeinfo = std::gmtime(&rawtime);
-    std::strftime(timeBuffer, 48, "%a, %d %b %Y %H:%M:%S %Z", timeinfo);
-
-    _headerString = status;
-    _headerString += "\r\n";
-
-    // NOTE https://developer.mozilla.org/ko/docs/Web/HTTP/Headers
-    // 서버의 소프트웨어 정보
-    _headers["Server"] = std::string("webserv/0.1");
-    // HTTP 메시지가 만들어진 날짜와 시간
-    _headers["Date"] = std::string(timeBuffer);
-    // 전송이 완료된 후 네트워크 접속을 유지할지 말지
-    // REVIEW 상황따라 keep-alive / close가 갈리긴 하지만 현재 구현상으로는 메시지 보내고 끊김. keep-alive 형태로 현재 연결된 fd를 유지시켜야 하나?
-    _headers["Connection"] = std::string("close");
-}
-
-void HTTPResponseHandler::setTypeHeader(std::string type) {
-    _headers["Content-Type"] = type;
-}
-
-void HTTPResponseHandler::setLengthHeader(long contentLength) {
-    std::stringstream ssLength;
-
-    ssLength << contentLength;
-    _headers["Content-Length"] = ssLength.str();
-}
-
-void HTTPResponseHandler::convertHeaderMapToString(bool isCGI) {
-    std::map<std::string, std::string>::iterator iter;
-    for (iter = _headers.begin(); iter != _headers.end(); ++iter) {
-        _headerString += iter->first;
-        _headerString += ": ";
-        _headerString += iter->second;
-        _headerString += "\r\n";
-    }
-    if (isCGI == false) {
-        _headerString += "\r\n";
-    }
-}
 
 std::string HTTPResponseHandler::get404Body(void) {
     // REVIEW : 다른데다 옮기는것도...
@@ -250,6 +204,19 @@ std::string HTTPResponseHandler::getAutoIndexBody(std::string root, std::string 
     stringBuffer << "</pre><hr></body>";
     stringBuffer << "</html>";
     return (stringBuffer.str());
+}
+
+bool HTTPResponseHandler::isCGI(std::string& URI) {
+    // FIXME: nginx.conf 파일 파싱 결과를 토대로 이 확장명이 CGI인지 판단해야 합니다.
+    if (URI == std::string("py")) {
+        return (true);
+    } else {
+        return (false);
+    }
+}
+
+int HTTPResponseHandler::getCGIfd(void) {
+    return (_cgi->getOutputStream());
 }
 
 std::string HTTPResponseHandler::getMIME(std::string& extension) {
@@ -370,30 +337,4 @@ std::string HTTPResponseHandler::getMIME(std::string& extension) {
     } else {
         return (mine[extension]);
     }
-}
-
-std::string HTTPResponseHandler::getExtenstion(std::string& URI) {
-    // REVIEW : 이 기능을 request핸들러로 옮기는 것 검토
-    std::string strHead;
-    
-    std::size_t foundDot = URI.rfind(".");
-    std::size_t foundSlash = URI.rfind("/");
-    if (foundDot == std::string::npos || foundSlash > foundDot) {
-        return (std::string(""));
-    } else {
-        return (URI.substr(foundDot + 1));
-    }
-}
-
-bool HTTPResponseHandler::isCGI(std::string& URI) {
-    // FIXME: nginx.conf 파일 파싱 결과를 토대로 이 확장명이 CGI인지 판단해야 합니다.
-    if (URI == std::string("py")) {
-        return (true);
-    } else {
-        return (false);
-    }
-}
-
-int HTTPResponseHandler::getCGIfd(void) {
-    return (_cgi->getOutputStream());
 }

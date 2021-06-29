@@ -29,14 +29,9 @@ class HTTPResponseHandler : public HTTPHandler {
 
         int getCGIfd(void);
     private:
-        void setGeneralHeader(std::string status);
-        void setTypeHeader(std::string type);
-        void setLengthHeader(long contentLength);
-        void convertHeaderMapToString(bool isCGI);
         static std::string get404Body(void);
         static std::string getAutoIndexBody(std::string root, std::string path);
         std::string getMIME(std::string& extension);
-        std::string getExtenstion(std::string& URI);
         bool isCGI(std::string& URI);
         std::string getServerIndex(NginxConfig::ServerBlock server);
 

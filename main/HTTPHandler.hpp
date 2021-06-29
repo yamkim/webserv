@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <sstream>
 #include <sys/socket.h>
 #include "ErrorHandler.hpp"
 
@@ -23,6 +24,11 @@ class HTTPHandler {
         std::string _headerString;
 	public:
 		HTTPHandler(int connectionFd);
+        std::string getExtension(void);
+        void setGeneralHeader(std::string status);
+        void setTypeHeader(std::string type);
+        void setLengthHeader(long contentLength);
+        void convertHeaderMapToString(bool isCGI);
 		virtual ~HTTPHandler();
 };
 #endif
