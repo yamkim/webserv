@@ -26,15 +26,15 @@ CGISession::CGISession(const std::string& absolutePath) : _pid(-2), _inputStream
 	_env = generateEnvp(_envMap);
 }
 
-CGISession::CGISession(const CGISession & cgisession) {
-	if (this != &cgisession)
-		*this = cgisession;
-}
+// CGISession::CGISession(const CGISession & cgisession) {
+// 	if (this != &cgisession)
+// 		*this = cgisession;
+// }
 
-CGISession & CGISession::operator=(const CGISession & cgisession) {
-	(void) cgisession;
-	return (*this);
-}
+// CGISession & CGISession::operator=(const CGISession & cgisession) {
+// 	(void) cgisession;
+// 	return (*this);
+// }
 
 CGISession::~CGISession() {
 	if (_pid > 0 && kill(_pid, SIGKILL) == -1) {

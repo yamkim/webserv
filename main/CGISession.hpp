@@ -23,7 +23,7 @@ class CGISession {
 
 	public:
 		CGISession(const std::string& absolutePath);
-		CGISession(const CGISession & cgisession);
+		// CGISession(const CGISession & cgisession);
 		~CGISession();
 		CGISession & operator=(const CGISession & cgisession);
 		int & getInputStream(void);
