@@ -56,22 +56,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process() {
             readLength = write(_fileController->getFd(), buffer, readLength);
         }
     }
-     // TODO: yekim : 리퀘스트 바디 받아서 임시 파일에 저장하기
-    // 1. 적당히 랜덤한 이름으로 tmp/[랜덤].tmp 파일로 저장
-    // 2. 저장이 끝나면 임시 파일명을 리스폰스 생성자로 넘기기
-    // - content_length가 없으면 종료, 있으면 length만큼 읽어오고 종료
     return _phase;
-}
-
-HTTPRequestHandler::Method HTTPRequestHandler::getMethod(void) const {
-    return (_method);
-}
-
-const std::string& HTTPRequestHandler::getURI(void) const {
-    return (_URI);
-}
-const std::map<std::string, std::string>& HTTPRequestHandler::getHeaders(void) const {
-    return (_headers);
 }
 
 std::string HTTPRequestHandler::getStringHeadByDelimiter(const std::string &buf, std::size_t &pos, const std::string &needle) {
@@ -115,41 +100,44 @@ int HTTPRequestHandler::findNewLine(const char *buffer) {
     }
 }
 
-bool HTTPRequestHandler::getHeaderStartLine(void) {
-    std::size_t delimiterLength = 0;
-    std::string chunk;
-
-    if (setHeaderString() == false) {
-        return (false);
-    }
-
-    // TODO: 각 단계를 함수 단위로 뽑기
-    chunk = getStringHeadByDelimiter(_headerString, delimiterLength, " ");
-    if (chunk == std::string("GET")) {
+void HTTPRequestHandler::setMethod(std::string method) {
+    if (method == std::string("GET")) {
         _method = HTTPRequestHandler::GET;
-    } else if (chunk == std::string("POST")) {
+    } else if (method == std::string("POST")) {
         _method = HTTPRequestHandler::POST;
-    } else if (chunk == std::string("DELETE")) {
+    } else if (method == std::string("DELETE")) {
         _method = HTTPRequestHandler::DELETE;
     } else {
         throw ErrorHandler("Error: weird method.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
     }
+}
 
-    chunk = getStringHeadByDelimiter(_headerString, delimiterLength, " ");
-    if (!chunk.empty()) {
-        _URI = chunk;
+void HTTPRequestHandler::setURI(std::string URI) {
+    if (!URI.empty()) {
+        _URI = URI;
     } else {
         throw ErrorHandler("Error: empty URI.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
     }
+}
 
-
-    if (_headerString.find("\r\n") == std::string::npos) {
-        chunk = getStringHeadByDelimiter(_headerString, delimiterLength, "\n");
-    } else {
-        chunk = getStringHeadByDelimiter(_headerString, delimiterLength, "\r\n");
-    }
-    if (chunk != std::string("HTTP/1.1")) {
+void HTTPRequestHandler::setProtocol(std::string protocol) {
+    if (protocol != std::string("HTTP/1.1")) {
         throw ErrorHandler("Error: weird Protocol.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
+    }
+}
+
+bool HTTPRequestHandler::getHeaderStartLine(void) {
+    if (setHeaderString() == false) {
+        return (false);
+    }
+
+    std::vector<std::string> tmp = Parser::getSplitBySpace(_headerString);
+    if (tmp.size() != 3) {
+        throw ErrorHandler("Error: invalid _headerString.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
+    } else {
+        setMethod(tmp[0]);
+        setURI(tmp[1]);
+        setProtocol(tmp[2]);
     }
     _headerString.clear();
     return (true);
@@ -159,6 +147,8 @@ bool HTTPRequestHandler::getHeader(void) {
     std::size_t delimiterLength = 0;
     std::string key;
     std::string value;
+
+    std::cout << "[DEBUG] _headerString: " << _headerString << std::endl;
 
     if (setHeaderString() == false) {
         return (false);

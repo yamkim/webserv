@@ -24,11 +24,15 @@ class HTTPHandler {
         std::string _headerString;
 	public:
 		HTTPHandler(int connectionFd);
-        std::string getExtension(void);
+		virtual ~HTTPHandler();
         void setGeneralHeader(std::string status);
         void setTypeHeader(std::string type);
         void setLengthHeader(long contentLength);
         void convertHeaderMapToString(bool isCGI);
-		virtual ~HTTPHandler();
+
+        Method getMethod(void) const;
+        std::string getURI(void) const;
+        std::map<std::string, std::string> getHeaders(void) const;
+        std::string getExtension(void);
 };
 #endif

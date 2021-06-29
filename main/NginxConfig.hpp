@@ -77,6 +77,7 @@ class NginxConfig : public NginxParser {
                 lineBegPos = lineEndPos;
             }
 
+            #if 0
             std::cout << "_none::user -> " << _none.user << std::endl;
             std::cout << "_none::worker_processes -> " << _none.worker_processes << std::endl;
             std::cout << "_http::charset -> " << _http.charset << std::endl;
@@ -95,6 +96,7 @@ class NginxConfig : public NginxParser {
             std::cout << "_http::server[1]::location[2]::path -> " << _http.server[1].location[2].locationPath << std::endl;
             std::cout << "_http::types::html -> " << _http.types.html << std::endl;
             std::cout << "_http::types::css -> " << _http.types.css << std::endl;
+            #endif
         }
 
     public:

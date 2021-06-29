@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 {
     KernelQueue kq;
     NginxConfig nginxConfig("nginx.conf");
-    #if 1
+    #if 0
     (void)argc, (void)argv;
     for (int i = 0; i < 2; i++) {
         ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);

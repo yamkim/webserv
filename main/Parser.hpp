@@ -80,5 +80,37 @@ class Parser {
             }
             return false;
         } 
+
+        // 매개변수 delimiter의 요소라면, 이를 기준으로 split 후에 첫 단어만 가지고 옵니다.
+        // [          listen     5000;]이고, delimit이 " "라면, listen만 가지고 옵니다.
+        static std::string	getIdentifier(const std::string str, std::size_t& endPos, std::string delimiter)
+        {
+            size_t wordSize = 0;
+
+            while ((str[endPos] != '\0') && isCharInString(delimiter, str[endPos])) {
+                ++endPos;
+            }
+            size_t begPos = endPos;
+            while ((str[endPos] != '\0') && !isCharInString(delimiter, str[endPos])) {
+                ++wordSize;
+                ++endPos;
+            }
+            return (str.substr(begPos, wordSize));
+        }
+
+        static std::vector<std::string> getSplitBySpace(std::string str) {
+            std::vector<std::string> ret;
+
+            std::size_t pos = 0;
+            while (str[pos]) {
+                std::string tmp = getIdentifier(str, pos, " \r\n");
+                if (tmp.empty()) {
+                    break ;
+                }
+                std::cout << "tmp: " << tmp << std::endl;
+                ret.push_back(tmp);
+            }
+            return ret; 
+        }
 };
 #endif
