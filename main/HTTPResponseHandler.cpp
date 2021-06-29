@@ -7,6 +7,7 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
     _root = _nginxConfig._http.server[1].root;
     // NOTE[yekim]: 언제 사용되는 건가여?
+    // file controller를 이용해서 파일을 읽어올 때 사용
     _file = NULL;
 
     // NOTE: 생성시 경로관련 세팅 미리 정해두기

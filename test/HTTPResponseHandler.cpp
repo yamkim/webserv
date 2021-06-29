@@ -163,7 +163,7 @@ std::string HTTPResponseHandler::get404Body(void) {
                         "</html>"));
 }
 
-std::string HTTPResponseHandler::getMIME(std::string& extension) {
+std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     // FIXME : 추후에 nginx.conf 파일에서 파싱해 와야 합니다. map 형식의 키-벨류 형식을 그대로 유지해야 할 듯 합니다.
     std::map<std::string, std::string> mine;
 
