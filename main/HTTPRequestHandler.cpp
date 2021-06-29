@@ -3,18 +3,16 @@
 HTTPRequestHandler::HTTPRequestHandler(int connectionFd) : HTTPHandler(connectionFd) {
     // REVIEW : accept에서 클라이언트의 IP와 포트도 받을 수 있도록 하면 좋을것 같습니다.
     _phase = PARSE_STARTLINE;
+    _contentLength = -1;
+    _fileController = NULL;
 }
 
-HTTPRequestHandler::~HTTPRequestHandler() {}
+HTTPRequestHandler::~HTTPRequestHandler() {
+    delete _fileController;
+}
 
 HTTPRequestHandler::Phase HTTPRequestHandler::process() {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
-    char temp;
-
-    if (recv(_connectionFd, &temp, 1, MSG_PEEK) == 0) {
-        // NOTE : 브라우저가 처음 접속할 때 핸드쉐이킹만 할 때 혹은 req 도중 갑자기 연결이 끊어질 때에 대한 핸들링입니다.
-        return CONNECTION_CLOSE;
-    }
 
     if (_phase == PARSE_STARTLINE) {
         if (getHeaderStartLine() == true) {
@@ -26,12 +24,39 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process() {
     } else if (_phase == PARSE_HEADER) {
         // TODO : 클라이언트가 이상한 헤더를 보낼 때 적절한 처리가 필요합니다. exception을 여기서 잡거나. 아직 자세히 안봤지만 Nginx는 400 Bad Request 같은거로 핸들링하는거 같습니다. 추후에 적용하겠습니다.
         if (getHeader() == true) {
-            _phase = FINISH;
+            if (_headers.find("Content-Length") == _headers.end()) {
+                _phase = FINISH;
+            } else {
+                _contentLength = std::atoi(_headers["Content-Length"].c_str());
+                std::cout << "_headers[] : " << _headers["Content-Length"] << std::endl;
+                char tmp[10];
+                srand(time(NULL));
+                for (int j = 0; j < 10; j++) {
+                    tmp[j] = char(std::rand() % ('Z' - 'A') + 'A');
+                }
+                _fileController = new FileController(std::string(tmp, 10), FileController::WRITE);
+                _phase = PARSE_BODY;
+            }
             // TODO : POST일 경우 임시 파일 만들어서 저장하는 로직 추가 예정
         } else {
             _phase = PARSE_HEADER;
         }
-    } // TODO: yekim : 리퀘스트 바디 받아서 임시 파일에 저장하기
+    } else if (_phase == PARSE_BODY) {
+        std::cout << "_contentLength : " << _contentLength << std::endl;
+        char buffer[REQUEST_BUFFER_SIZE + 1];
+
+        int readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, 0);
+        std::cout << "readLength : " << readLength << std::endl;
+        _contentLength -= readLength;
+        if (_contentLength <= 0) {
+            std::cout << "readLength + _contentLength : " << readLength + _contentLength << std::endl;
+            readLength = write(_fileController->getFd(), buffer, readLength + _contentLength);
+            _phase = FINISH;
+        } else {
+            readLength = write(_fileController->getFd(), buffer, readLength);
+        }
+    }
+     // TODO: yekim : 리퀘스트 바디 받아서 임시 파일에 저장하기
     // 1. 적당히 랜덤한 이름으로 tmp/[랜덤].tmp 파일로 저장
     // 2. 저장이 끝나면 임시 파일명을 리스폰스 생성자로 넘기기
     // - content_length가 없으면 종료, 있으면 length만큼 읽어오고 종료
