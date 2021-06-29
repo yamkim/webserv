@@ -9,8 +9,10 @@ int main(int argc, char *argv[])
 {
     KernelQueue kq;
     NginxConfig nginxConfig("nginx.conf");
-    // for (int i = 0; i < 2; i++) {
-        // ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
+    #if 1
+    for (int i = 0; i < 2; i++) {
+        ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
+    #else
     for (int i = 1; i < argc; i++) {
         std::cout << "[DEBUG] argv[" << i << "]: " << std::atoi(argv[i]) << std::endl;
         ListeningSocket* lSocket = new ListeningSocket(std::atoi(argv[i]), 42);
@@ -18,6 +20,7 @@ int main(int argc, char *argv[])
             return (1);
         kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
     }
+    #endif
 #if 0
     // NOTE: 여러 개의 소켓 관리도 간편하게 가능
     ListeningSocket* lSocket8080 = new ListeningSocket(8080, 42);
