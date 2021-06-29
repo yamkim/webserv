@@ -14,8 +14,7 @@ HTTPRequestHandler::~HTTPRequestHandler() {
 HTTPRequestHandler::Phase HTTPRequestHandler::process() {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
     if (_phase == PARSE_STARTLINE) {
-        if (getHeaderStartLine() == true) {
-            std::cout << "[DEBUG] HTTPRequestHandler.URI : " << _URI << std::endl;
+        if (getRequestLine() == true) {
             _phase = PARSE_HEADER;
         } else {
             _phase = PARSE_STARTLINE;
@@ -58,14 +57,15 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process() {
     return _phase;
 }
 
-bool HTTPRequestHandler::getHeaderStartLine(void) {
+bool HTTPRequestHandler::getRequestLine(void) {
     if (setHeaderString() == false) {
         return (false);
     }
 
-    std::vector<std::string> tmp = Parser::getSplitBySpace(_headerString);
+    _requestLine = _headerString;
+    std::vector<std::string> tmp = Parser::getSplitBySpace(_requestLine);
     if (tmp.size() != 3) {
-        throw ErrorHandler("Error: invalid _headerString.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
+        throw ErrorHandler("Error: invalid _headerString.", ErrorHandler::ALERT, "HTTPRequestHandler::getRequestLine");
     } else {
         setMethod(tmp[0]);
         setURI(tmp[1]);
@@ -137,7 +137,7 @@ void HTTPRequestHandler::setMethod(std::string method) {
     } else if (method == std::string("DELETE")) {
         _method = HTTPRequestHandler::DELETE;
     } else {
-        throw ErrorHandler("Error: weird method.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
+        throw ErrorHandler("Error: weird method.", ErrorHandler::ALERT, "HTTPRequestHandler::getRequestLine");
     }
 }
 
@@ -145,7 +145,7 @@ void HTTPRequestHandler::setURI(std::string URI) {
     if (!URI.empty()) {
         _URI = URI;
     } else {
-        throw ErrorHandler("Error: empty URI.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
+        throw ErrorHandler("Error: empty URI.", ErrorHandler::ALERT, "HTTPRequestHandler::getRequestLine");
     }
 }
 

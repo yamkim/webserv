@@ -22,7 +22,7 @@ class HTTPRequestHandler : public HTTPHandler {
         virtual HTTPRequestHandler::Phase process();
     public: // REVIEW getter로 파싱된 항목 가지고 오게 하는게 좋을지 더 좋은 방법이 있는지 고민 중입니다.
     private:
-        bool getHeaderStartLine(void);
+        bool getRequestLine(void);
         bool getHeader(void);
 
         int findNewLine(const char *buffer);
@@ -32,6 +32,7 @@ class HTTPRequestHandler : public HTTPHandler {
         void setURI(std::string URI);
         void setProtocol(std::string protocol);
 
+        std::string _requestLine;
         Phase _phase;
         long _contentLength;
         FileController* _fileController;
