@@ -19,9 +19,16 @@ ConnectionSocket::~ConnectionSocket(){
 
 HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     HTTPRequestHandler::Phase phase;
-    phase = _req->process(_connectionData);
-    if (phase == HTTPRequestHandler::FINISH) {
-        _res = new HTTPResponseHandler(_socket, _req->getURI());
+    try {
+        phase = _req->process(_connectionData);
+        if (phase == HTTPRequestHandler::FINISH) {
+            _res = new HTTPResponseHandler(_socket, _req->getURI());
+        }
+    } catch (const std::exception &error) {
+        std::cout << error.what() << std::endl;
+        _connectionData.StatusCode = 400; // Bad Request
+        // TODO: response에서 StatusCode를 인식해서 동작하게 해야 함.
+        phase = HTTPRequestHandler::FINISH;
     }
     return (phase);
 }

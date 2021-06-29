@@ -1,26 +1,41 @@
 #include "CGISession.hpp"
 
-CGISession::CGISession(const std::string& absolutePath) : _pid(-2), _inputStream(-1), _outputStream(-1) {
-    // NOTE: python에 대한 설정이지만, 고정적인 부분이면 생성자 생성시 확장자를 받아오고 분기하는 것이 좋을 거 같습니다!
-    std::string _binary;
+CGISession::CGISession(HTTPHandler::ConnectionData& data, std::string binary) : _pid(-2), _inputStream(-1), _outputStream(-1) {
+    // NOTE: data로부터 공통 인수를 받아오고 바이너리로부터 CGI를 실행할 바이너리 경로를 집어넣습니다.
     std::string _cgiArg;
     std::map<std::string, std::string> _envMap;
 
     _envMap[std::string("USER")] = std::string(std::getenv("USER"));
     _envMap[std::string("PATH")] = std::string(std::getenv("PATH"));
     _envMap[std::string("LANG")] = std::string(std::getenv("LANG"));
-    _envMap[std::string("CONTENT_TYPE")] = std::string("application/x-www-form-urlencoded");
+    // NOTE: CGI 1.1 표준 항목
+    _envMap[std::string("QUERY_STRING")] = data.QueryString;
+    _envMap[std::string("REQUEST_METHOD")] = data.RequestMethod;
+    _envMap[std::string("CONTENT_TYPE")] = data.ReqContentType;
+    _envMap[std::string("CONTENT_LENGTH")] = data.ReqContentLength;
+    _envMap[std::string("SCRIPT_NAME")] = std::string("");
+    _envMap[std::string("REQUEST_URI")] = std::string("");
+    _envMap[std::string("DOCUMENT_URI")] = std::string("");
+    _envMap[std::string("DOCUMENT_ROOT")] = std::string("");
+    _envMap[std::string("SERVER_PROTOCOL")] = std::string("HTTP/1.1");
+    _envMap[std::string("REQUEST_SCHEME")] = std::string("");
     _envMap[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
-    _binary = std::string("/usr/bin/python3");
+    _envMap[std::string("SERVER_SOFTWARE")] = std::string("WEBSERV/0.1");
+    _envMap[std::string("REMOTE_ADDR")] = std::string("");
+    _envMap[std::string("REMOTE_PORT")] = std::string("");
+    _envMap[std::string("SERVER_ADDR")] = std::string("");
+    _envMap[std::string("SERVER_PORT")] = std::string("");
+    _envMap[std::string("SERVER_NAME")] = std::string("");
+    //_binary = std::string("/usr/bin/python3");
     _cgiArg = std::string("data=test");
 
     // setCGIargs(binary, absolutePath, cgiArg, envMap);
-    _arg[0] = const_cast<char*>(_binary.c_str());
-	_arg[1] = const_cast<char*>(absolutePath.c_str());
-    if (_cgiArg.empty()) {
+    _arg[0] = const_cast<char*>(binary.c_str());
+	_arg[1] = const_cast<char*>(data.RequestAbsoluteFilePath.c_str());
+    if (data.QueryString.empty()) {
         _arg[2] = NULL;
     } else {
-        _arg[2] = const_cast<char*>(_cgiArg.c_str());
+        _arg[2] = const_cast<char*>(data.QueryString.c_str());
     }
 	_arg[3] = NULL;
 	_env = generateEnvp(_envMap);

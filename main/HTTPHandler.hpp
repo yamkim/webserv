@@ -16,11 +16,19 @@ class HTTPHandler {
     public:
         typedef enum e_Method {UNDEF, GET, POST, DELETE} Method;
         typedef struct s_ConnectionData {
+            std::string RequestMethod;
             std::string HostIP;
             int HostPort;
             std::string ClientIP;
-            std::string ClientPort;
+            int ClientPort;
             std::string postFilePath;
+            std::string URI;
+            std::string QueryString;
+            int StatusCode;
+            std::string ReqContentType;
+            std::string ReqContentLength;
+            std::string RequestFilePath;
+            std::string RequestAbsoluteFilePath;
         } ConnectionData;
 	protected:
         static const ssize_t TRANS_ERROR = -1;

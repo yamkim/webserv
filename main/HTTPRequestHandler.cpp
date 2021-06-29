@@ -14,14 +14,28 @@ HTTPRequestHandler::~HTTPRequestHandler() {
 HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPHandler::ConnectionData& data) {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
     if (_phase == PARSE_STARTLINE) {
+        data.StatusCode = 200;
         if (getHeaderStartLine() == true) {
-            std::cout << "[DEBUG] HTTPRequestHandler.URI : " << _URI << std::endl;
+            // TODO: 개별로 쓰이는 HTTPHandler 지역변수 (_URI 등) 없애기
+            data.URI = _URI;
+            if (_URI.find("?") != std::string::npos) {
+                data.QueryString = _URI.substr(_URI.find("?") + 1);
+                data.RequestFilePath = _URI.substr(0, _URI.find("?"));
+            } else {
+                data.RequestFilePath = _URI;
+            }
+            if (_method == HTTPRequestHandler::GET) {
+                data.RequestMethod = "GET";
+            } else if (_method == HTTPRequestHandler::POST) {
+                data.RequestMethod = "POST";
+            } else if (_method == HTTPRequestHandler::DELETE) {
+                data.RequestMethod = "DELETE";
+            }
             _phase = PARSE_HEADER;
         } else {
             _phase = PARSE_STARTLINE;
         }
     } else if (_phase == PARSE_HEADER) {
-        // TODO : 클라이언트가 이상한 헤더를 보낼 때 적절한 처리가 필요합니다. exception을 여기서 잡거나. 아직 자세히 안봤지만 Nginx는 400 Bad Request 같은거로 핸들링하는거 같습니다. 추후에 적용하겠습니다.
         if (getHeader() == true) {
             if (_headers.find("Content-Length") == _headers.end()) {
                 _phase = FINISH;
@@ -35,6 +49,8 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPHandler::ConnectionDat
                 }
                 data.postFilePath = std::string(tmp, 10);
                 _fileController = new FileController(std::string(tmp, 10), FileController::WRITE);
+                data.ReqContentLength = _headers["Content-Length"];
+                data.ReqContentType = _headers["Content-Type"];
                 _phase = PARSE_BODY;
             }
         } else {

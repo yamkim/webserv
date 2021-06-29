@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include "ErrorHandler.hpp"
+#include "HTTPHandler.hpp"
 
 // CGI Session (draft) by joopark
 
@@ -22,7 +23,7 @@ class CGISession {
 		CGISession();
 
 	public:
-		CGISession(const std::string& absolutePath);
+		CGISession(HTTPHandler::ConnectionData& data, std::string binary);
 		// CGISession(const CGISession & cgisession);
 		~CGISession();
 		CGISession & operator=(const CGISession & cgisession);

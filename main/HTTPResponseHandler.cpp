@@ -10,13 +10,13 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
     // file controller를 이용해서 파일을 읽어올 때 사용
     _file = NULL;
 
-    // NOTE: 생성시 경로관련 세팅 미리 정해두기
+    // FIXME: 일단 공통 구조체를 process 내에서만 사용해서... 이 변수들에 대해 조치가 필요합니다.
     _absolutePath = _root + _URI;
     _extension = getExtension();
     _type = FileController::checkType(_absolutePath);
     _serverIndex = getServerIndex(_nginxConfig._http.server[1]);
 
-    _cgi = new CGISession(_absolutePath);
+    _cgi = NULL;
 }
 
 HTTPResponseHandler::~HTTPResponseHandler() {
@@ -70,8 +70,9 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPHandler::ConnectionData& data) {
-    (void) data;
     if (_phase == FIND_RESOURCE) {
+        // TODO: data 인수에 request 파싱된 결과가 들어있어서 이 클래스 초기화될때 data를 넣어서 초기화 하거나 여기서 초기화 해야합니다.
+        data.RequestAbsoluteFilePath = _absolutePath + _serverIndex;
         if (_type == FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 404 Not Found");
             _phase = NOT_FOUND;
@@ -140,7 +141,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPHandler::ConnectionD
     if (_phase == CGI_RUN) {
         // FIXME[yekim]: _cgi를 처음에 절대 경로와 함께 생성하는데, 이를 그대로 사용하면 cgi가 동작하지 않습니다 ㅠㅠ
         delete _cgi;
-        _cgi = new CGISession(_absolutePath);
+        _cgi = new CGISession(data, std::string("/usr/bin/python3"));
         _cgi->makeCGIProcess();
         fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
         convertHeaderMapToString(true);
