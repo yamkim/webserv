@@ -24,6 +24,7 @@ ListeningSocket::~ListeningSocket() {
 
 void ListeningSocket::setSocket() {
     this->_socket = socket(PF_INET, SOCK_STREAM, 0);
+    setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, (char *)_optval, OPTVAL_BUFFER_SIZE);
     if (this->_socket == -1) {
         throw ErrorHandler("Error: server socket open error.", ErrorHandler::CRITICAL, "ListeningSocket::setSocket");
     }
