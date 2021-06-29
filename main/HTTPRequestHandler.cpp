@@ -13,7 +13,6 @@ HTTPRequestHandler::~HTTPRequestHandler() {
 
 HTTPRequestHandler::Phase HTTPRequestHandler::process() {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
-
     if (_phase == PARSE_STARTLINE) {
         if (getHeaderStartLine() == true) {
             std::cout << "[DEBUG] HTTPRequestHandler.URI : " << _URI << std::endl;
@@ -59,15 +58,55 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process() {
     return _phase;
 }
 
-std::string HTTPRequestHandler::getStringHeadByDelimiter(const std::string &buf, std::size_t &pos, const std::string &needle) {
-    std::string strHead;
-    
-    std::size_t found = buf.find(needle, pos);
-    if (found != std::string::npos) {
-        strHead = buf.substr(pos, found - pos);
-        pos = found + needle.size();
+bool HTTPRequestHandler::getHeaderStartLine(void) {
+    if (setHeaderString() == false) {
+        return (false);
     }
-    return (strHead);
+
+    std::vector<std::string> tmp = Parser::getSplitBySpace(_headerString);
+    if (tmp.size() != 3) {
+        throw ErrorHandler("Error: invalid _headerString.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
+    } else {
+        setMethod(tmp[0]);
+        setURI(tmp[1]);
+        setProtocol(tmp[2]);
+    }
+    _headerString.clear();
+    return (true);
+}
+
+bool HTTPRequestHandler::getHeader(void) {
+    // REVIEW: if 두개의 의미를 모르겠습니다!
+    if (setHeaderString() == false) {
+        return (false);
+    }
+    if (_headerString.length() < 3) {
+        _headerString.clear();
+        return (true);
+    }
+
+    std::size_t pos = 0;
+    std::string key = Parser::getIdentifier(_headerString, pos, ": ");
+    if (key.empty()) {
+        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeader");
+    }
+    pos += 2;
+    std::string value = Parser::getIdentifier(_headerString, pos, "\r\n");
+    if (value.empty()) {
+        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeader");
+    }
+    _headers[key] = value;
+    _headerString.clear();
+    return (false);
+}
+
+int HTTPRequestHandler::findNewLine(const char *buffer) {
+    const char* n = std::strstr(buffer, "\n");
+    if (n == NULL) {
+        return (-1);
+    } else {
+        return (n - buffer + 1);
+    }
 }
 
 bool HTTPRequestHandler::setHeaderString(void) {
@@ -79,7 +118,7 @@ bool HTTPRequestHandler::setHeaderString(void) {
     }
     buffer[readLength] = '\0';
     int newLinePosition = findNewLine(buffer);
-    if (newLinePosition < 0) {
+    if (newLinePosition == -1) {
         readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, 0);
         _headerString += std::string(buffer, readLength);
         return (false);
@@ -87,16 +126,6 @@ bool HTTPRequestHandler::setHeaderString(void) {
         readLength = recv(_connectionFd, buffer, newLinePosition, 0);
         _headerString += std::string(buffer, readLength);
         return (true);
-    }
-}
-
-// TODO: Parser 클래스 만든 후 이관
-int HTTPRequestHandler::findNewLine(const char *buffer) {
-    const char* n = std::strstr(buffer, "\n");
-    if (n == NULL) {
-        return (-1);
-    } else {
-        return (n - buffer + 1);
     }
 }
 
@@ -124,49 +153,4 @@ void HTTPRequestHandler::setProtocol(std::string protocol) {
     if (protocol != std::string("HTTP/1.1")) {
         throw ErrorHandler("Error: weird Protocol.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
     }
-}
-
-bool HTTPRequestHandler::getHeaderStartLine(void) {
-    if (setHeaderString() == false) {
-        return (false);
-    }
-
-    std::vector<std::string> tmp = Parser::getSplitBySpace(_headerString);
-    if (tmp.size() != 3) {
-        throw ErrorHandler("Error: invalid _headerString.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeaderStartLine");
-    } else {
-        setMethod(tmp[0]);
-        setURI(tmp[1]);
-        setProtocol(tmp[2]);
-    }
-    _headerString.clear();
-    return (true);
-}
-
-bool HTTPRequestHandler::getHeader(void) {
-    std::size_t delimiterLength = 0;
-    std::string key;
-    std::string value;
-
-    std::cout << "[DEBUG] _headerString: " << _headerString << std::endl;
-
-    if (setHeaderString() == false) {
-        return (false);
-    }
-    if (_headerString.length() < 3) {
-        _headerString.clear();
-        return (true);
-    }
-    key = getStringHeadByDelimiter(_headerString, delimiterLength, ": ");
-    if (key.empty()) {
-        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeader");
-    }
-    if (_headerString.find("\r\n") == std::string::npos) {
-        value = getStringHeadByDelimiter(_headerString, delimiterLength, "\n");
-    } else {
-        value = getStringHeadByDelimiter(_headerString, delimiterLength, "\r\n");
-    }
-    _headers[key] = value;
-    _headerString.clear();
-    return (false);
 }

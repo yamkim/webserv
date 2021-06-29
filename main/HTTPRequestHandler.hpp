@@ -22,19 +22,20 @@ class HTTPRequestHandler : public HTTPHandler {
         virtual HTTPRequestHandler::Phase process();
     public: // REVIEW getter로 파싱된 항목 가지고 오게 하는게 좋을지 더 좋은 방법이 있는지 고민 중입니다.
     private:
-        std::string getStringHeadByDelimiter(const std::string &buf, std::size_t &pos, const std::string &needle);
-        bool setHeaderString(void);
-        int findNewLine(const char *buffer);
         bool getHeaderStartLine(void);
         bool getHeader(void);
+
+        int findNewLine(const char *buffer);
+        bool setHeaderString(void);
+
+        void setMethod(std::string method);
+        void setURI(std::string URI);
+        void setProtocol(std::string protocol);
 
         Phase _phase;
         long _contentLength;
         FileController* _fileController;
 
-        void setMethod(std::string method);
-        void setURI(std::string URI);
-        void setProtocol(std::string protocol);
 };
 
 #endif
