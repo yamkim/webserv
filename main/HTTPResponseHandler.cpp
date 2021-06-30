@@ -184,8 +184,16 @@ int HTTPResponseHandler::getCGIfd(void) {
 
 std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     // FIXME : yekim : types 블록에 대해 map 타입으로 파싱해야 합니다.
-    std::map<std::string, std::string> mine;
 
+    std::map<std::string, std::string> mime = _nginxConfig._http.types.typeMap;
+    if(extension == std::string("") || mime.find(extension) == mime.end()) {
+        return (std::string("application/octet-stream"));
+    } else {
+        return (mime[extension]);
+    }
+}
+
+#if 0
     mine[std::string("html")] = std::string("text/html");
     mine[std::string("htm")] = std::string("text/html");
     mine[std::string("shtml")] = std::string("text/html");
@@ -294,10 +302,4 @@ std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     mine[std::string("asf")] = std::string("video/x-ms-asf");
     mine[std::string("wmv")] = std::string("video/x-ms-wmv");
     mine[std::string("avi")] = std::string("video/x-msvideo");
-
-    if(extension == std::string("") || mine.find(extension) == mine.end()) {
-        return (std::string("application/octet-stream"));
-    } else {
-        return (mine[extension]);
-    }
-}
+#endif

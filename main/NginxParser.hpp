@@ -60,5 +60,12 @@ class NginxParser : public Parser {
 
             return buf.substr(blockBeg + 1, blockEnd - blockBeg - 1);
         }
+
+        void setTypeMap(std::map<std::string, std::string>& typeMap, std::string& type, std::string& value) {
+            std::vector<std::string> tmpVec = getSplitBySpace(value);
+            for (int i = 0; i < (int)tmpVec.size(); ++i) {
+                typeMap[tmpVec[i]] = type;
+            }
+        }
 };
 #endif
