@@ -22,9 +22,11 @@ class NginxConfig : public NginxParser {
             std::vector<std::string> dirCase;
             // FIXME: yekim: cgi 파라미터 관련 요소 (cgi_pass) 추가
             std::string locationPath;
-            std::string try_files;
-            std::string deny;
-            std::string locationReturn;
+            std::vector<std::string> try_files;
+            std::vector<std::string> _return;
+            std::vector<std::string> deny;
+            // std::string deny;
+            // std::string locationReturn;
         };
         struct ServerBlock : NginxBlock{
             std::vector<std::string> dirCase;
@@ -132,6 +134,11 @@ class NginxConfig : public NginxParser {
         }
 
         void setLocationBlock(struct LocationBlock& block) {
+            block.dirCase.push_back("return");
+            block.dirCase.push_back("try_files");
+            block.dirCase.push_back("deny");
+            block.dirCase.push_back("autoindex");
+
             std::string buf = block.rawData;
             std::size_t pos = 0;
             while (buf[pos]) {
@@ -142,15 +149,37 @@ class NginxConfig : public NginxParser {
                 std::size_t tmpPos = 0;
                 std::string tmpDir = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, " "));
                 // std::cout << "identifier[location]: [" << tmpDir << "]" << std::endl;
-                if (tmpDir == "return") {
-                    block.locationReturn = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                if (find(block.dirCase.begin(), block.dirCase.end(), tmpDir) == block.dirCase.end()) {
+                    throw std::string("Error: " + tmpDir + " is not in block[server] list.");
                 } else if (tmpDir == "try_files") {
-                    block.try_files = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";")); 
-                } else if (tmpDir == "deny") {
-                    block.deny = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";")); 
+                    std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    block.try_files = getSplitBySpace(tmpVal);
+                } else if (tmpDir == "return") {
+                    std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    block._return = getSplitBySpace(tmpVal);
+                    if (block._return.size() != 2) {
+                        throw std::string("Error: invalid number of arguments in "+ tmpDir + " directive.");
+                    } else if (!isNumber(block._return[1])) {
+                        throw std::string("Error: invalid status code in "+ tmpDir + " directive.");
+                    }
                 } else {
-                    throw std::string("Error: " + tmpDir + " is not in block[location] list.");
+                    std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    std::vector<std::string> tmpSplit = getSplitBySpace(tmpVal);
+                    if (tmpSplit.size() != 1) {
+                        throw std::string("Error: invalid number of arguments in "+ tmpDir + " directive.");
+                    }
+                    block.dirMap[tmpDir] = tmpSplit[0];
+                    std::cout << "[DEBUG] dirMap[tmpDir] in location: " << block.dirMap[tmpDir] << std::endl;
                 }
+                // if (tmpDir == "return") {
+                //     block.locationReturn = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                // } else if (tmpDir == "try_files") {
+                //     block.try_files = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";")); 
+                // } else if (tmpDir == "deny") {
+                //     block.deny = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";")); 
+                // } else {
+                //     throw std::string("Error: " + tmpDir + " is not in block[location] list.");
+                // }
             }
         }
 
