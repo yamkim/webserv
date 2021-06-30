@@ -58,3 +58,7 @@ int ConnectionSocket::runSocket() {
 int ConnectionSocket::getCGIfd(void) {
     return (_res->getCGIfd());
 }
+
+void ConnectionSocket::ConnectionSocketKiller(void* connectionsocket) {
+    delete reinterpret_cast<ConnectionSocket*>(connectionsocket);
+}

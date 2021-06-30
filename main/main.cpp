@@ -4,6 +4,7 @@
 #include <vector>
 #include "KernelQueue.hpp"
 #include <cstdlib>
+#include "Timer.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -54,12 +55,14 @@ int main(int argc, char *argv[])
     pollfds.appendElement(lSocket3, PairArray::LISTENING);
  #endif
 #if 1
+    Timer timer;
     try {
         while (true) {
             //TODO: joopark - 커널큐로 테스트 해보기 (코드 반영 x)
             //int result = poll(pollfds.getArray(), pollfds.getSize(), 1000);
             int result = kq.getEventsIndex();
             if (result == 0) {
+                timer.CheckTimer(ConnectionSocket::ConnectionSocketKiller);
                 std::cout << "waiting..." << std::endl;
             } else {
                 for (int i = 0; i < result; ++i) {
@@ -71,13 +74,15 @@ int main(int argc, char *argv[])
                     } else if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
                         // NOTE: Listening Socket Event 발생
                         ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket());
+                        timer.addObj(cSocket, 2);
                         kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
                     } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
                         // NOTE: Connection Socket Event 발생
                         ConnectionSocket* cSocket = dynamic_cast<ConnectionSocket*>(instance);
                         if (kq.isClose(i)) {
                             // NOTE: 연결 종료 여부 확인
-                            delete cSocket;
+                            timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
+                            //delete cSocket;
                         } else if (kq.isReadEvent(i)) {
                             // NOTE: Read Event
                             if (cSocket->HTTPRequestProcess() == HTTPRequestHandler::FINISH) {
@@ -89,13 +94,15 @@ int main(int argc, char *argv[])
                             HTTPResponseHandler::Phase phase = cSocket->HTTPResponseProcess();
                             if (phase == HTTPResponseHandler::FINISH) {
                                 kq.deletePairEvent(i);
-                                delete cSocket;
+                                timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
+                                //delete cSocket;
                             } else if (phase == HTTPResponseHandler::CGI_REQ) {
                                 kq.setPairEvent(i, cSocket->getCGIfd());
                             }
                         }
                     }
                 }
+                timer.CheckTimer(ConnectionSocket::ConnectionSocketKiller);
             }
         }
     } catch (const std::exception &error) {

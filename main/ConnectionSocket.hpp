@@ -23,6 +23,7 @@ class ConnectionSocket : public Socket {
         int runSocket();
         int getCGIfd(void);
         void setConnectionData(struct sockaddr_in _serverSocketAddr, struct sockaddr_in _clientSocektAddr);
+        static void ConnectionSocketKiller(void* connectionsocket);
 };
 
 #endif
