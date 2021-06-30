@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 {
     KernelQueue kq;
     NginxConfig nginxConfig("nginx.conf");
-    #if 1
+    #if 0
     (void)argc, (void)argv;
     for (int i = 0; i < 2; i++) {
         ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
@@ -19,7 +19,6 @@ int main(int argc, char *argv[])
     }
     #else
     for (int i = 1; i < argc; i++) {
-        std::cout << "[DEBUG] argv[" << i << "]: " << std::atoi(argv[i]) << std::endl;
         ListeningSocket* lSocket = new ListeningSocket(std::atoi(argv[i]), 42);
         if (lSocket->runSocket())
             return (1);
@@ -54,7 +53,7 @@ int main(int argc, char *argv[])
     pollfds.appendElement(lSocket2, PairArray::LISTENING);
     pollfds.appendElement(lSocket3, PairArray::LISTENING);
  #endif
-
+#if 1
     try {
         while (true) {
             //TODO: joopark - 커널큐로 테스트 해보기 (코드 반영 x)
@@ -103,6 +102,7 @@ int main(int argc, char *argv[])
         std::cout << error.what() << std::endl;
         return (1);
     }
+#endif
     return (0);
 }
     

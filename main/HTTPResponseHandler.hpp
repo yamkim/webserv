@@ -2,7 +2,6 @@
 #define HTTPRESPONSEHANDLER_HPP
 
 #include <ctime>
-#include <sstream>
 #include <iostream>
 #include <fcntl.h>
 
@@ -11,6 +10,7 @@
 #include "CGISession.hpp"
 
 #include "NginxConfig.hpp"
+#include "HTMLBody.hpp"
 
 class HTTPResponseHandler : public HTTPHandler {
     private:
@@ -28,8 +28,6 @@ class HTTPResponseHandler : public HTTPHandler {
 
         int getCGIfd(void);
     private:
-        static std::string get404Body(void);
-        static std::string getAutoIndexBody(std::string root, std::string path);
         std::string getMIME(const std::string& extension) const;
         bool isCGI(std::string& URI);
         std::string getServerIndex(NginxConfig::ServerBlock server);
@@ -40,9 +38,7 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string _root;
         FileController::Type _type;
 
-        std::string _internalHTMLString;
         std::string _absolutePath;
-        std::string _extension;
         std::string _staticHtml;
         FileController* _file;
         CGISession* _cgi;
