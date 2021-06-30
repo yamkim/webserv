@@ -7,8 +7,10 @@ class NginxConfig : public NginxParser {
     public:
         struct NginxBlock {
             std::string rawData;
+            std::map<std::string, std::string> dirMap;
         };
         struct NoneBlock : NginxBlock {
+            std::vector<std::string> dirCase;
             std::string user;
             std::string worker_processes;
         };
@@ -17,6 +19,7 @@ class NginxConfig : public NginxParser {
             std::map<std::string, std::string> typeMap;
         };
         struct LocationBlock : NginxBlock {
+            std::vector<std::string> dirCase;
             // FIXME: yekim: cgi 파라미터 관련 요소 (cgi_pass) 추가
             std::string locationPath;
             std::string try_files;
@@ -24,13 +27,15 @@ class NginxConfig : public NginxParser {
             std::string locationReturn;
         };
         struct ServerBlock : NginxBlock{
-            std::string listen;
-            std::string server_name;
-            std::string root;
-            std::string index;
+            std::vector<std::string> dirCase;
+            // std::string listen;
+            // std::string server_name;
+            // std::string root;
+            std::vector<std::string> index;
             std::vector<struct LocationBlock> location;
         };
         struct HttpBlock : NginxBlock{
+            std::vector<std::string> dirCase;
             std::string charset;
             std::string include;
             std::string default_type;
@@ -151,6 +156,12 @@ class NginxConfig : public NginxParser {
         }
 
         void setServerBlock(struct ServerBlock& block) {
+            block.dirCase.push_back("listen");
+            block.dirCase.push_back("server_name");
+            block.dirCase.push_back("root");
+            block.dirCase.push_back("index");
+            block.dirCase.push_back("location");
+
             std::string buf = block.rawData;
 
             std::size_t pos = 0;
@@ -163,14 +174,8 @@ class NginxConfig : public NginxParser {
                 std::size_t tmpPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, tmpPos, " ");
                 // std::cout << "identifier[server]: [" << tmpDir << "]" << std::endl;
-                if (tmpDir == "listen") {
-                    block.listen = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                } else if (tmpDir == "server_name") {
-                    block.server_name = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                } else if (tmpDir == "root") {
-                    block.root = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                } else if (tmpDir == "index") {
-                    block.index = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                if (find(block.dirCase.begin(), block.dirCase.end(), tmpDir) == block.dirCase.end()) {
+                    throw std::string("Error: " + tmpDir + " is not in block[server] list.");
                 } else if (tmpDir == "location") {
                     LocationBlock tmpLocationBlock;
                     tmpLocationBlock.locationPath = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, "{"));
@@ -178,9 +183,37 @@ class NginxConfig : public NginxParser {
                     setLocationBlock(tmpLocationBlock);
                     block.location.push_back(tmpLocationBlock);
                     pos = blockPos;
+                } else if (tmpDir == "index") {
+                    std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    block.index = getSplitBySpace(tmpVal);
                 } else {
-                    throw std::string("Error: " + tmpDir + " is not in block[server] list.");
+                    std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    std::vector<std::string> tmpSplit = getSplitBySpace(tmpVal);
+                    if (tmpSplit.size() != 1) {
+                        throw std::string("Error: invalid number of arguments in "+ tmpDir + " directive.");
+                    }
+                    block.dirMap[tmpDir] = tmpSplit[0];
+                    std::cout << "[DEBUG] dirMap[tmpDir]: " << block.dirMap[tmpDir] << std::endl;
                 }
+
+                // if (tmpDir == "listen") {
+                //     block.listen = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                // } else if (tmpDir == "server_name") {
+                //     block.server_name = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                // } else if (tmpDir == "root") {
+                //     block.root = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                // } else if (tmpDir == "index") {
+                //     block.index = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                // } else if (tmpDir == "location") {
+                //     LocationBlock tmpLocationBlock;
+                //     tmpLocationBlock.locationPath = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, "{"));
+                //     tmpLocationBlock.rawData = getBlockContent(buf, blockPos);
+                //     setLocationBlock(tmpLocationBlock);
+                //     block.location.push_back(tmpLocationBlock);
+                //     pos = blockPos;
+                // } else {
+                //     throw std::string("Error: " + tmpDir + " is not in block[server] list.");
+                // }
             }
         }
 

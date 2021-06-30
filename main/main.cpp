@@ -8,14 +8,19 @@
 int main(int argc, char *argv[])
 {
     KernelQueue kq;
-    NginxConfig nginxConfig("nginx.conf");
+    try {
+        NginxConfig nginxConfig("nginx.conf");
     #if 1
     (void)argc, (void)argv;
     for (int i = 0; i < (int)nginxConfig._http.server.size(); i++) {
-        ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
+        // ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
+        ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].dirMap["listen"].c_str()), 42);
         if (lSocket->runSocket())
             return (1);
         kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
+    }
+    } catch (const std::string& e) {
+        std::cout << e << std::endl;
     }
     #else
     for (int i = 1; i < argc; i++) {
@@ -25,39 +30,9 @@ int main(int argc, char *argv[])
         kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
     }
     #endif
-#if 0
-    // NOTE: 여러 개의 소켓 관리도 간편하게 가능
-    ListeningSocket* lSocket8080 = new ListeningSocket(8080, 42);
-    if (lSocket8080->runSocket())
-        return (1);
-    kq.addReadEvent(lSocket8080->getSocket(), reinterpret_cast<void*>(lSocket8080));
-    //pollfds.appendElement(lSocket1, PairArray::LISTENING);
-#endif
-
-#if 0
-    Socket* lSocket1 = new ListeningSocket(4201, 42);
-    if (lSocket1->runSocket())
-        return (1);
-    Socket* lSocket2 = new ListeningSocket(4202, 42);
-    if (lSocket2->runSocket())
-        return (1);
-    Socket* lSocket3 = new ListeningSocket(4203, 42);
-    if (lSocket3->runSocket())
-        return (1);
-    
-    lSocket1->setPollFd(POLLIN);
-    lSocket2->setPollFd(POLLIN);
-    lSocket3->setPollFd(POLLIN);
-
-    pollfds.appendElement(lSocket1, PairArray::LISTENING);
-    pollfds.appendElement(lSocket2, PairArray::LISTENING);
-    pollfds.appendElement(lSocket3, PairArray::LISTENING);
- #endif
 #if 1
     try {
         while (true) {
-            //TODO: joopark - 커널큐로 테스트 해보기 (코드 반영 x)
-            //int result = poll(pollfds.getArray(), pollfds.getSize(), 1000);
             int result = kq.getEventsIndex();
             if (result == 0) {
                 std::cout << "waiting..." << std::endl;
