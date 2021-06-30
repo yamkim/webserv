@@ -108,7 +108,6 @@ class Parser {
                 if (tmp.empty()) {
                     break ;
                 }
-                std::cout << "tmp: " << tmp << std::endl;
                 ret.push_back(tmp);
             }
             return ret; 

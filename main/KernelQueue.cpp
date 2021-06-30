@@ -108,7 +108,7 @@ void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd) {
             0,
             reinterpret_cast<void*>(_pair[_getEvent[masterIndex].ident]));
     _pair[_getEvent[masterIndex].ident]->setPairQueue(master, slave);
-    std::cout << "[DEBUG] : GEN " << _pair[_getEvent[masterIndex].ident] << std::endl;
+    // std::cout << "[DEBUG] : GEN " << _pair[_getEvent[masterIndex].ident] << std::endl;
     if (kevent(_kernelQueuefd, &slave, 1, NULL, 0, NULL) == -1) {
         throw ErrorHandler("Error: Kernel Queue setPairEvent Error.", ErrorHandler::CRITICAL, "KernelQueue::setPairEvent");
     }

@@ -3,17 +3,11 @@
 // FIXME : 리스폰스에 URI 외에 더 다양한 아규먼트를 집어넣어야 하는데 어떤 형식으로 집어넣을지 고민 중입니다. 추후에 수정하겠습니다.
 HTTPResponseHandler::HTTPResponseHandler(int connectionFd) : HTTPHandler(connectionFd), _nginxConfig("nginx.conf") {
     _phase = FIND_RESOURCE;
-    // _URI = arg;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
     _root = _nginxConfig._http.server[1].root;
-    // NOTE[yekim]: 언제 사용되는 건가여?
-    // file controller를 이용해서 파일을 읽어올 때 사용
     _file = NULL;
 
     // FIXME: 일단 공통 구조체를 process 내에서만 사용해서... 이 변수들에 대해 조치가 필요합니다.
-    // _absolutePath = _root + _URI;
-    // _extension = getExtension();
-    // _type = FileController::checkType(_absolutePath);
     _serverIndex = getServerIndex(_nginxConfig._http.server[1]);
 
     _cgi = NULL;
@@ -25,19 +19,16 @@ HTTPResponseHandler::~HTTPResponseHandler() {
 }
 
 std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server) {
-    // FIXME: yekim: 로직 수정
     std::string indeces = server.index + ";";
     std::size_t pos = 0;
     std::string tmpServerIndex[3];
     tmpServerIndex[0] = NginxParser::getIdentifier(indeces, pos, " ");
     tmpServerIndex[1] = NginxParser::getIdentifier(indeces, pos, ";");
     for (int i = 0; i < 2; i++) {
-        std::cout << "[DEBUG] _serverIndex before file check: " << _absolutePath + tmpServerIndex[i] << std::endl;
         if (FileController::checkType(_absolutePath + tmpServerIndex[i]) == FileController::FILE) {
             return (tmpServerIndex[i]);
         }
     }
-    std::cout << "[DEBUG] INVALID _serverIndex=====================" << std::endl;
     return (std::string(""));
 }
 
@@ -101,9 +92,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == GET_FILE) {
         _file = new FileController(_absolutePath, FileController::READ);
         setHTMLHeader(data._URIExtension, _file->length());
-        // setTypeHeader(getMIME(_extension));
-        // setLengthHeader(_file->length());
-        // convertHeaderMapToString(false);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
     }

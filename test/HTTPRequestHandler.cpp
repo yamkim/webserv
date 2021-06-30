@@ -18,7 +18,6 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process() {
 
     if (_phase == PARSE_STARTLINE) {
         if (getHeaderStartLine() == true) {
-            std::cout << "[DEBUG] HTTPRequestHandler.URI : " << _URI << std::endl;
             _phase = PARSE_HEADER;
         } else {
             _phase = PARSE_STARTLINE;

@@ -28,7 +28,7 @@ class NginxConfig : public NginxParser {
             std::string server_name;
             std::string root;
             std::string index;
-            struct LocationBlock location[10];
+            std::vector<struct LocationBlock> location;
         };
         struct HttpBlock : NginxBlock{
             std::string charset;
@@ -37,7 +37,7 @@ class NginxConfig : public NginxParser {
             std::string keeplive_timeout;
             std::string sendfile;
 
-            struct ServerBlock server[2];
+            std::vector<struct ServerBlock> server;
             struct TypesBlock types;
         };
 
@@ -155,7 +155,6 @@ class NginxConfig : public NginxParser {
 
             std::size_t pos = 0;
             std::size_t blockPos = 0;
-            std::size_t locationBlockIdx = 0;
             while (buf[pos]) {
                 std::string tmpLine = getIdentifier(buf, pos, "\n");
                 if (sideSpaceTrim(tmpLine).empty()) {
@@ -173,10 +172,11 @@ class NginxConfig : public NginxParser {
                 } else if (tmpDir == "index") {
                     block.index = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "location") {
-                    block.location[locationBlockIdx].locationPath = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, "{"));
-                    block.location[locationBlockIdx].rawData = getBlockContent(buf, blockPos);
-                    setLocationBlock(block.location[locationBlockIdx]);
-                    locationBlockIdx++;
+                    LocationBlock tmpLocationBlock;
+                    tmpLocationBlock.locationPath = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, "{"));
+                    tmpLocationBlock.rawData = getBlockContent(buf, blockPos);
+                    setLocationBlock(tmpLocationBlock);
+                    block.location.push_back(tmpLocationBlock);
                     pos = blockPos;
                 } else {
                     throw std::string("Error: " + tmpDir + " is not in block[server] list.");
@@ -198,7 +198,6 @@ class NginxConfig : public NginxParser {
 
             std::size_t pos = 0;
             std::size_t blockPos = 0;
-            std::size_t serverBlockIdx = 0;
             while (buf[pos]) {
                 std::string tmpLine = getIdentifier(buf, pos, "\n");
                 if (sideSpaceTrim(tmpLine).empty()) {
@@ -218,9 +217,10 @@ class NginxConfig : public NginxParser {
                 } else if (tmpDir == "sendfile") {
                     block.sendfile = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                 } else if (tmpDir == "server") {
-                    block.server[serverBlockIdx].rawData = getBlockContent(buf, blockPos);
-                    setServerBlock(block.server[serverBlockIdx]);
-                    serverBlockIdx++;
+                    ServerBlock tmpServerBlock;
+                    tmpServerBlock.rawData = getBlockContent(buf, blockPos);
+                    setServerBlock(tmpServerBlock);
+                    block.server.push_back(tmpServerBlock);
                     pos = blockPos;
                 } else if (tmpDir == "types") {
                     block.types.rawData = getBlockContent(buf, blockPos);
