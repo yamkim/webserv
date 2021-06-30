@@ -22,6 +22,7 @@ class HTTPHandler {
         std::map<std::string, std::string> _headers;
         int _connectionFd;
         std::string _headerString;
+        std::string _extension;
 	public:
 		HTTPHandler(int connectionFd);
 		virtual ~HTTPHandler();

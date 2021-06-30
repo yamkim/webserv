@@ -43,7 +43,7 @@ std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server)
 
 void HTTPResponseHandler::responseNotFound(void) {
     std::string notFoundType = std::string("html");
-    _staticHtml = get404Body();
+    _staticHtml = HTMLBody::getStaticHTML(404);
     setHTMLHeader("html", _staticHtml.length());
     // setTypeHeader(getMIME(notFoundType));
     // setLengthHeader(_staticHtml.length());
@@ -54,7 +54,7 @@ void HTTPResponseHandler::responseNotFound(void) {
 
 void HTTPResponseHandler::responseAutoIndex(void) {
     std::string autoIndexType = std::string("html");
-    _staticHtml = getAutoIndexBody(_root, _URI);
+    _staticHtml = HTMLBody::getAutoIndexBody(_root, _URI);
     setHTMLHeader("html", _staticHtml.length());
     // setTypeHeader(getMIME(autoIndexType));
     // setLengthHeader(_staticHtml.length());
@@ -167,57 +167,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(void) {
     }
     #endif
     return (_phase);
-}
-
-
-std::string HTTPResponseHandler::get404Body(void) {
-    // REVIEW : 다른데다 옮기는것도...
-    return (std::string("<html>" \
-                            "<head>" \
-                                "<title>404 Not Found</title>" \
-                            "</head>" \
-                        "<body>" \
-                            "<center><h1>404 Not Found</h1></center>" \
-                            "<hr>" \
-                            "<center>webserv/0.0.1</center>" \
-                        "</body>" \
-                        "</html>"));
-}
-
-std::string HTTPResponseHandler::getAutoIndexBody(std::string root, std::string path) {
-    FileController folder = FileController(root + path, FileController::READ);
-    std::stringstream stringBuffer;
-    stringBuffer << "<html>";
-    stringBuffer << "<head><title>Index of /" << path << "</title></head>";
-    stringBuffer << "<body>";
-    stringBuffer << "<h1>Index of /" << path << "</h1><hr><pre>" << std::endl;
-    if (folder.getType() == FileController::DIRECTORY) {
-        for (int i = 0; i < folder.getFilesSize(); ++i) {
-            if (folder.getFiles(i)->name == std::string(".")) {
-                continue ;
-            }
-            std::string fileName;
-            if (folder.getFiles(i)->type == FileController::DIRECTORY) {
-                fileName = folder.getFiles(i)->name + std::string("/");
-            } else {
-                fileName = folder.getFiles(i)->name;
-            }
-            stringBuffer << "<a href=\"" << fileName << "\">";
-            stringBuffer << std::setw(53) << std::setfill(' ');
-            stringBuffer << std::left << (fileName + std::string("</a>"));
-            stringBuffer << std::right;
-            stringBuffer << folder.getFiles(i)->generateTime;
-            stringBuffer << std::setw(20) << std::setfill(' ');
-            if (folder.getFiles(i)->type == FileController::DIRECTORY) {
-                stringBuffer << "-" << std::endl;
-            } else {
-                stringBuffer << folder.getFiles(i)->size << std::endl;
-            }
-        }
-    }
-    stringBuffer << "</pre><hr></body>";
-    stringBuffer << "</html>";
-    return (stringBuffer.str());
 }
 
 bool HTTPResponseHandler::isCGI(std::string& URI) {
