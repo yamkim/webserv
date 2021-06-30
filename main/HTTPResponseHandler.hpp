@@ -21,7 +21,7 @@ class HTTPResponseHandler : public HTTPHandler {
         virtual ~HTTPResponseHandler();
 
         typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, FINISH} Phase;
-        virtual HTTPResponseHandler::Phase process(void);
+        virtual HTTPResponseHandler::Phase process(HTTPHandler::ConnectionData& data);
 
         void responseNotFound(void);
         void responseAutoIndex(void);
