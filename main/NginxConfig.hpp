@@ -25,25 +25,14 @@ class NginxConfig : public NginxParser {
             std::vector<std::string> try_files;
             std::vector<std::string> _return;
             std::vector<std::string> deny;
-            // std::string deny;
-            // std::string locationReturn;
         };
         struct ServerBlock : NginxBlock{
             std::vector<std::string> dirCase;
-            // std::string listen;
-            // std::string server_name;
-            // std::string root;
             std::vector<std::string> index;
             std::vector<struct LocationBlock> location;
         };
         struct HttpBlock : NginxBlock{
             std::vector<std::string> dirCase;
-            // std::string charset;
-            // std::string include;
-            // std::string default_type;
-            // std::string keeplive_timeout;
-            // std::string sendfile;
-
             std::vector<struct ServerBlock> server;
             struct TypesBlock types;
         };
@@ -150,7 +139,7 @@ class NginxConfig : public NginxParser {
                 std::string tmpDir = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, " "));
                 // std::cout << "identifier[location]: [" << tmpDir << "]" << std::endl;
                 if (find(block.dirCase.begin(), block.dirCase.end(), tmpDir) == block.dirCase.end()) {
-                    throw std::string("Error: " + tmpDir + " is not in block[server] list.");
+                    throw std::string("Error: " + tmpDir + " is not in block[location] list.");
                 } else if (tmpDir == "try_files") {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     block.try_files = getSplitBySpace(tmpVal);
@@ -158,28 +147,19 @@ class NginxConfig : public NginxParser {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     block._return = getSplitBySpace(tmpVal);
                     if (block._return.size() != 2) {
-                        throw std::string("Error: invalid number of arguments in "+ tmpDir + " directive.");
-                    } else if (!isNumber(block._return[1])) {
+                        throw std::string("Error: invalid number of arguments in location["+ tmpDir + " directive].");
+                    } else if (!isNumber(block._return[0])) {
                         throw std::string("Error: invalid status code in "+ tmpDir + " directive.");
                     }
                 } else {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     std::vector<std::string> tmpSplit = getSplitBySpace(tmpVal);
                     if (tmpSplit.size() != 1) {
-                        throw std::string("Error: invalid number of arguments in "+ tmpDir + " directive.");
+                        throw std::string("Error: invalid number of arguments in location["+ tmpDir + " directive].");
                     }
                     block.dirMap[tmpDir] = tmpSplit[0];
                     std::cout << "[DEBUG] dirMap[tmpDir] in location: " << block.dirMap[tmpDir] << std::endl;
                 }
-                // if (tmpDir == "return") {
-                //     block.locationReturn = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "try_files") {
-                //     block.try_files = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";")); 
-                // } else if (tmpDir == "deny") {
-                //     block.deny = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";")); 
-                // } else {
-                //     throw std::string("Error: " + tmpDir + " is not in block[location] list.");
-                // }
             }
         }
 
@@ -217,30 +197,11 @@ class NginxConfig : public NginxParser {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     std::vector<std::string> tmpSplit = getSplitBySpace(tmpVal);
                     if (tmpSplit.size() != 1) {
-                        throw std::string("Error: invalid number of arguments in "+ tmpDir + " directive.");
+                        throw std::string("Error: invalid number of arguments in server["+ tmpDir + " directive].");
                     }
                     block.dirMap[tmpDir] = tmpSplit[0];
                     std::cout << "[DEBUG] dirMap[tmpDir] in server: " << block.dirMap[tmpDir] << std::endl;
                 }
-
-                // if (tmpDir == "listen") {
-                //     block.listen = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "server_name") {
-                //     block.server_name = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "root") {
-                //     block.root = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "index") {
-                //     block.index = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "location") {
-                //     LocationBlock tmpLocationBlock;
-                //     tmpLocationBlock.locationPath = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, "{"));
-                //     tmpLocationBlock.rawData = getBlockContent(buf, blockPos);
-                //     setLocationBlock(tmpLocationBlock);
-                //     block.location.push_back(tmpLocationBlock);
-                //     pos = blockPos;
-                // } else {
-                //     throw std::string("Error: " + tmpDir + " is not in block[server] list.");
-                // }
             }
         }
 
@@ -289,35 +250,11 @@ class NginxConfig : public NginxParser {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     std::vector<std::string> tmpSplit = getSplitBySpace(tmpVal);
                     if (tmpSplit.size() != 1) {
-                        throw std::string("Error: invalid number of arguments in "+ tmpDir + " directive.");
+                        throw std::string("Error: invalid number of arguments in http["+ tmpDir + " directive].");
                     }
                     block.dirMap[tmpDir] = tmpSplit[0];
                     std::cout << "[DEBUG] dirMap[tmpDir] in http: " << block.dirMap[tmpDir] << std::endl;
                 }
-                // std::cout << "identifier[http]: [" << tmpDir << "]" << std::endl;
-                // if (tmpDir == "charset") {
-                //     block.charset = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "include") {
-                //     block.include = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "default_type") {
-                //     block.default_type = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "keepalive_timeout") {
-                //     block.keeplive_timeout = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "sendfile") {
-                //     block.sendfile = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                // } else if (tmpDir == "server") {
-                //     ServerBlock tmpServerBlock;
-                //     tmpServerBlock.rawData = getBlockContent(buf, blockPos);
-                //     setServerBlock(tmpServerBlock);
-                //     block.server.push_back(tmpServerBlock);
-                //     pos = blockPos;
-                // } else if (tmpDir == "types") {
-                //     block.types.rawData = getBlockContent(buf, blockPos);
-                //     setTypesBlock(block.types);
-                //     pos = blockPos;
-                // } else {
-                //     throw std::string("Error: " + tmpDir + " is not in block[http] list.");
-                // }
             }
         }
 };
