@@ -1,32 +1,14 @@
 #include "HTTPHandler.hpp"
 
 HTTPHandler::HTTPHandler(int connectionFd) {
-	_method = UNDEF;
-	_URI = std::string("");
 	_connectionFd = connectionFd;
 	_headerString = std::string("");
 }
 
 HTTPHandler::~HTTPHandler() {}
 
-HTTPHandler::Method HTTPHandler::getMethod(void) const {
-    return (_method);
-}
-
-std::string HTTPHandler::getURI(void) const {
-    return (_URI);
-}
 std::map<std::string, std::string> HTTPHandler::getHeaders(void) const {
     return (_headers);
-}
-
-std::string HTTPHandler::getExtension(void) {
-    std::size_t foundDot = _URI.rfind(".");
-    std::size_t foundSlash = _URI.rfind("/");
-    if (foundDot == std::string::npos || foundSlash > foundDot) {
-        return (std::string(""));
-    }
-    return (_URI.substr(foundDot + 1));
 }
 
 void HTTPHandler::setGeneralHeader(std::string status) {

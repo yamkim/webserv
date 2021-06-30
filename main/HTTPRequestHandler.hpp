@@ -19,10 +19,10 @@ class HTTPRequestHandler : public HTTPHandler {
         virtual ~HTTPRequestHandler();
 
         typedef enum e_Phase {PARSE_STARTLINE, PARSE_HEADER, PARSE_BODY, FINISH} Phase;
-        virtual HTTPRequestHandler::Phase process(HTTPHandler::ConnectionData& data);
+        virtual HTTPRequestHandler::Phase process(HTTPData& data);
     public: // REVIEW getter로 파싱된 항목 가지고 오게 하는게 좋을지 더 좋은 방법이 있는지 고민 중입니다.
     private:
-        bool getRequestLine(void);
+        bool getRequestLine(HTTPData& data);
         bool getHeader(void);
 
         int findNewLine(const char *buffer);

@@ -17,14 +17,14 @@ class HTTPResponseHandler : public HTTPHandler {
         HTTPResponseHandler();
         std::string _serverIndex;
     public:
-        HTTPResponseHandler(int coneectionFd, std::string arg);
+        HTTPResponseHandler(int coneectionFd);
         virtual ~HTTPResponseHandler();
 
         typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, FINISH} Phase;
-        virtual HTTPResponseHandler::Phase process(HTTPHandler::ConnectionData& data);
+        virtual HTTPResponseHandler::Phase process(HTTPData& data);
 
-        void responseNotFound(void);
-        void responseAutoIndex(void);
+        void responseNotFound(const HTTPData& data);
+        void responseAutoIndex(const HTTPData& data);
 
         int getCGIfd(void);
     private:

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <sys/socket.h>
 #include "ErrorHandler.hpp"
+#include "HTTPData.hpp"
 
 #define REQUEST_BUFFER_SIZE 100
 #define RESPONSE_BUFFER_SIZE 1000
@@ -13,31 +14,17 @@
 class HTTPHandler {
 	private:
 		HTTPHandler();
-    public:
-        typedef enum e_Method {UNDEF, GET, POST, DELETE} Method;
-        typedef struct s_ConnectionData {
-            std::string RequestMethod;
-            std::string HostIP;
-            int HostPort;
-            std::string ClientIP;
-            int ClientPort;
-            std::string postFilePath;
-            std::string URI;
-            std::string QueryString;
-            int StatusCode;
-            std::string ReqContentType;
-            std::string ReqContentLength;
-            std::string RequestFilePath;
-            std::string RequestAbsoluteFilePath;
-        } ConnectionData;
+
+
 	protected:
         static const ssize_t TRANS_ERROR = -1;
-        Method _method;
-        std::string _URI;
+        // Method _method;
+        // std::string _URI;
+        // std::string _extension;
         std::map<std::string, std::string> _headers;
         int _connectionFd;
         std::string _headerString;
-        std::string _extension;
+
 	public:
 		HTTPHandler(int connectionFd);
 		virtual ~HTTPHandler();
@@ -46,9 +33,6 @@ class HTTPHandler {
         void setLengthHeader(long contentLength);
         void convertHeaderMapToString(bool isCGI);
 
-        Method getMethod(void) const;
-        std::string getURI(void) const;
         std::map<std::string, std::string> getHeaders(void) const;
-        std::string getExtension(void);
 };
 #endif

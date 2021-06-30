@@ -1,6 +1,6 @@
 #include "CGISession.hpp"
 
-CGISession::CGISession(HTTPHandler::ConnectionData& data, std::string binary) : _pid(-2), _inputStream(-1), _outputStream(-1) {
+CGISession::CGISession(HTTPData& data, std::string binary) : _pid(-2), _inputStream(-1), _outputStream(-1) {
     // NOTE: data로부터 공통 인수를 받아오고 바이너리로부터 CGI를 실행할 바이너리 경로를 집어넣습니다.
     std::string _cgiArg;
     std::map<std::string, std::string> _envMap;
@@ -9,10 +9,10 @@ CGISession::CGISession(HTTPHandler::ConnectionData& data, std::string binary) : 
     _envMap[std::string("PATH")] = std::string(std::getenv("PATH"));
     _envMap[std::string("LANG")] = std::string(std::getenv("LANG"));
     // NOTE: CGI 1.1 표준 항목
-    _envMap[std::string("QUERY_STRING")] = data.QueryString;
-    _envMap[std::string("REQUEST_METHOD")] = data.RequestMethod;
-    _envMap[std::string("CONTENT_TYPE")] = data.ReqContentType;
-    _envMap[std::string("CONTENT_LENGTH")] = data.ReqContentLength;
+    _envMap[std::string("QUERY_STRING")] = data._URIQueryString;
+    _envMap[std::string("REQUEST_METHOD")] = data._reqMethod;
+    _envMap[std::string("CONTENT_TYPE")] = data._reqContentType;
+    _envMap[std::string("CONTENT_LENGTH")] = data._reqContentLength;
     _envMap[std::string("SCRIPT_NAME")] = std::string("");
     _envMap[std::string("REQUEST_URI")] = std::string("");
     _envMap[std::string("DOCUMENT_URI")] = std::string("");
@@ -31,11 +31,11 @@ CGISession::CGISession(HTTPHandler::ConnectionData& data, std::string binary) : 
 
     // setCGIargs(binary, absolutePath, cgiArg, envMap);
     _arg[0] = const_cast<char*>(binary.c_str());
-	_arg[1] = const_cast<char*>(data.RequestAbsoluteFilePath.c_str());
-    if (data.QueryString.empty()) {
+	_arg[1] = const_cast<char*>(data._requestAbsoluteFilePath.c_str());
+    if (data._URIQueryString.empty()) {
         _arg[2] = NULL;
     } else {
-        _arg[2] = const_cast<char*>(data.QueryString.c_str());
+        _arg[2] = const_cast<char*>(data._URIQueryString.c_str());
     }
 	_arg[3] = NULL;
 	_env = generateEnvp(_envMap);

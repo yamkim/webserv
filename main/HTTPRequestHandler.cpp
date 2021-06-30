@@ -11,25 +11,17 @@ HTTPRequestHandler::~HTTPRequestHandler() {
     delete _fileController;
 }
 
-HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPHandler::ConnectionData& data) {
+HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
     if (_phase == PARSE_STARTLINE) {
-        data.StatusCode = 200;
-        if (getRequestLine() == true) {
-            // TODO: 개별로 쓰이는 HTTPHandler 지역변수 (_URI 등) 없애기
-            data.URI = _URI;
-            if (_URI.find("?") != std::string::npos) {
-                data.QueryString = _URI.substr(_URI.find("?") + 1);
-                data.RequestFilePath = _URI.substr(0, _URI.find("?"));
+        data._statusCode = 200;
+        if (getRequestLine(data) == true) {
+            // TODO: 개별로 쓰이는 HTTPHandler 지역변수 (_reqURI 등) 없애기
+            if (data._reqURI.find("?") != std::string::npos) {
+                data._URIQueryString = data._reqURI.substr(data._reqURI.find("?") + 1);
+                data._requestFilePath = data._reqURI.substr(0, data._reqURI.find("?"));
             } else {
-                data.RequestFilePath = _URI;
-            }
-            if (_method == HTTPRequestHandler::GET) {
-                data.RequestMethod = "GET";
-            } else if (_method == HTTPRequestHandler::POST) {
-                data.RequestMethod = "POST";
-            } else if (_method == HTTPRequestHandler::DELETE) {
-                data.RequestMethod = "DELETE";
+                data._requestFilePath = data._reqURI;
             }
             _phase = PARSE_HEADER;
         } else {
@@ -47,10 +39,10 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPHandler::ConnectionDat
                 for (int j = 0; j < 10; j++) {
                     tmp[j] = char(std::rand() % ('Z' - 'A') + 'A');
                 }
-                data.postFilePath = std::string(tmp, 10);
+                data._postFilePath = std::string(tmp, 10);
                 _fileController = new FileController(std::string(tmp, 10), FileController::WRITE);
-                data.ReqContentLength = _headers["Content-Length"];
-                data.ReqContentType = _headers["Content-Type"];
+                data._reqContentType = _headers["Content-Type"];
+                data._reqContentLength = _headers["Content-Length"];
                 _phase = PARSE_BODY;
             }
         } else {
@@ -74,7 +66,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPHandler::ConnectionDat
     return _phase;
 }
 
-bool HTTPRequestHandler::getRequestLine(void) {
+bool HTTPRequestHandler::getRequestLine(HTTPData& data) {
     if (setHeaderString() == false) {
         return (false);
     }
@@ -82,13 +74,24 @@ bool HTTPRequestHandler::getRequestLine(void) {
     _requestLine = _headerString;
     std::vector<std::string> tmp = Parser::getSplitBySpace(_requestLine);
     if (tmp.size() != 3) {
-        throw ErrorHandler("Error: invalid _headerString.", ErrorHandler::ALERT, "HTTPRequestHandler::getRequestLine");
+        throw ErrorHandler("Error: invalid request line.", ErrorHandler::ALERT, "HTTPRequestHandler::getRequestLine");
+    }
+    if (   tmp[0] == std::string("GET")
+        || tmp[0] == std::string("POST")
+        || tmp[0] == std::string("DELETE")
+        || tmp[2] != std::string("HTTP/1.1")) {
+        data._reqMethod = tmp[0];
+        data._reqURI = tmp[1];
+        data.setExtension();
     } else {
-        setMethod(tmp[0]);
-        setURI(tmp[1]);
-        setProtocol(tmp[2]);
+        throw ErrorHandler("Error: invalid request line.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
     }
     _headerString.clear();
+
+    std::cout << "[DEBUG] _reqMethod: " << data._reqMethod << std::endl;
+    std::cout << "[DEBUG] _reqURI: " << data._reqURI << std::endl;
+    std::cout << "[DEBUG] _reqExtension: " << data._URIExtension << std::endl;
+
     return (true);
 }
 
@@ -143,31 +146,5 @@ bool HTTPRequestHandler::setHeaderString(void) {
         readLength = recv(_connectionFd, buffer, newLinePosition, 0);
         _headerString += std::string(buffer, readLength);
         return (true);
-    }
-}
-
-void HTTPRequestHandler::setMethod(std::string method) {
-    if (method == std::string("GET")) {
-        _method = HTTPRequestHandler::GET;
-    } else if (method == std::string("POST")) {
-        _method = HTTPRequestHandler::POST;
-    } else if (method == std::string("DELETE")) {
-        _method = HTTPRequestHandler::DELETE;
-    } else {
-        throw ErrorHandler("Error: weird method.", ErrorHandler::ALERT, "HTTPRequestHandler::getRequestLine");
-    }
-}
-
-void HTTPRequestHandler::setURI(std::string URI) {
-    if (!URI.empty()) {
-        _URI = URI;
-    } else {
-        throw ErrorHandler("Error: empty URI.", ErrorHandler::ALERT, "HTTPRequestHandler::getRequestLine");
-    }
-}
-
-void HTTPRequestHandler::setProtocol(std::string protocol) {
-    if (protocol != std::string("HTTP/1.1")) {
-        throw ErrorHandler("Error: weird Protocol.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
     }
 }

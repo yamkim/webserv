@@ -4,13 +4,14 @@
 #include "Socket.hpp"
 #include "HTTPRequestHandler.hpp"
 #include "HTTPResponseHandler.hpp"
+#include "HTTPData.hpp"
 
 class ConnectionSocket : public Socket {
     private:
         ConnectionSocket();
         HTTPRequestHandler *_req;
         HTTPResponseHandler *_res;
-        HTTPHandler::ConnectionData _connectionData;
+        HTTPData _data;
     public:
         ConnectionSocket(int listeningSocket);
         virtual ~ConnectionSocket();

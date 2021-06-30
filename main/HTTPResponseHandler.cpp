@@ -1,9 +1,9 @@
 #include "HTTPResponseHandler.hpp"
 
 // FIXME : 리스폰스에 URI 외에 더 다양한 아규먼트를 집어넣어야 하는데 어떤 형식으로 집어넣을지 고민 중입니다. 추후에 수정하겠습니다.
-HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HTTPHandler(connectionFd), _nginxConfig("nginx.conf") {
+HTTPResponseHandler::HTTPResponseHandler(int connectionFd) : HTTPHandler(connectionFd), _nginxConfig("nginx.conf") {
     _phase = FIND_RESOURCE;
-    _URI = arg;
+    // _URI = arg;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
     _root = _nginxConfig._http.server[1].root;
     // NOTE[yekim]: 언제 사용되는 건가여?
@@ -11,9 +11,9 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd, std::string arg) : HT
     _file = NULL;
 
     // FIXME: 일단 공통 구조체를 process 내에서만 사용해서... 이 변수들에 대해 조치가 필요합니다.
-    _absolutePath = _root + _URI;
-    _extension = getExtension();
-    _type = FileController::checkType(_absolutePath);
+    // _absolutePath = _root + _URI;
+    // _extension = getExtension();
+    // _type = FileController::checkType(_absolutePath);
     _serverIndex = getServerIndex(_nginxConfig._http.server[1]);
 
     _cgi = NULL;
@@ -41,24 +41,18 @@ std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server)
     return (std::string(""));
 }
 
-void HTTPResponseHandler::responseNotFound(void) {
+void HTTPResponseHandler::responseNotFound(const HTTPData& data) {
     std::string notFoundType = std::string("html");
-    _staticHtml = HTMLBody::getStaticHTML(404);
+    _staticHtml = HTMLBody::getStaticHTML(data._statusCode);
     setHTMLHeader("html", _staticHtml.length());
-    // setTypeHeader(getMIME(notFoundType));
-    // setLengthHeader(_staticHtml.length());
-    // convertHeaderMapToString(false);
     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
     _phase = DATA_SEND_LOOP;
 }
 
-void HTTPResponseHandler::responseAutoIndex(void) {
+void HTTPResponseHandler::responseAutoIndex(const HTTPData& data) {
     std::string autoIndexType = std::string("html");
-    _staticHtml = HTMLBody::getAutoIndexBody(_root, _URI);
+    _staticHtml = HTMLBody::getAutoIndexBody(_root, data._reqURI);
     setHTMLHeader("html", _staticHtml.length());
-    // setTypeHeader(getMIME(autoIndexType));
-    // setLengthHeader(_staticHtml.length());
-    // convertHeaderMapToString(false);
     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
     _phase = DATA_SEND_LOOP;
 }
@@ -69,10 +63,12 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
     convertHeaderMapToString(false);
 }
 
-HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPHandler::ConnectionData& data) {
+HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
         // TODO: data 인수에 request 파싱된 결과가 들어있어서 이 클래스 초기화될때 data를 넣어서 초기화 하거나 여기서 초기화 해야합니다.
-        data.RequestAbsoluteFilePath = _absolutePath + _serverIndex;
+        _absolutePath = _root + data._reqURI;
+        _type = FileController::checkType(_absolutePath);
+        data._requestAbsoluteFilePath = _absolutePath + _serverIndex;
         if (_type == FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 404 Not Found");
             _phase = NOT_FOUND;
@@ -86,7 +82,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPHandler::ConnectionD
             }
         } else if (_type == FileController::FILE) {
             setGeneralHeader("HTTP/1.1 200 OK");
-            if (isCGI(_extension)) {
+            if (isCGI(data._URIExtension)) {
                 _phase = CGI_RUN;
             } else {
                 _phase = GET_FILE;
@@ -95,16 +91,16 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPHandler::ConnectionD
     } 
 
     if (_phase == NOT_FOUND) {
-        responseNotFound();
+        responseNotFound(data);
     }
 
     if (_phase == AUTOINDEX) {
-        responseAutoIndex();
+        responseAutoIndex(data);
     }
     
     if (_phase == GET_FILE) {
         _file = new FileController(_absolutePath, FileController::READ);
-        setHTMLHeader(_extension, _file->length());
+        setHTMLHeader(data._URIExtension, _file->length());
         // setTypeHeader(getMIME(_extension));
         // setLengthHeader(_file->length());
         // convertHeaderMapToString(false);
