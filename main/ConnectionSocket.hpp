@@ -22,6 +22,7 @@ class ConnectionSocket : public Socket {
         struct pollfd getPollfd() const;
         int runSocket();
         int getCGIfd(void);
+        void setConnectionData(struct sockaddr_in _serverSocketAddr, struct sockaddr_in _clientSocektAddr);
 };
 
 #endif

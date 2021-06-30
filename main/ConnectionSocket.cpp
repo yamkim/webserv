@@ -12,11 +12,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd) : Socket(-1) {
     if (getsockname(this->_socket, (struct sockaddr *) &myAddr, &this->_socketLen) == -1) {
         throw ErrorHandler("Error: getsockname error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
-    // _data.setConnectionData(_socketAddr, myAddr);
-    _data._clientIP = std::string(inet_ntoa(_socketAddr.sin_addr));
-    _data._clientPort = ntohs(_socketAddr.sin_port);
-    _data._hostIP = std::string(inet_ntoa(myAddr.sin_addr));
-    _data._hostPort = ntohs(myAddr.sin_port);
+    setConnectionData(_socketAddr, myAddr);
     _req = new HTTPRequestHandler(_socket);
     _res = NULL;
 }
@@ -40,6 +36,13 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
         phase = HTTPRequestHandler::FINISH;
     }
     return (phase);
+}
+
+void ConnectionSocket::setConnectionData(struct sockaddr_in _serverSocketAddr, struct sockaddr_in _clientSocketAddr) {
+    _data._clientIP = std::string(inet_ntoa(_serverSocketAddr.sin_addr));
+    _data._clientPort = ntohs(_serverSocketAddr.sin_port);
+    _data._hostIP = std::string(inet_ntoa(_clientSocketAddr.sin_addr));
+    _data._hostPort = ntohs(_clientSocketAddr.sin_port);
 }
 
 HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {

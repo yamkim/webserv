@@ -33,7 +33,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
                 _phase = FINISH;
             } else {
                 _contentLength = std::atoi(_headers["Content-Length"].c_str());
-                std::cout << "_headers[] : " << _headers["Content-Length"] << std::endl;
+                // std::cout << "_headers[] : " << _headers["Content-Length"] << std::endl;
                 char tmp[10];
                 srand(time(NULL));
                 for (int j = 0; j < 10; j++) {
@@ -49,14 +49,14 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
             _phase = PARSE_HEADER;
         }
     } else if (_phase == PARSE_BODY) {
-        std::cout << "_contentLength : " << _contentLength << std::endl;
+        // std::cout << "_contentLength : " << _contentLength << std::endl;
         char buffer[REQUEST_BUFFER_SIZE + 1];
 
         int readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, 0);
-        std::cout << "readLength : " << readLength << std::endl;
+        // std::cout << "readLength : " << readLength << std::endl;
         _contentLength -= readLength;
         if (_contentLength <= 0) {
-            std::cout << "readLength + _contentLength : " << readLength + _contentLength << std::endl;
+            // std::cout << "readLength + _contentLength : " << readLength + _contentLength << std::endl;
             readLength = write(_fileController->getFd(), buffer, readLength + _contentLength);
             _phase = FINISH;
         } else {
@@ -88,15 +88,10 @@ bool HTTPRequestHandler::getRequestLine(HTTPData& data) {
     }
     _headerString.clear();
 
-    std::cout << "[DEBUG] _reqMethod: " << data._reqMethod << std::endl;
-    std::cout << "[DEBUG] _reqURI: " << data._reqURI << std::endl;
-    std::cout << "[DEBUG] _reqExtension: " << data._URIExtension << std::endl;
-
     return (true);
 }
 
 bool HTTPRequestHandler::getHeader(void) {
-    // REVIEW: if 두개의 의미를 모르겠습니다!
     if (setHeaderString() == false) {
         return (false);
     }
