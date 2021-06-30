@@ -15,6 +15,7 @@ class HTTPData {
 
         // localhost:4242/data/index.html?id=123
         std::string _URIAbsolutePath; // root/data/index.html
+        std::string _URIFilePath;     // /data/index.html
         std::string _URIQueryString;  // id=123
         std::string _URIExtension;    // html
         std::string _URIFileName;     // index.html
@@ -29,6 +30,7 @@ class HTTPData {
         
         // Response Data
         int _statusCode;
+        std::string _CGIBinary;
 
         // Common Data
         std::string _postFilePath;
@@ -50,15 +52,21 @@ class HTTPData {
             return (_reqURI);
         }
 
-        void setExtension(void) {
-            std::size_t foundDot = _reqURI.rfind(".");
-            std::size_t foundSlash = _reqURI.rfind("/");
-            if (foundDot == std::string::npos || foundSlash > foundDot) {
-                _URIExtension = std::string("");
+        void setURIelements(void) {
+            std::size_t foundQuestion = _reqURI.rfind("?");
+            if (foundQuestion == std::string::npos) {
+                _URIFilePath = _reqURI;
+            } else {
+                _URIQueryString = _reqURI.substr(foundQuestion + 1);
+                _URIFilePath = _reqURI.substr(0, foundQuestion);
             }
-            _URIExtension = _reqURI.substr(foundDot + 1);
+            std::size_t foundDot = _URIFilePath.rfind(".");
+            std::size_t foundSlash = _URIFilePath.rfind("/");
+            _URIFileName = _URIFilePath.substr(foundSlash + 1);
+            if (foundDot != std::string::npos && foundSlash <= foundDot) {
+                _URIExtension = _URIFilePath.substr(foundDot + 1);
+            }
         }
-
 };
 
 #endif

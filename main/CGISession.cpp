@@ -1,6 +1,6 @@
 #include "CGISession.hpp"
 
-CGISession::CGISession(HTTPData& data, std::string binary) : _pid(-2), _inputStream(-1), _outputStream(-1) {
+CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStream(-1) {
     // NOTE: data로부터 공통 인수를 받아오고 바이너리로부터 CGI를 실행할 바이너리 경로를 집어넣습니다.
     std::string _cgiArg;
     std::map<std::string, std::string> _envMap;
@@ -13,7 +13,7 @@ CGISession::CGISession(HTTPData& data, std::string binary) : _pid(-2), _inputStr
     _envMap[std::string("REQUEST_METHOD")] = data._reqMethod;
     _envMap[std::string("CONTENT_TYPE")] = data._reqContentType;
     _envMap[std::string("CONTENT_LENGTH")] = data._reqContentLength;
-    _envMap[std::string("SCRIPT_NAME")] = std::string("");
+    _envMap[std::string("SCRIPT_NAME")] = data._URIFileName;
     _envMap[std::string("REQUEST_URI")] = std::string("");
     _envMap[std::string("DOCUMENT_URI")] = std::string("");
     _envMap[std::string("DOCUMENT_ROOT")] = std::string("");
@@ -21,16 +21,16 @@ CGISession::CGISession(HTTPData& data, std::string binary) : _pid(-2), _inputStr
     _envMap[std::string("REQUEST_SCHEME")] = std::string("");
     _envMap[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
     _envMap[std::string("SERVER_SOFTWARE")] = std::string("WEBSERV/0.1");
-    _envMap[std::string("REMOTE_ADDR")] = std::string("");
+    _envMap[std::string("REMOTE_ADDR")] = data._clientIP;
     _envMap[std::string("REMOTE_PORT")] = std::string("");
-    _envMap[std::string("SERVER_ADDR")] = std::string("");
+    _envMap[std::string("SERVER_ADDR")] = data._hostIP;
     _envMap[std::string("SERVER_PORT")] = std::string("");
     _envMap[std::string("SERVER_NAME")] = std::string("");
-    //_binary = std::string("/usr/bin/python3");
+    _envMap[std::string("SCRIPT_FILENAME")] = data._requestAbsoluteFilePath;
     _cgiArg = std::string("data=test");
 
     // setCGIargs(binary, absolutePath, cgiArg, envMap);
-    _arg[0] = const_cast<char*>(binary.c_str());
+    _arg[0] = const_cast<char*>(data._CGIBinary.c_str());
 	_arg[1] = const_cast<char*>(data._requestAbsoluteFilePath.c_str());
     if (data._URIQueryString.empty()) {
         _arg[2] = NULL;
