@@ -9,6 +9,17 @@ HTTPHandler::HTTPHandler(int connectionFd) {
 
 HTTPHandler::~HTTPHandler() {}
 
+HTTPHandler::Method HTTPHandler::getMethod(void) const {
+    return (_method);
+}
+
+std::string HTTPHandler::getURI(void) const {
+    return (_URI);
+}
+std::map<std::string, std::string> HTTPHandler::getHeaders(void) const {
+    return (_headers);
+}
+
 std::string HTTPHandler::getExtension(void) {
     std::size_t foundDot = _URI.rfind(".");
     std::size_t foundSlash = _URI.rfind("/");

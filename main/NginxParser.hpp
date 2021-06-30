@@ -20,23 +20,6 @@ class NginxParser : public Parser {
             }
         }
 
-        // 매개변수 delimiter의 요소라면, 이를 기준으로 split 후에 첫 단어만 가지고 옵니다.
-        // [          listen     5000;]이고, delimit이 " "라면, listen만 가지고 옵니다.
-        static std::string	getIdentifier(const std::string str, std::size_t& endPos, std::string delimiter)
-        {
-            size_t wordSize = 0;
-
-            while ((str[endPos] != '\0') && isCharInString(delimiter, str[endPos])) {
-                ++endPos;
-            }
-            size_t begPos = endPos;
-            while ((str[endPos] != '\0') && !isCharInString(delimiter, str[endPos])) {
-                ++wordSize;
-                ++endPos;
-            }
-            return (str.substr(begPos, wordSize));
-        }
-
         // 매개변수 pos 이후로 브라켓 세트를 만듭니다.
         // 열린 브라켓인지 닫힌 브라켓인지, 각 브라켓의 index는 무엇인지를 함께 담습니다.
         void findBlockSet(const std::string& buf, std::stack<int>st, std::vector<std::pair<std::string, std::size_t> >& vec, std::size_t& pos) {
@@ -76,6 +59,13 @@ class NginxParser : public Parser {
             pos = blockEnd + 1;
 
             return buf.substr(blockBeg + 1, blockEnd - blockBeg - 1);
+        }
+
+        void setTypeMap(std::map<std::string, std::string>& typeMap, std::string& type, std::string& value) {
+            std::vector<std::string> tmpVec = getSplitBySpace(value);
+            for (int i = 0; i < (int)tmpVec.size(); ++i) {
+                typeMap[tmpVec[i]] = type;
+            }
         }
 };
 #endif
