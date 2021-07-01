@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
                             // ============================================================================================
                             // FIXME: HTTPRequest, HTTPResponse를 밖으로 빼고, 생성자에서 cSocket을 받는 식으로 대공사를 하면 어떨까요..?
                             // ============================================================================================
-                            if (cSocket->HTTPRequestProcess(nginxConfig) == HTTPRequestHandler::FINISH) {
+                            if (cSocket->HTTPRequestProcess() == HTTPRequestHandler::FINISH) {
                                 // NOTE: to Write Event
                                 kq.modEventToWriteEvent(i);
                             }

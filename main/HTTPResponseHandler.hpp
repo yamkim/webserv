@@ -6,13 +6,22 @@
 #include <fcntl.h>
 
 #include "FileController.hpp"
-#include "HTTPHandler.hpp"
+
+#include <string>
+#include <map>
+#include <sstream>
+#include <sys/socket.h>
+#include "ErrorHandler.hpp"
+#include "HTTPData.hpp"
+
 #include "CGISession.hpp"
 
 #include "NginxConfig.hpp"
 #include "HTMLBody.hpp"
 
-class HTTPResponseHandler : public HTTPHandler {
+#define RESPONSE_BUFFER_SIZE 1000
+
+class HTTPResponseHandler {
     private:
         HTTPResponseHandler();
         std::string _serverIndex;
@@ -32,6 +41,10 @@ class HTTPResponseHandler : public HTTPHandler {
         bool isCGI(std::string& URI);
         std::string getServerIndex(NginxConfig::ServerBlock server);
         void setHTMLHeader(const std::string& extension, const long contentLength);
+        void setGeneralHeader(std::string status);
+        void setTypeHeader(std::string type);
+        void setLengthHeader(long contentLength);
+        void convertHeaderMapToString(bool isCGI);
 
     private:
         Phase _phase;
@@ -43,6 +56,9 @@ class HTTPResponseHandler : public HTTPHandler {
         FileController* _file;
         CGISession* _cgi;
         NginxConfig _nginxConfig;
+        std::map<std::string, std::string> _headers;
+        std::string _headerString;
+        int _connectionFd;
 };
 
 #endif

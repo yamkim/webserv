@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include "ErrorHandler.hpp"
-#include "HTTPHandler.hpp"
 #include "HTTPData.hpp"
 
 // CGI Session (draft) by joopark

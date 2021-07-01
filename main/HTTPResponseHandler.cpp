@@ -1,7 +1,7 @@
 #include "HTTPResponseHandler.hpp"
 
 // FIXME : 리스폰스에 URI 외에 더 다양한 아규먼트를 집어넣어야 하는데 어떤 형식으로 집어넣을지 고민 중입니다. 추후에 수정하겠습니다.
-HTTPResponseHandler::HTTPResponseHandler(int connectionFd) : HTTPHandler(connectionFd), _nginxConfig("nginx.conf") {
+HTTPResponseHandler::HTTPResponseHandler(int connectionFd) : _nginxConfig("nginx.conf") {
     _phase = FIND_RESOURCE;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
     _root = _nginxConfig._http.server[1].dirMap["root"];
@@ -11,6 +11,8 @@ HTTPResponseHandler::HTTPResponseHandler(int connectionFd) : HTTPHandler(connect
     _serverIndex = getServerIndex(_nginxConfig._http.server[1]);
 
     _cgi = NULL;
+	_connectionFd = connectionFd;
+	_headerString = std::string("");
 }
 
 HTTPResponseHandler::~HTTPResponseHandler() {
@@ -52,6 +54,52 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
     setTypeHeader(getMIME(extension));
     setLengthHeader(contentLength);
     convertHeaderMapToString(false);
+}
+
+
+void HTTPResponseHandler::setGeneralHeader(std::string status) {
+    static char timeBuffer[48];
+    time_t rawtime;
+
+    std::time(&rawtime);
+    struct tm* timeinfo = std::gmtime(&rawtime);
+    std::strftime(timeBuffer, 48, "%a, %d %b %Y %H:%M:%S %Z", timeinfo);
+
+    _headerString = status;
+    _headerString += "\r\n";
+
+    // NOTE https://developer.mozilla.org/ko/docs/Web/HTTP/Headers
+    // 서버의 소프트웨어 정보
+    _headers["Server"] = std::string("webserv/0.1");
+    // HTTP 메시지가 만들어진 날짜와 시간
+    _headers["Date"] = std::string(timeBuffer);
+    // 전송이 완료된 후 네트워크 접속을 유지할지 말지
+    // REVIEW 상황따라 keep-alive / close가 갈리긴 하지만 현재 구현상으로는 메시지 보내고 끊김. keep-alive 형태로 현재 연결된 fd를 유지시켜야 하나?
+    _headers["Connection"] = std::string("close");
+}
+
+void HTTPResponseHandler::setTypeHeader(std::string type) {
+    _headers["Content-Type"] = type;
+}
+
+void HTTPResponseHandler::setLengthHeader(long contentLength) {
+    std::stringstream ssLength;
+
+    ssLength << contentLength;
+    _headers["Content-Length"] = ssLength.str();
+}
+
+void HTTPResponseHandler::convertHeaderMapToString(bool isCGI) {
+    std::map<std::string, std::string>::iterator iter;
+    for (iter = _headers.begin(); iter != _headers.end(); ++iter) {
+        _headerString += iter->first;
+        _headerString += ": ";
+        _headerString += iter->second;
+        _headerString += "\r\n";
+    }
+    if (isCGI == false) {
+        _headerString += "\r\n";
+    }
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {

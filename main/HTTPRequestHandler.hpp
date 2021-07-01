@@ -4,13 +4,22 @@
 #include <cstring>
 #include <unistd.h>
 #include <ctime>
-#include "HTTPHandler.hpp"
+
+#include <string>
+#include <map>
+#include <sstream>
+#include <sys/socket.h>
+#include "ErrorHandler.hpp"
+#include "HTTPData.hpp"
+
 #include "FileController.hpp"
 #include "Parser.hpp"
 
 #include <iostream> // NOTE : 디버깅용 (추후에 제거 예정)
 
-class HTTPRequestHandler : public HTTPHandler {
+#define REQUEST_BUFFER_SIZE 100
+
+class HTTPRequestHandler {
     private:
         HTTPRequestHandler();
     // NOTE : 추후에 추가해야 할 기능이 늘어나거나 줄어들 수 있어 불가피하게 기능별로 나눠놨습니다. 추후에 간결하게 작성할 예정입니다.
@@ -31,11 +40,16 @@ class HTTPRequestHandler : public HTTPHandler {
         void setMethod(std::string method);
         void setURI(std::string URI);
         void setProtocol(std::string protocol);
+        std::map<std::string, std::string> getHeaders(void) const;
 
         std::string _requestLine;
         Phase _phase;
         long _contentLength;
         FileController* _fileController;
+        std::map<std::string, std::string> _headers;
+        std::string _headerString;
+        static const ssize_t TRANS_ERROR = -1;
+        int _connectionFd;
 
 };
 
