@@ -16,13 +16,6 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
     if (_phase == PARSE_STARTLINE) {
         data._statusCode = 200;
         if (getRequestLine(data) == true) {
-            // TODO: 개별로 쓰이는 HTTPHandler 지역변수 (_reqURI 등) 없애기
-            if (data._reqURI.find("?") != std::string::npos) {
-                data._URIQueryString = data._reqURI.substr(data._reqURI.find("?") + 1);
-                data._requestFilePath = data._reqURI.substr(0, data._reqURI.find("?"));
-            } else {
-                data._requestFilePath = data._reqURI;
-            }
             _phase = PARSE_HEADER;
         } else {
             _phase = PARSE_STARTLINE;
@@ -82,7 +75,7 @@ bool HTTPRequestHandler::getRequestLine(HTTPData& data) {
         || tmp[2] != std::string("HTTP/1.1")) {
         data._reqMethod = tmp[0];
         data._reqURI = tmp[1];
-        data.setExtension();
+        data.setURIelements();
     } else {
         throw ErrorHandler("Error: invalid request line.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
     }

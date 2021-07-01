@@ -42,7 +42,7 @@ void HTTPResponseHandler::responseNotFound(const HTTPData& data) {
 
 void HTTPResponseHandler::responseAutoIndex(const HTTPData& data) {
     std::string autoIndexType = std::string("html");
-    _staticHtml = HTMLBody::getAutoIndexBody(_root, data._reqURI);
+    _staticHtml = HTMLBody::getAutoIndexBody(_root, data._URIFilePath);
     setHTMLHeader("html", _staticHtml.length());
     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
     _phase = DATA_SEND_LOOP;
@@ -57,7 +57,7 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
         // TODO: data 인수에 request 파싱된 결과가 들어있어서 이 클래스 초기화될때 data를 넣어서 초기화 하거나 여기서 초기화 해야합니다.
-        _absolutePath = _root + data._reqURI;
+        _absolutePath = _root + data._URIFilePath;
         _type = FileController::checkType(_absolutePath);
         data._requestAbsoluteFilePath = _absolutePath + _serverIndex;
         if (_type == FileController::NOTFOUND) {
@@ -125,7 +125,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == CGI_RUN) {
         // FIXME[yekim]: _cgi를 처음에 절대 경로와 함께 생성하는데, 이를 그대로 사용하면 cgi가 동작하지 않습니다 ㅠㅠ
         delete _cgi;
-        _cgi = new CGISession(data, std::string("/usr/bin/python3"));
+        if (data._URIExtension == std::string("py")) {
+            data._CGIBinary = std::string("/usr/bin/python3");
+        } else if (data._URIExtension == std::string("php")) {
+            data._CGIBinary = std::string("/Users/joohongpark/Desktop/webserv_workspace/webserv/main/php-bin/php-cgi");
+        }
+        _cgi = new CGISession(data);
         _cgi->makeCGIProcess();
         fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
         convertHeaderMapToString(true);
@@ -134,11 +139,30 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     }
     
     if (_phase == CGI_REQ) {
-        // FIXME: 만약 리퀘스트 바디가 있을때
-        _phase = CGI_SEND_LOOP;
+        if (data._postFilePath.empty()) {
+            _phase = CGI_RECV_LOOP;
+        } else {
+            _file = new FileController(data._postFilePath, FileController::READ);
+            _phase = CGI_SEND_LOOP;
+        }
     }
     
     if (_phase == CGI_SEND_LOOP) {
+        char buf[RESPONSE_BUFFER_SIZE];
+
+        int length = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
+        if (length != 0) {
+            int writeLength = write(_cgi->getInputStream(), buf, length);
+            if (writeLength != length) {
+                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+            }
+        } else {
+            _file->del();
+            _phase = CGI_RECV_LOOP;
+        }
+    }
+    
+    if (_phase == CGI_RECV_LOOP) {
         char buf[RESPONSE_BUFFER_SIZE];
 
         int length = read(_cgi->getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
@@ -157,7 +181,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
 
 bool HTTPResponseHandler::isCGI(std::string& URI) {
     // FIXME: nginx.conf 파일 파싱 결과를 토대로 이 확장명이 CGI인지 판단해야 합니다.
-    if (URI == std::string("py")) {
+    if (URI == std::string("py") || URI == std::string("php")) {
         return (true);
     } else {
         return (false);

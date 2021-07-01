@@ -20,7 +20,7 @@ class HTTPResponseHandler : public HTTPHandler {
         HTTPResponseHandler(int coneectionFd);
         virtual ~HTTPResponseHandler();
 
-        typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, FINISH} Phase;
+        typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, CGI_RECV_LOOP, FINISH} Phase;
         virtual HTTPResponseHandler::Phase process(HTTPData& data);
 
         void responseNotFound(const HTTPData& data);

@@ -24,7 +24,7 @@ class CGISession {
 		CGISession();
 
 	public:
-		CGISession(HTTPData& data, std::string binary);
+		CGISession(HTTPData& data);
 		// CGISession(const CGISession & cgisession);
 		~CGISession();
 		CGISession & operator=(const CGISession & cgisession);
