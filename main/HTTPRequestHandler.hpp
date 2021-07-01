@@ -42,14 +42,14 @@ class HTTPRequestHandler {
         void setProtocol(std::string protocol);
         std::map<std::string, std::string> getHeaders(void) const;
 
-        std::string _requestLine;
-        Phase _phase;
-        long _contentLength;
+        std::string* _requestLine;
+        Phase* _phase;
+        long* _contentLength;
         FileController* _fileController;
-        std::map<std::string, std::string> _headers;
-        std::string _headerString;
+        std::map<std::string, std::string>* _headers;
+        std::string* _headerString;
+        int* _connectionFd;
         static const ssize_t TRANS_ERROR = -1;
-        int _connectionFd;
 
 };
 

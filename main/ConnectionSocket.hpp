@@ -13,6 +13,29 @@ class ConnectionSocket : public Socket {
         HTTPResponseHandler *_res;
         HTTPData _data;
     public:
+        typedef struct s_reqtest {
+            std::string _requestLine;
+            HTTPRequestHandler::Phase _phase;
+            long _contentLength;
+            FileController* _fileController;
+            std::map<std::string, std::string> _headers;
+            std::string _headerString;
+            int _connectionFd;
+        } reqtest;
+        typedef struct s_restest {
+            HTTPResponseHandler::Phase _phase;
+            std::string _root;
+            FileController::Type _type;
+
+            std::string _absolutePath;
+            std::string _staticHtml;
+            FileController* _file;
+            CGISession* _cgi;
+            NginxConfig _nginxConfig;
+            std::map<std::string, std::string> _headers;
+            std::string _headerString;
+            int _connectionFd;
+        } restest;
         ConnectionSocket(int listeningSocket);
         virtual ~ConnectionSocket();
         // NOTE: Request, Response가 나눠져 있어 둘로 나눠놨습니다.
