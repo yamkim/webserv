@@ -21,10 +21,11 @@ class HTTPHandler {
         std::map<std::string, std::string> _headers;
         int _connectionFd;
         std::string _headerString;
+        NginxConfig::ServerBlock _serverConf;
         NginxConfig _nginxConf;
 
     public:
-        HTTPHandler(int connectionFd, const NginxConfig& nginxConf);
+        HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf);
         virtual ~HTTPHandler();
         void setGeneralHeader(std::string status);
         void setTypeHeader(std::string type);

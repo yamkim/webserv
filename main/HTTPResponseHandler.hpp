@@ -17,7 +17,7 @@ class HTTPResponseHandler : public HTTPHandler {
         HTTPResponseHandler();
         std::string _serverIndex;
     public:
-        HTTPResponseHandler(int connectionFd, const NginxConfig& nginxConf);
+        HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverBlock, const NginxConfig& nginxConf);
         virtual ~HTTPResponseHandler();
 
         typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, CGI_RECV_LOOP, FINISH} Phase;
