@@ -1,18 +1,26 @@
 #include "HTTPResponseHandler.hpp"
 
 // FIXME : 리스폰스에 URI 외에 더 다양한 아규먼트를 집어넣어야 하는데 어떤 형식으로 집어넣을지 고민 중입니다. 추후에 수정하겠습니다.
-HTTPResponseHandler::HTTPResponseHandler(int connectionFd) : _nginxConfig("nginx.conf") {
-    _phase = FIND_RESOURCE;
+HTTPResponseHandler::HTTPResponseHandler(int connectionFd) {
+    _connectionFd = new int(0);
+    _file = new FileController*;
+    _type = new FileController::Type;
+    _nginxConfig = new NginxConfig("nginx.conf");
+    _phase = new Phase(FIND_RESOURCE);
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
-    _root = _nginxConfig._http.server[1].dirMap["root"];
-    _file = NULL;
+    _root = new std::string();
+    _serverIndex = new std::string();
+    _staticHtml = new std::string();
+    _absolutePath = new std::string();
+    *_root = (*_nginxConfig)._http.server[1].dirMap["root"];
 
     // FIXME: 일단 공통 구조체를 process 내에서만 사용해서... 이 변수들에 대해 조치가 필요합니다.
-    _serverIndex = getServerIndex(_nginxConfig._http.server[1]);
+    (*_serverIndex) = getServerIndex((*_nginxConfig)._http.server[1]);
 
     _cgi = NULL;
-	_connectionFd = connectionFd;
-	_headerString = std::string("");
+	(*_connectionFd) = connectionFd;
+	_headerString = new std::string("");
+    _headers = new std::map<std::string, std::string>;
 }
 
 HTTPResponseHandler::~HTTPResponseHandler() {
@@ -27,7 +35,7 @@ std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server)
     // tmpServerIndex[0] = NginxParser::getIdentifier(indeces, pos, " ");
     // tmpServerIndex[1] = NginxParser::getIdentifier(indeces, pos, ";");
     for (int i = 0; i < (int)server.index.size(); i++) {
-        if (FileController::checkType(_absolutePath + server.index[i]) == FileController::FILE) {
+        if (FileController::checkType((*_absolutePath) + server.index[i]) == FileController::FILE) {
             return (server.index[i]);
         }
     }
@@ -36,18 +44,18 @@ std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server)
 
 void HTTPResponseHandler::responseNotFound(const HTTPData& data) {
     std::string notFoundType = std::string("html");
-    _staticHtml = HTMLBody::getStaticHTML(data._statusCode);
-    setHTMLHeader("html", _staticHtml.length());
-    send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-    _phase = DATA_SEND_LOOP;
+    (*_staticHtml) = HTMLBody::getStaticHTML(data._statusCode);
+    setHTMLHeader("html", (*_staticHtml).length());
+    send((*_connectionFd), (*_headerString).data(), (*_headerString).length(), 0);
+    (*_phase) = DATA_SEND_LOOP;
 }
 
 void HTTPResponseHandler::responseAutoIndex(const HTTPData& data) {
     std::string autoIndexType = std::string("html");
-    _staticHtml = HTMLBody::getAutoIndexBody(_root, data._URIFilePath);
-    setHTMLHeader("html", _staticHtml.length());
-    send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-    _phase = DATA_SEND_LOOP;
+    (*_staticHtml) = HTMLBody::getAutoIndexBody((*_root), data._URIFilePath);
+    setHTMLHeader("html", (*_staticHtml).length());
+    send((*_connectionFd), (*_headerString).data(), (*_headerString).length(), 0);
+    (*_phase) = DATA_SEND_LOOP;
 }
 
 void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long contentLength) {
@@ -65,112 +73,112 @@ void HTTPResponseHandler::setGeneralHeader(std::string status) {
     struct tm* timeinfo = std::gmtime(&rawtime);
     std::strftime(timeBuffer, 48, "%a, %d %b %Y %H:%M:%S %Z", timeinfo);
 
-    _headerString = status;
-    _headerString += "\r\n";
+    (*_headerString) = status;
+    (*_headerString) += "\r\n";
 
     // NOTE https://developer.mozilla.org/ko/docs/Web/HTTP/Headers
     // 서버의 소프트웨어 정보
-    _headers["Server"] = std::string("webserv/0.1");
+    (*_headers)["Server"] = std::string("webserv/0.1");
     // HTTP 메시지가 만들어진 날짜와 시간
-    _headers["Date"] = std::string(timeBuffer);
+    (*_headers)["Date"] = std::string(timeBuffer);
     // 전송이 완료된 후 네트워크 접속을 유지할지 말지
     // REVIEW 상황따라 keep-alive / close가 갈리긴 하지만 현재 구현상으로는 메시지 보내고 끊김. keep-alive 형태로 현재 연결된 fd를 유지시켜야 하나?
-    _headers["Connection"] = std::string("close");
+    (*_headers)["Connection"] = std::string("close");
 }
 
 void HTTPResponseHandler::setTypeHeader(std::string type) {
-    _headers["Content-Type"] = type;
+    (*_headers)["Content-Type"] = type;
 }
 
 void HTTPResponseHandler::setLengthHeader(long contentLength) {
     std::stringstream ssLength;
 
     ssLength << contentLength;
-    _headers["Content-Length"] = ssLength.str();
+    (*_headers)["Content-Length"] = ssLength.str();
 }
 
 void HTTPResponseHandler::convertHeaderMapToString(bool isCGI) {
     std::map<std::string, std::string>::iterator iter;
-    for (iter = _headers.begin(); iter != _headers.end(); ++iter) {
-        _headerString += iter->first;
-        _headerString += ": ";
-        _headerString += iter->second;
-        _headerString += "\r\n";
+    for (iter = (*_headers).begin(); iter != (*_headers).end(); ++iter) {
+        (*_headerString) += iter->first;
+        (*_headerString) += ": ";
+        (*_headerString) += iter->second;
+        (*_headerString) += "\r\n";
     }
     if (isCGI == false) {
-        _headerString += "\r\n";
+        (*_headerString) += "\r\n";
     }
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
-    if (_phase == FIND_RESOURCE) {
+    if (*_phase == FIND_RESOURCE) {
         // TODO: data 인수에 request 파싱된 결과가 들어있어서 이 클래스 초기화될때 data를 넣어서 초기화 하거나 여기서 초기화 해야합니다.
-        _absolutePath = _root + data._URIFilePath;
-        _type = FileController::checkType(_absolutePath);
-        data._requestAbsoluteFilePath = _absolutePath + _serverIndex;
-        if (_type == FileController::NOTFOUND) {
+        (*_absolutePath) = (*_root) + data._URIFilePath;
+        (*_type) = FileController::checkType((*_absolutePath));
+        data._requestAbsoluteFilePath = (*_absolutePath) + (*_serverIndex);
+        if ((*_type) == FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 404 Not Found");
-            _phase = NOT_FOUND;
-        } else if (_type == FileController::DIRECTORY) {
+            *_phase = NOT_FOUND;
+        } else if ((*_type) == FileController::DIRECTORY) {
             setGeneralHeader("HTTP/1.1 200 OK");
-            if (_serverIndex.empty()) { // 만약 _serverIndex가 없다면 바로 auto index로 띄우기
-                _phase = AUTOINDEX;
+            if ((*_serverIndex).empty()) { // 만약 _serverIndex가 없다면 바로 auto index로 띄우기
+                *_phase = AUTOINDEX;
             } else {                    // 만약 dierctory이고 server index가 있다면 절대 경로에 index 더하기
-                _absolutePath = _absolutePath + _serverIndex;
-                _phase = GET_FILE;
+                (*_absolutePath) = (*_absolutePath) + (*_serverIndex);
+                *_phase = GET_FILE;
             }
-        } else if (_type == FileController::FILE) {
+        } else if ((*_type) == FileController::FILE) {
             setGeneralHeader("HTTP/1.1 200 OK");
             if (isCGI(data._URIExtension)) {
-                _phase = CGI_RUN;
+                *_phase = CGI_RUN;
             } else {
-                _phase = GET_FILE;
+                *_phase = GET_FILE;
             }
         }
     } 
 
-    if (_phase == NOT_FOUND) {
+    if (*_phase == NOT_FOUND) {
         responseNotFound(data);
     }
 
-    if (_phase == AUTOINDEX) {
+    if (*_phase == AUTOINDEX) {
         responseAutoIndex(data);
     }
     
-    if (_phase == GET_FILE) {
-        _file = new FileController(_absolutePath, FileController::READ);
-        setHTMLHeader(data._URIExtension, _file->length());
-        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-        _phase = DATA_SEND_LOOP;
+    if (*_phase == GET_FILE) {
+        (*_file) = new FileController((*_absolutePath), FileController::READ);
+        setHTMLHeader(data._URIExtension, (*_file)->length());
+        send((*_connectionFd), (*_headerString).data(), (*_headerString).length(), 0);
+        *_phase = DATA_SEND_LOOP;
     }
     
     #if 1 // HTML Part
-    if (_phase == DATA_SEND_LOOP) {
+    if (*_phase == DATA_SEND_LOOP) {
         // FIXME: 조금 더 이쁘장하게 수정해야 할 듯 합니다...
-        if (_staticHtml.empty() == false) {
-            size_t writeLength = send(_connectionFd, _staticHtml.c_str(), _staticHtml.length(), 0);
-            if (writeLength != _staticHtml.length()) {
+        if ((*_staticHtml).empty() == false) {
+            size_t writeLength = send((*_connectionFd), (*_staticHtml).c_str(), (*_staticHtml).length(), 0);
+            if (writeLength != (*_staticHtml).length()) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             } else {
-                _phase = FINISH;
+                *_phase = FINISH;
             }
         } else {
             char buf[RESPONSE_BUFFER_SIZE];
-            int length = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
+            int length = read((*_file)->getFd(), buf, RESPONSE_BUFFER_SIZE);
             if (length != 0) {
-                int writeLength = send(_connectionFd, buf, length, 0);
+                int writeLength = send((*_connectionFd), buf, length, 0);
                 if (writeLength != length) {
                     throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
                 }
             } else {
-                _phase = FINISH;
+                *_phase = FINISH;
             }
         }
     } 
     #endif
 
     #if 1 // CGI Part
-    if (_phase == CGI_RUN) {
+    if (*_phase == CGI_RUN) {
         // FIXME[yekim]: _cgi를 처음에 절대 경로와 함께 생성하는데, 이를 그대로 사용하면 cgi가 동작하지 않습니다 ㅠㅠ
         delete _cgi;
         if (data._URIExtension == std::string("py")) {
@@ -178,53 +186,53 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         } else if (data._URIExtension == std::string("php")) {
             data._CGIBinary = std::string("/Users/joohongpark/Desktop/webserv_workspace/webserv/main/php-bin/php-cgi");
         }
-        _cgi = new CGISession(data);
-        _cgi->makeCGIProcess();
-        fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
+        (*_cgi) = new CGISession(data);
+        (*_cgi)->makeCGIProcess();
+        fcntl((*_cgi)->getOutputStream(), F_SETFL, O_NONBLOCK);
         convertHeaderMapToString(true);
-        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-        _phase = CGI_REQ;
+        send((*_connectionFd), (*_headerString).data(), (*_headerString).length(), 0);
+        *_phase = CGI_REQ;
     }
     
-    if (_phase == CGI_REQ) {
+    if (*_phase == CGI_REQ) {
         if (data._postFilePath.empty()) {
-            _phase = CGI_RECV_LOOP;
+            *_phase = CGI_RECV_LOOP;
         } else {
-            _file = new FileController(data._postFilePath, FileController::READ);
-            _phase = CGI_SEND_LOOP;
+            (*_file) = new FileController(data._postFilePath, FileController::READ);
+            *_phase = CGI_SEND_LOOP;
         }
     }
     
-    if (_phase == CGI_SEND_LOOP) {
+    if (*_phase == CGI_SEND_LOOP) {
         char buf[RESPONSE_BUFFER_SIZE];
 
-        int length = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
+        int length = read((*_file)->getFd(), buf, RESPONSE_BUFFER_SIZE);
         if (length != 0) {
-            int writeLength = write(_cgi->getInputStream(), buf, length);
+            int writeLength = write((*_cgi)->getInputStream(), buf, length);
             if (writeLength != length) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
         } else {
-            _file->del();
-            _phase = CGI_RECV_LOOP;
+            (*_file)->del();
+            *_phase = CGI_RECV_LOOP;
         }
     }
     
-    if (_phase == CGI_RECV_LOOP) {
+    if (*_phase == CGI_RECV_LOOP) {
         char buf[RESPONSE_BUFFER_SIZE];
 
-        int length = read(_cgi->getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
+        int length = read((*_cgi)->getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
         if (length != 0) {
-            int writeLength = send(_connectionFd, buf, length, 0);
+            int writeLength = send(*_connectionFd, buf, length, 0);
             if (writeLength != length) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
         } else {
-            _phase = FINISH;
+            *_phase = FINISH;
         }
     }
     #endif
-    return (_phase);
+    return (*_phase);
 }
 
 bool HTTPResponseHandler::isCGI(std::string& URI) {
@@ -237,13 +245,13 @@ bool HTTPResponseHandler::isCGI(std::string& URI) {
 }
 
 int HTTPResponseHandler::getCGIfd(void) {
-    return (_cgi->getOutputStream());
+    return ((*_cgi)->getOutputStream());
 }
 
 std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     // FIXME : yekim : types 블록에 대해 map 타입으로 파싱해야 합니다.
 
-    std::map<std::string, std::string> mime = _nginxConfig._http.types.typeMap;
+    std::map<std::string, std::string> mime = (*_nginxConfig)._http.types.typeMap;
     if(extension == std::string("") || mime.find(extension) == mime.end()) {
         return (std::string("application/octet-stream"));
     } else {

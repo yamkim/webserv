@@ -24,7 +24,6 @@
 class HTTPResponseHandler {
     private:
         HTTPResponseHandler();
-        std::string _serverIndex;
     public:
         HTTPResponseHandler(int coneectionFd);
         virtual ~HTTPResponseHandler();
@@ -47,18 +46,19 @@ class HTTPResponseHandler {
         void convertHeaderMapToString(bool isCGI);
 
     private:
-        Phase _phase;
-        std::string _root;
-        FileController::Type _type;
+        Phase* _phase;
+        std::string* _root;
+        std::string* _headerString;
+        std::string* _serverIndex;
+        std::string* _absolutePath;
+        std::string* _staticHtml;
 
-        std::string _absolutePath;
-        std::string _staticHtml;
-        FileController* _file;
-        CGISession* _cgi;
-        NginxConfig _nginxConfig;
-        std::map<std::string, std::string> _headers;
-        std::string _headerString;
-        int _connectionFd;
+        FileController::Type* _type;
+        FileController** _file;
+        CGISession** _cgi;
+        NginxConfig* _nginxConfig;
+        std::map<std::string, std::string>* _headers;
+        int* _connectionFd;
 };
 
 #endif
