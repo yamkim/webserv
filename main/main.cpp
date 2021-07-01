@@ -14,13 +14,15 @@ int main(int argc, char *argv[])
     (void)argc, (void)argv;
     for (int i = 0; i < (int)nginxConfig._http.server.size(); i++) {
         // ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
-        ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].dirMap["listen"].c_str()), 42);
+        // ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].dirMap["listen"].c_str()), 42);
+        ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i]);
         if (lSocket->runSocket())
             return (1);
         kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
     }
     } catch (const std::string& e) {
         std::cout << e << std::endl;
+        return 1;
     }
     #else
     for (int i = 1; i < argc; i++) {
@@ -55,7 +57,10 @@ int main(int argc, char *argv[])
                             delete cSocket;
                         } else if (kq.isReadEvent(i)) {
                             // NOTE: Read Event
-                            if (cSocket->HTTPRequestProcess() == HTTPRequestHandler::FINISH) {
+                            // ============================================================================================
+                            // FIXME: HTTPRequest, HTTPResponse를 밖으로 빼고, 생성자에서 cSocket을 받는 식으로 대공사를 하면 어떨까요..?
+                            // ============================================================================================
+                            if (cSocket->HTTPRequestProcess(nginxConfig) == HTTPRequestHandler::FINISH) {
                                 // NOTE: to Write Event
                                 kq.modEventToWriteEvent(i);
                             }

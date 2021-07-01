@@ -113,10 +113,10 @@ class Parser {
             return ret; 
         }
 
-        static bool isNumber(std::string str) {
+        static bool isNumber(const std::string& str) {
             int pos = 0;
             while (str[pos]) {
-                if (str[pos] >= '0' && str[pos] <= '9') {
+                if (!(str[pos] >= '0' && str[pos] <= '9')) {
                     return false;
                 }
                 ++pos;
