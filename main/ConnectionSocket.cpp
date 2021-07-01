@@ -3,7 +3,7 @@
 #include <iostream>
 
 
-ConnectionSocket::ConnectionSocket(int listeningSocketFd) : Socket(-1) {
+ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& conf, const NginxConfig& nginxConf) : Socket(-1, conf), _nginxConf(nginxConf) {
     struct sockaddr_in myAddr;
     this->_socket = accept(listeningSocketFd, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
     if (this->_socket == -1) {

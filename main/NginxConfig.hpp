@@ -41,6 +41,14 @@ class NginxConfig : public NginxParser {
         struct NoneBlock _none;
         struct HttpBlock _http;
 
+        // NginxConfig(){}
+
+        // NginxConfig& operator=(const NginxConfig& ref) {
+        //     _none = ref._none;
+        //     _http = ref._http;
+        //     return (*this);
+        // }
+
         NginxConfig(const std::string& fileName) : NginxParser(fileName) {
             std::size_t pos = 0;
             std::string identifier;

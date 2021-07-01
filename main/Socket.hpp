@@ -20,7 +20,7 @@ class Socket {
 
     public:
         Socket(int socket_);
-        Socket(int socket_, NginxConfig::ServerBlock conf_);
+        Socket(int socket_, const NginxConfig::ServerBlock& conf_);
         virtual ~Socket();
         int getSocket() const;
         NginxConfig::ServerBlock getConfig() const;

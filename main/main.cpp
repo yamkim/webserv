@@ -9,8 +9,8 @@
 int main(int argc, char *argv[])
 {
     KernelQueue kq;
+    NginxConfig nginxConfig("nginx.conf");
     try {
-        NginxConfig nginxConfig("nginx.conf");
     #if 1
     (void)argc, (void)argv;
     for (int i = 0; i < (int)nginxConfig._http.server.size(); i++) {
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
                         pairQueue->stopSlave();
                     } else if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
                         // NOTE: Listening Socket Event 발생
-                        ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket());
+                        ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket(), instance->getConfig(), nginxConfig);
                         timer.addObj(cSocket, 2);
                         kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
                     } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
                             // ============================================================================================
                             // FIXME: HTTPRequest, HTTPResponse를 밖으로 빼고, 생성자에서 cSocket을 받는 식으로 대공사를 하면 어떨까요..?
                             // ============================================================================================
-                            if (cSocket->HTTPRequestProcess(nginxConfig) == HTTPRequestHandler::FINISH) {
+                            if (cSocket->HTTPRequestProcess() == HTTPRequestHandler::FINISH) {
                                 // NOTE: to Write Event
                                 kq.modEventToWriteEvent(i);
                             }
@@ -92,4 +92,3 @@ int main(int argc, char *argv[])
 #endif
     return (0);
 }
-    
