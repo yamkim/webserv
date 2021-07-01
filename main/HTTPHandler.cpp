@@ -1,6 +1,6 @@
 #include "HTTPHandler.hpp"
 
-HTTPHandler::HTTPHandler(int connectionFd) {
+HTTPHandler::HTTPHandler(int connectionFd, const NginxConfig& nginxConf) : _nginxConf(nginxConf) {
 	_connectionFd = connectionFd;
 	_headerString = std::string("");
 }

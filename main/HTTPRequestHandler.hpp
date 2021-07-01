@@ -15,7 +15,7 @@ class HTTPRequestHandler : public HTTPHandler {
         HTTPRequestHandler();
     // NOTE : 추후에 추가해야 할 기능이 늘어나거나 줄어들 수 있어 불가피하게 기능별로 나눠놨습니다. 추후에 간결하게 작성할 예정입니다.
     public:
-        HTTPRequestHandler(int connectionFd);
+        HTTPRequestHandler(int connectionFd, const NginxConfig& nginxConf);
         virtual ~HTTPRequestHandler();
 
         typedef enum e_Phase {PARSE_STARTLINE, PARSE_HEADER, PARSE_BODY, FINISH} Phase;

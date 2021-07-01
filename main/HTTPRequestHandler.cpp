@@ -1,6 +1,6 @@
 #include "HTTPRequestHandler.hpp"
 
-HTTPRequestHandler::HTTPRequestHandler(int connectionFd) : HTTPHandler(connectionFd) {
+HTTPRequestHandler::HTTPRequestHandler(int connectionFd, const NginxConfig& nginxConf) : HTTPHandler(connectionFd, nginxConf) {
     // REVIEW : accept에서 클라이언트의 IP와 포트도 받을 수 있도록 하면 좋을것 같습니다.
     _phase = PARSE_STARTLINE;
     _contentLength = -1;

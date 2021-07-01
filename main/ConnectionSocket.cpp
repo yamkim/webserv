@@ -13,7 +13,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::Ser
         throw ErrorHandler("Error: getsockname error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
     setConnectionData(_socketAddr, myAddr);
-    _req = new HTTPRequestHandler(_socket);
+    _req = new HTTPRequestHandler(_socket, _nginxConf);
     _res = NULL;
 }
 
@@ -27,7 +27,7 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     try {
         phase = _req->process(_data);
         if (phase == HTTPRequestHandler::FINISH) {
-            _res = new HTTPResponseHandler(_socket);
+            _res = new HTTPResponseHandler(_socket, _nginxConf);
         }
     } catch (const std::exception &error) {
         std::cout << error.what() << std::endl;
