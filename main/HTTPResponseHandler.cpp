@@ -4,7 +4,7 @@
 HTTPResponseHandler::HTTPResponseHandler(int connectionFd) : HTTPHandler(connectionFd), _nginxConfig("nginx.conf") {
     _phase = FIND_RESOURCE;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
-    _root = _nginxConfig._http.server[1].root;
+    _root = _nginxConfig._http.server[1].dirMap["root"];
     _file = NULL;
 
     // FIXME: 일단 공통 구조체를 process 내에서만 사용해서... 이 변수들에 대해 조치가 필요합니다.
@@ -19,14 +19,14 @@ HTTPResponseHandler::~HTTPResponseHandler() {
 }
 
 std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server) {
-    std::string indeces = server.index + ";";
-    std::size_t pos = 0;
-    std::string tmpServerIndex[3];
-    tmpServerIndex[0] = NginxParser::getIdentifier(indeces, pos, " ");
-    tmpServerIndex[1] = NginxParser::getIdentifier(indeces, pos, ";");
-    for (int i = 0; i < 2; i++) {
-        if (FileController::checkType(_absolutePath + tmpServerIndex[i]) == FileController::FILE) {
-            return (tmpServerIndex[i]);
+    // std::string indeces = server.index + ";";
+    // std::size_t pos = 0;
+    // std::string tmpServerIndex[3];
+    // tmpServerIndex[0] = NginxParser::getIdentifier(indeces, pos, " ");
+    // tmpServerIndex[1] = NginxParser::getIdentifier(indeces, pos, ";");
+    for (int i = 0; i < (int)server.index.size(); i++) {
+        if (FileController::checkType(_absolutePath + server.index[i]) == FileController::FILE) {
+            return (server.index[i]);
         }
     }
     return (std::string(""));

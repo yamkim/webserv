@@ -4,6 +4,10 @@ Socket::Socket(int socket_) : _socket(socket_)
 {
 }
 
+Socket::Socket(int socket_, NginxConfig::ServerBlock conf) : _socket(socket_), _conf(conf)
+{
+}
+
 Socket::~Socket() {
     if (_socket != -1) {
         if (close(_socket) == -1) {
@@ -13,5 +17,9 @@ Socket::~Socket() {
 }
 
 int Socket::getSocket() const {
-    return (this->_socket);
+    return _socket;
+}
+
+NginxConfig::ServerBlock Socket::getConfig() const {
+    return _conf;
 }

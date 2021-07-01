@@ -35,14 +35,6 @@ class HTTPData {
         // Common Data
         std::string _postFilePath;
 
-        // Connection Data Method
-        // void setConnectionData(struct sockaddr_in& clientSocketAddr, struct sockaddr_in& serverSocketAddr) {
-        //     _clientIP = std::string(inet_ntoa(clientSocketAddr.sin_addr));
-        //     _clientPort = ntohs(_socketAddr.sin_port);
-        //     _hostIP = std::string(inet_ntoa(serverSocketAddr.sin_addr));
-        //     _hostPort = ntohs(serverSocketAddr.sin_port);
-        // }
-
         // Request Data Method
         std::string getMethod(void) const {
             return (_reqMethod);

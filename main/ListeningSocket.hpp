@@ -15,6 +15,7 @@ class ListeningSocket : public Socket {
     public:
         ListeningSocket(int portNum, int backlog);
         ListeningSocket(int portNum, int backlog, const char* ip);
+        ListeningSocket(const NginxConfig::ServerBlock& serverConfig);
         virtual ~ListeningSocket();
 
         void setSocket();
