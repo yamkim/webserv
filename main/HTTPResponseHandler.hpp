@@ -30,7 +30,6 @@ class HTTPResponseHandler : public HTTPHandler {
     private:
         std::string getMIME(const std::string& extension) const;
         bool isCGI(std::string& URI);
-        std::string getServerIndex(NginxConfig::ServerBlock server);
         std::string getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec);
         void setHTMLHeader(const std::string& extension, const long contentLength);
 

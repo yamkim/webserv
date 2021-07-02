@@ -16,15 +16,6 @@ HTTPResponseHandler::~HTTPResponseHandler() {
     delete _file;
 }
 
-std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server) {
-    for (int i = 0; i < (int)server.index.size(); i++) {
-        if (FileController::checkType(_absolutePath + server.index[i]) == FileController::FILE) {
-            return (server.index[i]);
-        }
-    }
-    return (std::string(""));
-}
-
 std::string HTTPResponseHandler::getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec) {
     std::vector<std::string>::iterator iter;
     for (iter = indexVec.begin(); iter != indexVec.end(); ++iter) {
@@ -90,19 +81,13 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
         // TODO: data 인수에 request 파싱된 결과가 들어있어서 이 클래스 초기화될때 data를 넣어서 초기화 하거나 여기서 초기화 해야합니다.
-        std::cout << "Preprocessing DEBUGING======================================" << std::endl;
         _root = _serverConf.dirMap["root"];
-        std::cout << "[DEBUG] _root: " << _root << std::endl;
-        std::cout << "[DEBUG] data._URIFilePath: " << data._URIFilePath << std::endl;
-        _absolutePath = _root + data._URIFilePath;
-        data._reqAbsoluteFilePath = _root + data._URIFilePath;
-        // std::cout << "[DEBUG] _absolutePath" << _absolutePath << std::endl;
-        _serverIndex = getIndexFile(_absolutePath, _serverConf.index);
+        // nginx.conf에서 server index를 찾지 못할 경우, 기본 페이지를 index.html으로 설정
+        _serverIndex = getIndexFile(_root + data._URIFilePath, _serverConf.index);
         _serverIndex = _serverIndex.empty() ? std::string("index.html") : _serverIndex;
-        // std::cout << "[DEBUG] _serverIndex" << _serverIndex << std::endl;
 
-        std::cout << "[DEBUG] path for searching file: " << _root + data._URIFilePath << std::endl;
         _type = FileController::checkType(_root + data._URIFilePath);
+        std::cout << "[DEBUG] after first checkType: " << _type << std::endl;
         if (_type == FileController::NOTFOUND) { // 서버컴퓨터에 존재하지 않는 경우
             setGeneralHeader("HTTP/1.1 404 Not Found");
             data._statusCode = 404;
@@ -113,7 +98,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             bool isLocFlag = false;
             NginxConfig::LocationBlock tmpLocConf;
             for (int i = 0; i < (int)_serverConf.location.size(); ++i) {
-                if (_serverConf.location[i].locationPath + "/" == data._URIFilePath) {
+                if (_serverConf.location[i].locationPath == data._URIFilePath
+                    || _serverConf.location[i].locationPath + "/" == data._URIFilePath) {
                     tmpLocConf = _serverConf.location[i];
                     isLocFlag = true;
                     break ;
@@ -126,7 +112,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                 if (_type == FileController::FILE) {
                     setGeneralHeader("HTTP/1.1 200 OK");
                     data._statusCode = 200;
-                    _phase = TEST;
+                    _absolutePath = _root + data._URIFilePath + _locIndex;
+                    // FIXME: 리팩토링 때 수정해야할 항목
+                    data._URIExtension = HTTPData::getExtension(_absolutePath);
+                    _phase = GET_FILE;
                 } else  {
                     if (tmpLocConf.dirMap["autoindex"] == "on") {
                         setGeneralHeader("HTTP/1.1 200 OK");
@@ -143,16 +132,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                 data._statusCode = 404;
                 _phase = NOT_FOUND;
             }
-
-
-
-
-
         } else if (_type == FileController::FILE) {
-            std::cout << "[DEBUG] absolute path(file): " << _root + data._URIFilePath << std::endl;
             setGeneralHeader("HTTP/1.1 200 OK");
             data._statusCode = 200;
-            _phase = TEST;
+            _absolutePath = _root + data._URIFilePath;
+            data._URIExtension = HTTPData::getExtension(_absolutePath);
+            _phase = GET_FILE;
         } 
     }
         
@@ -164,70 +149,13 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         responseTest(data);
     }
 
-    if (_phase == DATA_SEND_LOOP) {
-        // FIXME: 조금 더 이쁘장하게 수정해야 할 듯 합니다...
-        if (_staticHtml.empty() == false) {
-            size_t writeLength = send(_connectionFd, _staticHtml.c_str(), _staticHtml.length(), 0);
-            if (writeLength != _staticHtml.length()) {
-                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
-            } else {
-                _phase = FINISH;
-            }
-        } else {
-            char buf[RESPONSE_BUFFER_SIZE];
-            int length = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
-            if (length != 0) {
-                int writeLength = send(_connectionFd, buf, length, 0);
-                if (writeLength != length) {
-                    throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
-                }
-            } else {
-                _phase = FINISH;
-            }
-        }
-    } 
-
-    //     _type = FileController::checkType(_root + data._reqFilePath);
-    //     data._reqAbsoluteFilePath = _absolutePath + _serverIndex;
-
-    //     if (_type == FileController::NOTFOUND) {
-    //         setGeneralHeader("HTTP/1.1 404 Not Found");
-    //         _phase = NOT_FOUND;
-    //     } else if (_type == FileController::DIRECTORY) {
-    //         setGeneralHeader("HTTP/1.1 200 OK");
-    //         if (_serverIndex.empty()) { // 만약 _serverIndex가 없다면 바로 auto index로 띄우기
-    //             _phase = AUTOINDEX;
-    //         } else {                    // 만약 dierctory이고 server index가 있다면 절대 경로에 index 더하기
-    //             _absolutePath = _absolutePath + _serverIndex;
-    //             _phase = GET_FILE;
-    //         }
-    //     } else if (_type == FileController::FILE) {
-    //         setGeneralHeader("HTTP/1.1 200 OK");
-    //         if (isCGI(data._URIExtension)) {
-    //             _phase = CGI_RUN;
-    //         } else {
-    //             _phase = GET_FILE;
-    //         }
-    //     }
-    // } 
-
-#if 0
-    if (_phase == NOT_FOUND) {
-        responseNotFound(data);
-    }
-
-    if (_phase == AUTOINDEX) {
-        responseAutoIndex(data);
-    }
-    
     if (_phase == GET_FILE) {
         _file = new FileController(_absolutePath, FileController::READ);
         setHTMLHeader(data._URIExtension, _file->length());
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
     }
-    
-    #if 1 // HTML Part
+
     if (_phase == DATA_SEND_LOOP) {
         // FIXME: 조금 더 이쁘장하게 수정해야 할 듯 합니다...
         if (_staticHtml.empty() == false) {
@@ -250,9 +178,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             }
         }
     } 
-    #endif
 
-    #if 1 // CGI Part
     if (_phase == CGI_RUN) {
         // FIXME[yekim]: _cgi를 처음에 절대 경로와 함께 생성하는데, 이를 그대로 사용하면 cgi가 동작하지 않습니다 ㅠㅠ
         delete _cgi;
@@ -306,8 +232,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             _phase = FINISH;
         }
     }
-    #endif
-#endif
     return (_phase);
 }
 

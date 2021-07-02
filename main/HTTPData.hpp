@@ -44,6 +44,17 @@ class HTTPData {
         std::string getURI(void) const {
             return (_reqURI);
         }
+        
+        static std::string getExtension(std::string URI) {
+            std::string ret;
+            std::size_t foundDot = URI.rfind(".");
+            std::size_t foundSlash = URI.rfind("/");
+            if (foundDot == std::string::npos || foundSlash > foundDot) {
+                ret = std::string("");
+            }
+            ret = URI.substr(foundDot + 1);
+            return ret;
+        }
 
         void setURIelements(void) {
             std::size_t foundQuestion = _reqURI.rfind("?");
