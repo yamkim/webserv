@@ -15,8 +15,6 @@
 class HTTPResponseHandler : public HTTPHandler {
     private:
         HTTPResponseHandler();
-        std::string _serverIndex;
-        std::string _locIndex;
     public:
         HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverBlock, const NginxConfig& nginxConf);
         virtual ~HTTPResponseHandler();
@@ -46,6 +44,9 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string _staticHtml;
         FileController* _file;
         CGISession* _cgi;
+
+        std::string _serverIndex;
+        std::string _locIndex;
 };
 
 #endif

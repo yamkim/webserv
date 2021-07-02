@@ -22,19 +22,16 @@ std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server)
             return (server.index[i]);
         }
     }
-    // return (std::string("index.html"));
     return (std::string(""));
 }
 
 std::string HTTPResponseHandler::getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec) {
     std::vector<std::string>::iterator iter;
     for (iter = indexVec.begin(); iter != indexVec.end(); ++iter) {
-        // std::cout << "[DEBUG] in getIndexFile: " << absolutePath + *iter << std::endl;
         if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
             return (*iter);
         }
     }
-    // return (std::string("index.html"));
     return (std::string(""));
 }
 
@@ -77,29 +74,18 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 //            -- 폴더인 경우: 4. nginx.conf server context의 location path를 순회
 //            -- 파일인 경우: file에 대한 정보를 바로 반환 :: FINISH
 //    -- 없음: 404 Not Found 페이지 열림 :: FINISH
-// 4. location path와 일치하는 location인지 확인
-//    -- 일치: 5. 해당 location의 context에서 정보를 가져옴
-//    -- 불일치: 서버컴퓨터에는 존재하지만, nginx.conf에 세팅해두지 않은 경우, 404 Not Found 페이지 열림 :: FINISH
-// 5. location에 index 있는지 확인
-//    -- 있음: _locIndex = _URILocPath + nginx.conf location context의 index
-//    -- 없음: _locIndex = _URILocPath + _serverIndex
-
-// NOTE:
-// 1. data._URIFilePath가 서버 컴퓨터에 존재하는지 확인
-//    -- 있음: 폴더인지 파일인지 확인
-//            -- 폴더인 경우: location context의 경로에 포함되는지 확인
-//            -- 파일인 경우:
-//    -- 없음: 404 Not Found 페이지 열림
-// 4. 아래의 동작 수행
-
-
-// NOTE:
-// 1. nginx.conf에 index -- 있음: 서버 폴더에 있는지 확인 -- 있음: conf의 index 사용
-//                                                 -- 없음: 기본 값(index.html) 사용
-//                 -- 없음: 기본 값(index.html) 사용
-// 2. index가 -- 있음: 정상적으로 페이지 열행
-//           -- 없음: autoindex -- on: autoindex 페이지 열림
-//                             -- off: 403 Forbidden 페이지 열림
+// 4-1. location path와 일치하는 location인지 확인
+//      -- 일치: 5. 해당 location의 context에서 정보를 가져옴
+//      -- 불일치: 서버컴퓨터에는 존재하지만, nginx.conf에 세팅해두지 않은 경우, 404 Not Found 페이지 열림 :: FINISH
+// 4-2. index 페이지 세팅
+//      -- nginx.conf의 index가 있는지 확인 및 서버에 index가 있는지 확인
+//         -- 있음: nginx.conf location context의 index 사용
+//         -- 없음: _serverIndex를 그대로 사용.
+// 4-3. _locIndex/_serverIndex가 서버 컴퓨터에 있는지 확인
+//      -- 있음: _serverIndex 파일 전송 :: FINISH
+//      -- 없음: autoindex가 켜져있는지 확인
+//              -- on: autoindex 페이지 response :: FINISH
+//              -- off: 403 에러
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
@@ -112,6 +98,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         data._reqAbsoluteFilePath = _root + data._URIFilePath;
         // std::cout << "[DEBUG] _absolutePath" << _absolutePath << std::endl;
         _serverIndex = getIndexFile(_absolutePath, _serverConf.index);
+        _serverIndex = _serverIndex.empty() ? std::string("index.html") : _serverIndex;
         // std::cout << "[DEBUG] _serverIndex" << _serverIndex << std::endl;
 
         std::cout << "[DEBUG] path for searching file: " << _root + data._URIFilePath << std::endl;
@@ -124,23 +111,34 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             // NOTE: 해야할 것: location/server index 분석 및 autoindex 체크
             std::cout << "[DEBUG] path for searching file: " << _root + data._URIFilePath << std::endl;
             bool isLocFlag = false;
+            NginxConfig::LocationBlock tmpLocConf;
             for (int i = 0; i < (int)_serverConf.location.size(); ++i) {
-                if (_serverConf.location[i].locationPath == data._URIFilePath
-                    || _serverConf.location[i].locationPath + "/" == data._URIFilePath) {
+                if (_serverConf.location[i].locationPath + "/" == data._URIFilePath) {
+                    tmpLocConf = _serverConf.location[i];
                     isLocFlag = true;
                     break ;
                 }
             }
-            std::cout << "[DEBUG] isLocFlag: " << isLocFlag << std::endl;
             if (isLocFlag) {
-                setGeneralHeader("HTTP/1.1 200 OK");
-                data._statusCode = 200;
-                _phase = TEST;
+                _locIndex = getIndexFile(_root + data._URIFilePath, tmpLocConf.index);
+                _locIndex = _locIndex.empty() ? _serverIndex : _locIndex;
+                _type = FileController::checkType(_root + data._URIFilePath + _locIndex);
+                if (_type == FileController::FILE) {
+                    setGeneralHeader("HTTP/1.1 200 OK");
+                    data._statusCode = 200;
+                    _phase = TEST;
+                } else  {
+                    setGeneralHeader("HTTP/1.1 403 Forbidden");
+                    data._statusCode = 403;
+                    _phase = NOT_FOUND;
+                }
             } else {         // 서버컴퓨터에는 존재 하지만, nginx.conf에 세팅된 경로가 아닌 경우
                 setGeneralHeader("HTTP/1.1 404 Not Found");
                 data._statusCode = 404;
                 _phase = NOT_FOUND;
             }
+
+
 
 
 
@@ -156,11 +154,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             data._statusCode = 200;
             _phase = TEST;
         } 
-        std::vector<struct NginxConfig::LocationBlock>::iterator iter;
-        for (iter = _serverConf.location.begin(); iter != _serverConf.location.end(); ++iter) {
-            _locIndex = getIndexFile(_absolutePath, iter->index);
-            std::cout << "[DEBUG] _locIndex: " << _locIndex << std::endl;
-        }
     }
         
     if (_phase == NOT_FOUND) {
