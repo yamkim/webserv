@@ -78,13 +78,14 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 //              -- on: autoindex 페이지 response :: FINISH
 //              -- off: 403 에러
 
+// try_files, return, deny 부분 추가하기
+
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
         // TODO: data 인수에 request 파싱된 결과가 들어있어서 이 클래스 초기화될때 data를 넣어서 초기화 하거나 여기서 초기화 해야합니다.
         _root = _serverConf.dirMap["root"];
         // nginx.conf에서 server index를 찾지 못할 경우, 기본 페이지를 index.html으로 설정
         _serverIndex = getIndexFile(_root + data._URIFilePath, _serverConf.index);
-        _serverIndex = _serverIndex.empty() ? std::string("index.html") : _serverIndex;
 
         _type = FileController::checkType(_root + data._URIFilePath);
         std::cout << "[DEBUG] after first checkType: " << _type << std::endl;
@@ -106,10 +107,15 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                 }
             }
             if (isLocFlag) {
-                _locIndex = getIndexFile(_root + data._URIFilePath, tmpLocConf.index);
-                _locIndex = _locIndex.empty() ? _serverIndex : _locIndex;
+                // NOTE: location에 index가 없는 경우, server index로부터 상속
+                // NOTE: location에 index가 있는 경우, server index 무시하고 새로 확인
+                if (tmpLocConf.index.empty()) {
+                    _locIndex = _serverIndex;
+                } else { 
+                    _locIndex = getIndexFile(_root + data._URIFilePath, tmpLocConf.index);
+                }
                 _type = FileController::checkType(_root + data._URIFilePath + _locIndex);
-                if (_type == FileController::FILE) {
+                if (!_locIndex.empty() && _type == FileController::FILE) {
                     setGeneralHeader("HTTP/1.1 200 OK");
                     data._statusCode = 200;
                     _absolutePath = _root + data._URIFilePath + _locIndex;
