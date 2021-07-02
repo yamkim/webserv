@@ -128,21 +128,21 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                     data._statusCode = 200;
                     _phase = TEST;
                 } else  {
-                    setGeneralHeader("HTTP/1.1 403 Forbidden");
-                    data._statusCode = 403;
-                    _phase = NOT_FOUND;
+                    if (tmpLocConf.dirMap["autoindex"] == "on") {
+                        setGeneralHeader("HTTP/1.1 200 OK");
+                        data._statusCode = 200;
+                        _phase = AUTOINDEX;
+                    } else {
+                        setGeneralHeader("HTTP/1.1 403 Forbidden");
+                        data._statusCode = 403;
+                        _phase = NOT_FOUND;
+                    }
                 }
             } else {         // 서버컴퓨터에는 존재 하지만, nginx.conf에 세팅된 경로가 아닌 경우
                 setGeneralHeader("HTTP/1.1 404 Not Found");
                 data._statusCode = 404;
                 _phase = NOT_FOUND;
             }
-
-
-
-
-
-
 
 
 
@@ -158,6 +158,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         
     if (_phase == NOT_FOUND) {
         responseNotFound(data);
+    } else if (_phase == AUTOINDEX) {
+        responseAutoIndex(data);
     } else if (_phase == TEST) {
         responseTest(data);
     }
