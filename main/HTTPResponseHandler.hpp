@@ -26,6 +26,7 @@ class HTTPResponseHandler : public HTTPHandler {
 
         void responseNotFound(const HTTPData& data);
         void responseAutoIndex(const HTTPData& data);
+        void responseTest(const HTTPData& data);
 
         int getCGIfd(void);
     private:

@@ -12,6 +12,10 @@ class HTMLBody {
             std::string statusMsg;
             if (statusCode == 404) {
                 statusMsg = "404 Not Found";
+            } else if (statusCode == 403) {
+                statusMsg = "403 Forbidden";
+            }else if (statusCode == 200) {
+                statusMsg = "Test Page";
             }
 
             std::string serverName = "webserv/0.0.1";
