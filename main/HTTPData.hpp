@@ -16,7 +16,7 @@ class HTTPData {
         // localhost:4242/data/index.html?id=123
         std::string _URIAbsolutePath; // root/data/index.html
         std::string _URIFilePath;     // /data/index.html
-        std::string _URILocPath;     // /data/index.html
+        std::string _URILocPath;      // /data/
         std::string _URIQueryString;  // id=123
         std::string _URIExtension;    // html
         std::string _URIFileName;     // index.html

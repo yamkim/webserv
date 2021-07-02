@@ -4,8 +4,6 @@
 HTTPResponseHandler::HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig& nginxConf) : HTTPHandler(connectionFd, serverConf, nginxConf) {
     _phase = FIND_RESOURCE;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
-    _root = _serverConf.dirMap["root"];
-    std::cout << "[DEBUG] _root: " << _root << std::endl;
     _file = NULL;
 
     // FIXME: 일단 공통 구조체를 process 내에서만 사용해서... 이 변수들에 대해 조치가 필요합니다.
@@ -22,6 +20,18 @@ std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server)
     for (int i = 0; i < (int)server.index.size(); i++) {
         if (FileController::checkType(_absolutePath + server.index[i]) == FileController::FILE) {
             return (server.index[i]);
+        }
+    }
+    // return (std::string("index.html"));
+    return (std::string(""));
+}
+
+std::string HTTPResponseHandler::getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec) {
+    std::vector<std::string>::iterator iter;
+    for (iter = indexVec.begin(); iter != indexVec.end(); ++iter) {
+        std::cout << "[DEBUG] in getIndexFile: " << absolutePath + *iter << std::endl;
+        if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
+            return (*iter);
         }
     }
     // return (std::string("index.html"));
@@ -52,16 +62,31 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 
 
 // NOTE:
-// 1. root가 있음 -- server block의 location 경로 순환하며 concat
-//                (ex. root: /User/yekim/, location: /data)
-//              -- 없음: 에러 띄우기
-// 2. concat된 폴더가 있는지 확인
-//    (ex. URILocPath: /User/yekim/data)
-//    -- 있음: 3. 폴더에 대한 작업하기
+// 1. root가 있는지 확인
+//    -- 있음: 요청받은 파일/폴더명(data._URIFilePath)을 가지고오기
+//            (ex. root: /User/yekim/, location: /data)
+//    -- 없음: 에러 띄우기
+// 2. 요청받은 파일/폴더명이 location 경로와 비교될 수 있도록 임시 경로 생성
+// 3. 임시경로가 서버 컴퓨터에 존재하는지 확인
+//    -- 있음: 폴더인지 파일인지 확인
+//            -- 폴더인 경우: 4. nginx.conf server context의 location path를 순회
+//            -- 파일인 경우: file에 대한 정보를 바로 반환 :: FINISH
+//    -- 없음: 404 Not Found 페이지 열림 :: FINISH
+// 4. location path와 일치하는 location인지 확인
+//    -- 일치: 5. 해당 location의 context에서 정보를 가져옴
+//    -- 불일치: 404 Not Found 페이지 열림 :: FINISH
+// 5. location에 index 있는지 확인
+//    -- 있음: _locIndex = _URILocPath + nginx.conf location context의 index
+//    -- 없음: _locIndex = _URILocPath + _serverIndex
+
+// NOTE:
+// 1. data._URIFilePath가 서버 컴퓨터에 존재하는지 확인
+//    -- 있음: 폴더인지 파일인지 확인
+//            -- 폴더인 경우: location context의 경로에 포함되는지 확인
+//            -- 파일인 경우:
 //    -- 없음: 404 Not Found 페이지 열림
-// 3. location에 index -- 있음: _locIndex = _URILocPath + nginx.conf location context의 index
-//                    -- 없음: _locIndex = _URILocPath + _serverIndex
 // 4. 아래의 동작 수행
+
 
 // NOTE:
 // 1. nginx.conf에 index -- 있음: 서버 폴더에 있는지 확인 -- 있음: conf의 index 사용
@@ -70,41 +95,96 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 // 2. index가 -- 있음: 정상적으로 페이지 열행
 //           -- 없음: autoindex -- on: autoindex 페이지 열림
 //                             -- off: 403 Forbidden 페이지 열림
+
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
         // TODO: data 인수에 request 파싱된 결과가 들어있어서 이 클래스 초기화될때 data를 넣어서 초기화 하거나 여기서 초기화 해야합니다.
         std::cout << "Preprocessing DEBUGING======================================" << std::endl;
-        std::cout << "_root: " << _serverConf.dirMap["root"] << std::endl;
+        _root = _serverConf.dirMap["root"];
+        std::cout << "[DEBUG] _root: " << _root << std::endl;
+        std::cout << "[DEBUG] data._URIFilePath: " << data._URIFilePath << std::endl;
         for (int i = 0; i < (int)_serverConf.location.size(); ++i) {
-            std::cout << "_loation[" << i << "] path: " << _serverConf.location[i].locationPath << std::endl;
-            std::cout << "_loation[" << i << "] autoindex: " << _serverConf.location[i].dirMap["autoindex"] << std::endl;
+            std::cout << "[DEBUG] _loation[" << i << "] path: " << _serverConf.location[i].locationPath << std::endl;
+            std::cout << "[DEBUG] _loation[" << i << "] autoindex: " << _serverConf.location[i].dirMap["autoindex"] << std::endl;
         }
-
         _absolutePath = _root + data._URIFilePath;
-        _type = FileController::checkType(_absolutePath);
-        _serverIndex = getServerIndex(_serverConf);
-        data._reqAbsoluteFilePath = _absolutePath + _serverIndex;
+        data._reqAbsoluteFilePath = _root + data._URIFilePath;
+        // std::cout << "[DEBUG] _absolutePath" << _absolutePath << std::endl;
+        _serverIndex = getIndexFile(_absolutePath, _serverConf.index);
+        // std::cout << "[DEBUG] _serverIndex" << _serverIndex << std::endl;
+
+        std::cout << "[DEBUG] path for searching file: " << _root + data._URIFilePath << std::endl;
+        _type = FileController::checkType(_root + data._URIFilePath);
         if (_type == FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 404 Not Found");
+            data._statusCode = 404;
             _phase = NOT_FOUND;
         } else if (_type == FileController::DIRECTORY) {
-            setGeneralHeader("HTTP/1.1 200 OK");
-            if (_serverIndex.empty()) { // 만약 _serverIndex가 없다면 바로 auto index로 띄우기
-                _phase = AUTOINDEX;
-            } else {                    // 만약 dierctory이고 server index가 있다면 절대 경로에 index 더하기
-                _absolutePath = _absolutePath + _serverIndex;
-                _phase = GET_FILE;
-            }
+            _phase = FINISH;
         } else if (_type == FileController::FILE) {
-            setGeneralHeader("HTTP/1.1 200 OK");
-            if (isCGI(data._URIExtension)) {
-                _phase = CGI_RUN;
+            _phase = FINISH;
+        } 
+        std::vector<struct NginxConfig::LocationBlock>::iterator iter;
+        for (iter = _serverConf.location.begin(); iter != _serverConf.location.end(); ++iter) {
+            _locIndex = getIndexFile(_absolutePath, iter->index);
+            std::cout << "[DEBUG] _locIndex: " << _locIndex << std::endl;
+        }
+    }
+        
+    if (_phase == NOT_FOUND) {
+        responseNotFound(data);
+    } 
+    if (_phase == TEST) {
+        responseAutoIndex(data);
+    }
+    if (_phase == DATA_SEND_LOOP) {
+        // FIXME: 조금 더 이쁘장하게 수정해야 할 듯 합니다...
+        if (_staticHtml.empty() == false) {
+            size_t writeLength = send(_connectionFd, _staticHtml.c_str(), _staticHtml.length(), 0);
+            if (writeLength != _staticHtml.length()) {
+                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             } else {
-                _phase = GET_FILE;
+                _phase = FINISH;
+            }
+        } else {
+            char buf[RESPONSE_BUFFER_SIZE];
+            int length = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
+            if (length != 0) {
+                int writeLength = send(_connectionFd, buf, length, 0);
+                if (writeLength != length) {
+                    throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                }
+            } else {
+                _phase = FINISH;
             }
         }
     } 
 
+    //     _type = FileController::checkType(_root + data._reqFilePath);
+    //     data._reqAbsoluteFilePath = _absolutePath + _serverIndex;
+
+    //     if (_type == FileController::NOTFOUND) {
+    //         setGeneralHeader("HTTP/1.1 404 Not Found");
+    //         _phase = NOT_FOUND;
+    //     } else if (_type == FileController::DIRECTORY) {
+    //         setGeneralHeader("HTTP/1.1 200 OK");
+    //         if (_serverIndex.empty()) { // 만약 _serverIndex가 없다면 바로 auto index로 띄우기
+    //             _phase = AUTOINDEX;
+    //         } else {                    // 만약 dierctory이고 server index가 있다면 절대 경로에 index 더하기
+    //             _absolutePath = _absolutePath + _serverIndex;
+    //             _phase = GET_FILE;
+    //         }
+    //     } else if (_type == FileController::FILE) {
+    //         setGeneralHeader("HTTP/1.1 200 OK");
+    //         if (isCGI(data._URIExtension)) {
+    //             _phase = CGI_RUN;
+    //         } else {
+    //             _phase = GET_FILE;
+    //         }
+    //     }
+    // } 
+
+#if 0
     if (_phase == NOT_FOUND) {
         responseNotFound(data);
     }
@@ -200,6 +280,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         }
     }
     #endif
+#endif
     return (_phase);
 }
 
