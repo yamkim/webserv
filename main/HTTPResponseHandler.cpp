@@ -4,11 +4,11 @@
 HTTPResponseHandler::HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig& nginxConf) : HTTPHandler(connectionFd, serverConf, nginxConf) {
     _phase = FIND_RESOURCE;
     // FIXME : root 경로와 같은 정보는 .conf 파일에서 받아와야 합니다.
-    _root = _nginxConf._http.server[1].dirMap["root"];
+    _root = _serverConf.dirMap["root"];
+    std::cout << "[DEBUG] _root: " << _root << std::endl;
     _file = NULL;
 
     // FIXME: 일단 공통 구조체를 process 내에서만 사용해서... 이 변수들에 대해 조치가 필요합니다.
-    _serverIndex = getServerIndex(_nginxConf._http.server[1]);
 
     _cgi = NULL;
 }
@@ -24,6 +24,7 @@ std::string HTTPResponseHandler::getServerIndex(NginxConfig::ServerBlock server)
             return (server.index[i]);
         }
     }
+    // return (std::string("index.html"));
     return (std::string(""));
 }
 
@@ -49,12 +50,40 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
     convertHeaderMapToString(false);
 }
 
+
+// NOTE:
+// 1. root가 있음 -- server block의 location 경로 순환하며 concat
+//                (ex. root: /User/yekim/, location: /data)
+//              -- 없음: 에러 띄우기
+// 2. concat된 폴더가 있는지 확인
+//    (ex. URILocPath: /User/yekim/data)
+//    -- 있음: 3. 폴더에 대한 작업하기
+//    -- 없음: 404 Not Found 페이지 열림
+// 3. location에 index -- 있음: _locIndex = _URILocPath + nginx.conf location context의 index
+//                    -- 없음: _locIndex = _URILocPath + _serverIndex
+// 4. 아래의 동작 수행
+
+// NOTE:
+// 1. nginx.conf에 index -- 있음: 서버 폴더에 있는지 확인 -- 있음: conf의 index 사용
+//                                                 -- 없음: 기본 값(index.html) 사용
+//                 -- 없음: 기본 값(index.html) 사용
+// 2. index가 -- 있음: 정상적으로 페이지 열행
+//           -- 없음: autoindex -- on: autoindex 페이지 열림
+//                             -- off: 403 Forbidden 페이지 열림
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
         // TODO: data 인수에 request 파싱된 결과가 들어있어서 이 클래스 초기화될때 data를 넣어서 초기화 하거나 여기서 초기화 해야합니다.
+        std::cout << "Preprocessing DEBUGING======================================" << std::endl;
+        std::cout << "_root: " << _serverConf.dirMap["root"] << std::endl;
+        for (int i = 0; i < (int)_serverConf.location.size(); ++i) {
+            std::cout << "_loation[" << i << "] path: " << _serverConf.location[i].locationPath << std::endl;
+            std::cout << "_loation[" << i << "] autoindex: " << _serverConf.location[i].dirMap["autoindex"] << std::endl;
+        }
+
         _absolutePath = _root + data._URIFilePath;
         _type = FileController::checkType(_absolutePath);
-        data._requestAbsoluteFilePath = _absolutePath + _serverIndex;
+        _serverIndex = getServerIndex(_serverConf);
+        data._reqAbsoluteFilePath = _absolutePath + _serverIndex;
         if (_type == FileController::NOTFOUND) {
             setGeneralHeader("HTTP/1.1 404 Not Found");
             _phase = NOT_FOUND;

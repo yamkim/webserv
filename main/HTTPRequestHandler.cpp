@@ -88,7 +88,7 @@ bool HTTPRequestHandler::getHeader(void) {
     if (setHeaderString() == false) {
         return (false);
     }
-    if (_headerString.length() < 3) {
+    if (_headerString == std::string("\r\n") || _headerString == std::string("\n")) {
         _headerString.clear();
         return (true);
     }
