@@ -32,17 +32,6 @@ void HTTPHandler::setGeneralHeader(std::string status) {
     _headers["Connection"] = std::string("close");
 }
 
-void HTTPHandler::setTypeHeader(std::string type) {
-    _headers["Content-Type"] = type;
-}
-
-void HTTPHandler::setLengthHeader(long contentLength) {
-    std::stringstream ssLength;
-
-    ssLength << contentLength;
-    _headers["Content-Length"] = ssLength.str();
-}
-
 void HTTPHandler::convertHeaderMapToString(bool isCGI) {
     std::map<std::string, std::string>::iterator iter;
     for (iter = _headers.begin(); iter != _headers.end(); ++iter) {

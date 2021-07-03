@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include "ErrorHandler.hpp"
 #include "HTTPData.hpp"
+#include "Utils.hpp"
 #include "NginxConfig.hpp"
 
 #define REQUEST_BUFFER_SIZE 100
@@ -28,8 +29,6 @@ class HTTPHandler {
         HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf);
         virtual ~HTTPHandler();
         void setGeneralHeader(std::string status);
-        void setTypeHeader(std::string type);
-        void setLengthHeader(long contentLength);
         void convertHeaderMapToString(bool isCGI);
     
         std::map<std::string, std::string> getHeaders(void) const;

@@ -43,19 +43,28 @@ void HTTPResponseHandler::responseTest(const HTTPData& data) {
     _phase = DATA_SEND_LOOP;
 }
 
-void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long contentLength) {
-    setTypeHeader(getMIME(extension));
-    setLengthHeader(contentLength);
-    convertHeaderMapToString(false);
+std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
+    std::map<std::string, std::string> mime = _nginxConf._http.types.typeMap;
+    if(extension == std::string("") || mime.find(extension) == mime.end()) {
+        return (mime["default_type"]);
+    } else {
+        return (mime[extension]);
+    }
 }
 
+void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long contentLength) {
+    _headers["Content-Type"] = getMIME(extension);
+    std::stringstream ssLength(contentLength);
+    _headers["Content-Length"] = ssLength.str();
+    convertHeaderMapToString(false);
+}
 
 // NOTE:
 // 1. root가 nginx.conf에 있는지 확인
 //    -- 있음: 요청받은 파일/폴더명(data._URIFilePath)을 가지고오기
 //            (ex. root: /User/yekim/, location: /data)
 //    -- 없음: 에러 띄우기
-// 2. cgi에서 사용할 확장자명 list로 얻어두기
+// 2. cgi 관련 정보를 맵[key: 사용할 확장자명, value: binary pass 형태로 얻어두기
 // 3. 요청받은 파일/폴더명이 location 경로가 서버 컴퓨터에 존재하는지 확인
 //    -- 있음: 폴더인지 파일인지 확인
 //            -- 폴더인 경우: 4. nginx.conf server context의 location path를 순회
@@ -106,9 +115,11 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         // NOTE: CGI로 사용될 파일 확장자 parsing
         for (int i = 0; i < (int)_serverConf.location.size(); ++i) {
             std::string tmpExt = HTTPData::getExtension(_serverConf.location[i].locationPath);
+            NginxConfig::LocationBlock tmpLocBlock = _serverConf.location[i];
             if (tmpExt.empty())
                 continue ;
-            _cgiExtList.push_back(tmpExt);
+            std::cout << "[DEBUG] getMapValue[" << tmpExt << "]: " << tmpLocBlock.dirMap["cgi_pass"] << std::endl;
+            _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
 
         _type = FileController::checkType(_root + data._URIFilePath);
@@ -143,7 +154,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                     data._resAbsoluteFilePath = _root + data._URIFilePath + _locIndex;
                     data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
                     std::cout << "[DEBUG] open location index file: " << data._resAbsoluteFilePath << std::endl;
-                    if (find(_cgiExtList.begin(), _cgiExtList.end(), data._URIExtension) != _cgiExtList.end()) {
+                    if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
+                        data._CGIBinary = _cgiConfMap[data._URIExtension];
                         _phase = CGI_RUN;
                     } else {
                         _phase = GET_FILE;
@@ -171,7 +183,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             data._resAbsoluteFilePath = _root + data._URIFilePath;
             data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
             std::cout << "[DEBUG] open location file (not index): " << data._resAbsoluteFilePath << std::endl;
-            if (find(_cgiExtList.begin(), _cgiExtList.end(), data._URIExtension) != _cgiExtList.end()) {
+            if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
+                data._CGIBinary = _cgiConfMap[data._URIExtension];
                 _phase = CGI_RUN;
             } else {
                 _phase = GET_FILE;
@@ -220,13 +233,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == CGI_RUN) {
         // FIXME[yekim]: _cgi를 처음에 절대 경로와 함께 생성하는데, 이를 그대로 사용하면 cgi가 동작하지 않습니다 ㅠㅠ
         delete _cgi;
-        if (data._URIExtension == std::string("py")) {
-            data._CGIBinary = std::string("/usr/bin/python3");
-        } else if (data._URIExtension == std::string("php")) {
-            data._CGIBinary = std::string("/Users/joohongpark/Desktop/webserv_workspace/webserv/main/php-bin/php-cgi");
-        }
-        std::cout << "DEBUG================================" << std::endl;
-        std::cout << "[DEBUG] absolutePath: " << data._resAbsoluteFilePath << std::endl;
         _cgi = new CGISession(data);
         _cgi->makeCGIProcess();
         fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
@@ -275,26 +281,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     return (_phase);
 }
 
-bool HTTPResponseHandler::isCGI(std::string& URI) {
-    // FIXME: nginx.conf 파일 파싱 결과를 토대로 이 확장명이 CGI인지 판단해야 합니다.
-    if (URI == std::string("py") || URI == std::string("php")) {
-        return (true);
-    } else {
-        return (false);
-    }
-}
-
 int HTTPResponseHandler::getCGIfd(void) {
     return (_cgi->getOutputStream());
-}
-
-std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
-    // FIXME : yekim : types 블록에 대해 map 타입으로 파싱해야 합니다.
-
-    std::map<std::string, std::string> mime = _nginxConf._http.types.typeMap;
-    if(extension == std::string("") || mime.find(extension) == mime.end()) {
-        return (std::string("application/octet-stream"));
-    } else {
-        return (mime[extension]);
-    }
 }

@@ -45,7 +45,7 @@ class HTTPResponseHandler : public HTTPHandler {
 
         std::string _serverIndex;
         std::string _locIndex;
-        std::vector<std::string> _cgiExtList;
+        std::map<std::string, std::string> _cgiConfMap;
 };
 
 #endif

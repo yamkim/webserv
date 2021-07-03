@@ -1,3 +1,6 @@
+#ifndef UTILS_HPP
+#define UTILS_HPP
+
 #include "NginxConfig.hpp"
 
 class Utils {
@@ -6,3 +9,4 @@ class Utils {
             return map_.find(key)->second;
         }
 };
+#endif

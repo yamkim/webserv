@@ -129,6 +129,7 @@ class NginxConfig : public NginxParser {
             block.dirCase.push_back("deny");
             block.dirCase.push_back("autoindex");
             block.dirCase.push_back("index");
+            block.dirCase.push_back("cgi_pass");
 
             std::string buf = block.rawData;
             std::size_t pos = 0;
