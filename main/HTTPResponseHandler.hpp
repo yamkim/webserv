@@ -39,13 +39,13 @@ class HTTPResponseHandler : public HTTPHandler {
         FileController::Type _type;
 
         // root/data/index.html
-        std::string _absolutePath;
         std::string _staticHtml;
         FileController* _file;
         CGISession* _cgi;
 
         std::string _serverIndex;
         std::string _locIndex;
+        std::vector<std::string> _cgiExtList;
 };
 
 #endif

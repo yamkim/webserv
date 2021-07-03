@@ -14,8 +14,6 @@ int main(int argc, char *argv[])
     #if 1
     (void)argc, (void)argv;
     for (int i = 0; i < (int)nginxConfig._http.server.size(); i++) {
-        // ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].listen.c_str()), 42);
-        // ListeningSocket* lSocket = new ListeningSocket(std::atoi(nginxConfig._http.server[i].dirMap["listen"].c_str()), 42);
         ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i]);
         if (lSocket->runSocket())
             return (1);

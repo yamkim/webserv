@@ -36,7 +36,6 @@ class HTTPRequestHandler : public HTTPHandler {
         Phase _phase;
         long _contentLength;
         FileController* _fileController;
-
 };
 
 #endif

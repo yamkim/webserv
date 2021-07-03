@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include <iostream> //FIXME 디버깅용
 class HTTPData {
     public:
         // Connection Data
@@ -14,7 +15,7 @@ class HTTPData {
         int _clientPort;
 
         // localhost:4242/data/index.html?id=123
-        std::string _URIAbsolutePath; // root/data/index.html
+        std::string _reqURI;          // /data/index.html?id=123
         std::string _URIFilePath;     // /data/index.html
         std::string _URILocPath;      // /data/
         std::string _URIQueryString;  // id=123
@@ -22,9 +23,6 @@ class HTTPData {
         std::string _URIFileName;     // index.html
 
         // Request Data
-        std::string _reqURI;
-        std::string _reqFilePath;
-        std::string _reqAbsoluteFilePath;
         std::string _reqMethod;
         std::string _reqContentType;
         std::string _reqContentLength;
@@ -32,6 +30,7 @@ class HTTPData {
         // Response Data
         int _statusCode;
         std::string _CGIBinary;
+        std::string _resAbsoluteFilePath;
 
         // Common Data
         std::string _postFilePath;
@@ -49,10 +48,13 @@ class HTTPData {
             std::string ret;
             std::size_t foundDot = URI.rfind(".");
             std::size_t foundSlash = URI.rfind("/");
-            if (foundDot == std::string::npos || foundSlash > foundDot) {
-                ret = std::string("");
+            if (foundDot == std::string::npos 
+                || (foundSlash != std::string::npos && foundSlash > foundDot)) {
+                return (std::string(""));
             }
             ret = URI.substr(foundDot + 1);
+            if (ret[ret.size() - 1] == '$')
+                ret = ret.substr(0, ret.size() - 1);
             return ret;
         }
 
