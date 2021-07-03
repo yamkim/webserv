@@ -84,7 +84,7 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 //      -- 있음: cgi인지 확인하기
 //              -- cgi인 경우: 6. cgi에 대한 처리
 //              -- cgi가 아닌 경우: _serverIndex 파일 전송 :: FINISH
-//      -- 없음: autoindex가 켜져있는지 확인
+//      -- 없음: autoindex가 켜져있는지 확인 (만약, location autoindex가 설정되어있지 않다면, server conf로부터 상속)
 //              -- on: autoindex 페이지 response :: FINISH
 //              -- off: 403 에러
 // NOTE: cgi 파트 location 블록과 함께 사용하기
@@ -102,8 +102,6 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 
 // TODO
 // 1. try_files, return, deny 부분 추가하기
-// 2. location 블록에 .py, .php 부분 추가하기
-// 3. autoindex 체크하는 부분 server context 레벨까지 끌어올리기
 // 4. 기본적으로 prefix match로 사용
 // 5. return 관련부분, cgi pass
 
@@ -113,7 +111,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         _serverIndex = getIndexFile(_root + data._URIFilePath, _serverConf.index);
 
         // NOTE: CGI로 사용될 파일 확장자 parsing
-        for (int i = 0; i < (int)_serverConf.location.size(); ++i) {
+        for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
             std::string tmpExt = HTTPData::getExtension(_serverConf.location[i].locationPath);
             NginxConfig::LocationBlock tmpLocBlock = _serverConf.location[i];
             if (tmpExt.empty())
@@ -128,15 +126,39 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             data._statusCode = 404;
             _phase = NOT_FOUND;
         } else if (_type == FileController::DIRECTORY) {
-            // NOTE: 해야할 것: location/server index 분석 및 autoindex 체크
+            // 현재 방식: location의 path와 정확히 일치하는 경로의 block만 취급
             bool isLocFlag = false;
             NginxConfig::LocationBlock tmpLocConf;
-            for (int i = 0; i < (int)_serverConf.location.size(); ++i) {
-                if (_serverConf.location[i].locationPath == data._URIFilePath
-                    || _serverConf.location[i].locationPath + "/" == data._URIFilePath) {
-                    tmpLocConf = _serverConf.location[i];
+            std::size_t matchLen = 0; 
+
+            std::cout << "[DEBUG] data._URIFilePath: [" << data._URIFilePath << "]" << std::endl;
+            for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
+                std::string tmpLocPath = _serverConf.location[i].locationPath;
+                if (data._URIFilePath == std::string("/") && tmpLocPath == std::string("/")) {
                     isLocFlag = true;
-                    break ;
+                    tmpLocConf = _serverConf.location[i];
+                } else {
+                    // NOTE: GUIDE LINE for Prefix Match
+                    // - request uri로 /data/a가 들어오는 경우
+                    // 1. location path를 순환하며, path가 request uri의 첫부분에 포함되는지 찾기
+                    // 2. 만약 포함 된다면, 길이를 기억하기
+                    // 3. 가장 긴 길이(가장 알맞은 경로)의 path를 갖는 location block을 사용하기
+                    // 주의: 폴더여야하므로 항상 끝은 "/"로 끝나도록
+                    //      (ex. location /data/ab/ 인데, req uri: /data/a인 경우는 폴더가 아닌 파일)
+                    // case 1. localhost:4242/data 받으면: localhost:4242/data/ 가 아니므로 오류..
+                    // case 2. location path에 /data만 있는 경우에, /data/a를 받아도 에러가 나지 않도록 설정하기
+                    tmpLocPath = tmpLocPath + std::string("/");
+                    std::size_t j = 0;
+                    for (; j < data._URIFilePath.size(); ++j) {
+                        if (tmpLocPath[j] != data._URIFilePath[j]) {
+                            break ;
+                        }
+                    }
+                    if (j > 0 && (tmpLocPath[j - 1] == '/' && matchLen < j)) {
+                        isLocFlag = true;
+                        matchLen = j;
+                        tmpLocConf = _serverConf.location[i];
+                    }
                 }
             }
             if (isLocFlag) {
@@ -161,6 +183,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                         _phase = GET_FILE;
                     }
                 } else  {
+                    // location block에 autoindex 없으면 상속받기
+                    if (tmpLocConf.dirMap["autoindex"].empty()) {
+                        tmpLocConf.dirMap["autoindex"] = _serverConf.dirMap["autoindex"];
+                    }
                     if (tmpLocConf.dirMap["autoindex"] == "on") {
                         setGeneralHeader("HTTP/1.1 200 OK");
                         data._statusCode = 200;

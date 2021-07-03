@@ -175,6 +175,7 @@ class NginxConfig : public NginxParser {
             block.dirCase.push_back("root");
             block.dirCase.push_back("index");
             block.dirCase.push_back("location");
+            block.dirCase.push_back("autoindex");
 
             std::string buf = block.rawData;
             std::size_t pos = 0;
