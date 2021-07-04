@@ -22,27 +22,6 @@ std::string HTTPResponseHandler::getIndexFile(const std::string& absolutePath, s
     return (std::string(""));
 }
 
-// void HTTPResponseHandler::responseNotFound(const HTTPData& data) {
-//     _staticHtml = HTMLBody::getStaticHTML(data._statusCode);
-//     setHTMLHeader("html", _staticHtml.length());
-//     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-//     _phase = DATA_SEND_LOOP;
-// }
-
-// void HTTPResponseHandler::responseAutoIndex(const HTTPData& data) {
-//     _staticHtml = HTMLBody::getAutoIndexBody(_root, data._URIFilePath);
-//     setHTMLHeader("html", _staticHtml.length());
-//     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-//     _phase = DATA_SEND_LOOP;
-// }
-
-// void HTTPResponseHandler::responseTest(const HTTPData& data) {
-//     _staticHtml = HTMLBody::getStaticHTML(data._statusCode);
-//     setHTMLHeader("html", _staticHtml.length());
-//     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-//     _phase = DATA_SEND_LOOP;
-// }
-
 std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     std::map<std::string, std::string> mime = _nginxConf._http.types.typeMap;
     if(extension == std::string("") || mime.find(extension) == mime.end()) {
@@ -106,8 +85,8 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
-        _root = _serverConf.dirMap["root"];
-        _serverIndex = getIndexFile(_root + data._URIFilePath, _serverConf.index);
+        data._root = _serverConf.dirMap["root"];
+        _serverIndex = getIndexFile(data._root + data._URIFilePath, _serverConf.index);
 
         // NOTE: CGI로 사용될 파일 확장자 parsing
         for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
@@ -119,7 +98,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
 
-        _type = FileController::checkType(_root + data._URIFilePath);
+        _type = FileController::checkType(data._root + data._URIFilePath);
         if (_type == FileController::NOTFOUND) { // 서버컴퓨터에 존재하지 않는 경우
             setGeneralHeader("HTTP/1.1 404 Not Found");
             data._statusCode = 404;
@@ -199,13 +178,13 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                     if (tmpLocConf.index.empty()) {
                         _locIndex = _serverIndex;
                     } else { 
-                        _locIndex = getIndexFile(_root + data._URIFilePath, tmpLocConf.index);
+                        _locIndex = getIndexFile(data._root + data._URIFilePath, tmpLocConf.index);
                     }
-                    _type = FileController::checkType(_root + data._URIFilePath + _locIndex);
+                    _type = FileController::checkType(data._root + data._URIFilePath + _locIndex);
                     if (!_locIndex.empty() && _type == FileController::FILE) {
                         setGeneralHeader("HTTP/1.1 200 OK");
                         data._statusCode = 200;
-                        data._resAbsoluteFilePath = _root + data._URIFilePath + _locIndex;
+                        data._resAbsoluteFilePath = data._root + data._URIFilePath + _locIndex;
                         data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
                         std::cout << "[DEBUG] open location index file: " << data._resAbsoluteFilePath << std::endl;
                         if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
@@ -243,7 +222,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         } else if (_type == FileController::FILE) {
             setGeneralHeader("HTTP/1.1 200 OK");
             data._statusCode = 200;
-            data._resAbsoluteFilePath = _root + data._URIFilePath;
+            data._resAbsoluteFilePath = data._root + data._URIFilePath;
             data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
             std::cout << "[DEBUG] open location file (not index): " << data._resAbsoluteFilePath << std::endl;
             if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
@@ -256,12 +235,11 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     }
 
     if (_phase == GET_STATIC_HTML) {
-        _staticHtml = HTMLBody::getStaticHTML(data._statusCode, _root, data._URIFilePath);
+        _staticHtml = HTMLBody::getStaticHTML(data);
         setHTMLHeader(data._URIExtension, _staticHtml.length());
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
-    }
-    else if (_phase == GET_FILE) {
+    } else if (_phase == GET_FILE) {
         _file = new FileController(data._resAbsoluteFilePath, FileController::READ);
         setHTMLHeader(data._URIExtension, _file->length());
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
@@ -269,27 +247,23 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     }
 
     if (_phase == DATA_SEND_LOOP) {
-        if (_staticHtml.empty() == false) {
-            std::cout << "[DEBUG] CASE 1=========================================" << std::endl;
-            size_t writeLength = send(_connectionFd, _staticHtml.c_str(), _staticHtml.length(), 0);
-            if (writeLength != _staticHtml.length()) {
-                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
-            } else {
-                _phase = FINISH;
-            }
+        char *buf;
+        size_t writtenLengthOnBuf;
+        if (_staticHtml.empty()) {
+            buf = new char[RESPONSE_BUFFER_SIZE];
+            writtenLengthOnBuf = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
+            _phase = writtenLengthOnBuf == 0 ? FINISH : DATA_SEND_LOOP;
         } else {
-            std::cout << "[DEBUG] CASE 2=========================================" << std::endl;
-            char buf[RESPONSE_BUFFER_SIZE];
-            int length = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
-            if (length != 0) {
-                int writeLength = send(_connectionFd, buf, length, 0);
-                if (writeLength != length) {
-                    throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
-                }
-            } else {
-                _phase = FINISH;
-            }
+            buf = new char[_staticHtml.length() + 1];
+            writtenLengthOnBuf = strlcpy(buf, _staticHtml.c_str(), _staticHtml.length());
+            _phase = FINISH;
         }
+        size_t writtenLengthOnSocket = send(_connectionFd, buf, writtenLengthOnBuf, 0);
+        if (writtenLengthOnSocket != writtenLengthOnBuf) {
+            delete [] buf;
+            throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+        }
+        delete [] buf;
     } 
 
     if (_phase == CGI_RUN) {

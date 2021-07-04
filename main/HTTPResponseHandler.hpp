@@ -35,7 +35,6 @@ class HTTPResponseHandler : public HTTPHandler {
 
     private:
         Phase _phase;
-        std::string _root;
         FileController::Type _type;
 
         // root/data/index.html

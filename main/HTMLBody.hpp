@@ -57,17 +57,18 @@ class HTMLBody {
             return (ret.str());
         }
 
-        static std::string getStaticHTML(int statusCode, std::string root, std::string path) {
+        //static std::string getStaticHTML(int statusCode, std::string root, std::string path) {
+        static std::string getStaticHTML(const HTTPData& data) {
             std::string statusMsg;
             std::string ret;
-            if (statusCode == 404) {
+            if (data._statusCode == 404) {
                 statusMsg = "404 Not Found";
                 ret = getBasicHTMLBody(statusMsg);
-            } else if (statusCode == 403) {
+            } else if (data._statusCode == 403) {
                 statusMsg = "403 Forbidden";
                 ret = getBasicHTMLBody(statusMsg);
-            } else if (statusCode == 200) {
-                ret = getAutoIndexBody(root, path);
+            } else if (data._statusCode == 200) {
+                ret = getAutoIndexBody(data._root, data._URIFilePath);
             }
             return (ret);
         }

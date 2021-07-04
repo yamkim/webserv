@@ -29,6 +29,7 @@ class HTTPData {
         
         // Response Data
         int _statusCode;
+        std::string _root;
         std::string _CGIBinary;
         std::string _resAbsoluteFilePath;
 
