@@ -22,26 +22,26 @@ std::string HTTPResponseHandler::getIndexFile(const std::string& absolutePath, s
     return (std::string(""));
 }
 
-void HTTPResponseHandler::responseNotFound(const HTTPData& data) {
-    _staticHtml = HTMLBody::getStaticHTML(data._statusCode);
-    setHTMLHeader("html", _staticHtml.length());
-    send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-    _phase = DATA_SEND_LOOP;
-}
+// void HTTPResponseHandler::responseNotFound(const HTTPData& data) {
+//     _staticHtml = HTMLBody::getStaticHTML(data._statusCode);
+//     setHTMLHeader("html", _staticHtml.length());
+//     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+//     _phase = DATA_SEND_LOOP;
+// }
 
-void HTTPResponseHandler::responseAutoIndex(const HTTPData& data) {
-    _staticHtml = HTMLBody::getAutoIndexBody(_root, data._URIFilePath);
-    setHTMLHeader("html", _staticHtml.length());
-    send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-    _phase = DATA_SEND_LOOP;
-}
+// void HTTPResponseHandler::responseAutoIndex(const HTTPData& data) {
+//     _staticHtml = HTMLBody::getAutoIndexBody(_root, data._URIFilePath);
+//     setHTMLHeader("html", _staticHtml.length());
+//     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+//     _phase = DATA_SEND_LOOP;
+// }
 
-void HTTPResponseHandler::responseTest(const HTTPData& data) {
-    _staticHtml = HTMLBody::getStaticHTML(data._statusCode);
-    setHTMLHeader("html", _staticHtml.length());
-    send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-    _phase = DATA_SEND_LOOP;
-}
+// void HTTPResponseHandler::responseTest(const HTTPData& data) {
+//     _staticHtml = HTMLBody::getStaticHTML(data._statusCode);
+//     setHTMLHeader("html", _staticHtml.length());
+//     send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+//     _phase = DATA_SEND_LOOP;
+// }
 
 std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     std::map<std::string, std::string> mime = _nginxConf._http.types.typeMap;
@@ -102,7 +102,6 @@ void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long
 
 // TODO
 // 1. try_files, return, deny 부분 추가하기
-// 4. 기본적으로 prefix match로 사용
 // 5. return 관련부분, cgi pass
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
@@ -161,47 +160,85 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                     }
                 }
             }
-            if (isLocFlag) {
-                // NOTE: location에 index가 없는 경우, server index로부터 상속
-                // NOTE: location에 index가 있는 경우, server index 무시하고 새로 확인
-                if (tmpLocConf.index.empty()) {
-                    _locIndex = _serverIndex;
-                } else { 
-                    _locIndex = getIndexFile(_root + data._URIFilePath, tmpLocConf.index);
+            if (isLocFlag) {                    
+                // NOTE GUIDE LINE FOR REDIRECTION
+                // 1. tmpLocConf._return이 있는지 확인
+                //    -- 있음: 2. status code, path 파싱
+                //    -- 없음: index 확인 부로 바로 넘어가기
+                // 2-1. statusCode = tmpLocConf._return[0]
+                // 2-2. absolutePath = tmpLocConf._return[1]
+                // 2-3. 
+                if (!tmpLocConf._return.empty()){
+                    // FIXME: setGeneralHeader에 들어갈 string도 status code에 따라서 처리하기
+                    setGeneralHeader("HTTP/1.1 301 Moved Permanently");
+                    data._statusCode = atoi(tmpLocConf._return[0].c_str());
+                    data._resAbsoluteFilePath = tmpLocConf._return[1];
+                    std::cout << "[DEBUG] Redirection Case: status code: " << data._statusCode << std::endl;
+                    std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
+                    // FIXME DATA 전송부 수정하기==========================
+                    _phase = DATA_SEND_LOOP;
                 }
-                _type = FileController::checkType(_root + data._URIFilePath + _locIndex);
-                if (!_locIndex.empty() && _type == FileController::FILE) {
-                    setGeneralHeader("HTTP/1.1 200 OK");
-                    data._statusCode = 200;
-                    data._resAbsoluteFilePath = _root + data._URIFilePath + _locIndex;
-                    data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                    std::cout << "[DEBUG] open location index file: " << data._resAbsoluteFilePath << std::endl;
-                    if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
-                        data._CGIBinary = _cgiConfMap[data._URIExtension];
-                        _phase = CGI_RUN;
-                    } else {
-                        _phase = GET_FILE;
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+                else { // index 확인부
+
+                    // NOTE: location에 index가 없는 경우, server index로부터 상속
+                    // NOTE: location에 index가 있는 경우, server index 무시하고 새로 확인
+                    if (tmpLocConf.index.empty()) {
+                        _locIndex = _serverIndex;
+                    } else { 
+                        _locIndex = getIndexFile(_root + data._URIFilePath, tmpLocConf.index);
                     }
-                } else  {
-                    // location block에 autoindex 없으면 상속받기
-                    if (tmpLocConf.dirMap["autoindex"].empty()) {
-                        tmpLocConf.dirMap["autoindex"] = _serverConf.dirMap["autoindex"];
-                    }
-                    if (tmpLocConf.dirMap["autoindex"] == "on") {
+                    _type = FileController::checkType(_root + data._URIFilePath + _locIndex);
+                    if (!_locIndex.empty() && _type == FileController::FILE) {
                         setGeneralHeader("HTTP/1.1 200 OK");
                         data._statusCode = 200;
-                        _phase = AUTOINDEX;
-                    } else {
-                        setGeneralHeader("HTTP/1.1 403 Forbidden");
-                        data._statusCode = 403;
-                        _phase = NOT_FOUND;
+                        data._resAbsoluteFilePath = _root + data._URIFilePath + _locIndex;
+                        data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
+                        std::cout << "[DEBUG] open location index file: " << data._resAbsoluteFilePath << std::endl;
+                        if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
+                            data._CGIBinary = _cgiConfMap[data._URIExtension];
+                            _phase = CGI_RUN;
+                        } else {
+                            _phase = GET_FILE;
+                        }
+                    } else  {
+                        // location block에 autoindex 없으면 상속받기
+                        if (tmpLocConf.dirMap["autoindex"].empty()) {
+                            tmpLocConf.dirMap["autoindex"] = _serverConf.dirMap["autoindex"];
+                        }
+                        if (tmpLocConf.dirMap["autoindex"] == "on") {
+                            setGeneralHeader("HTTP/1.1 200 OK");
+                            data._statusCode = 200;
+                        } else {
+                            setGeneralHeader("HTTP/1.1 403 Forbidden");
+                            data._statusCode = 403;
+                        }
+                        data._URIExtension = "html";
+                        _phase = GET_STATIC_HTML;
                     }
                 }
+
+
+
             } else {         // 서버컴퓨터에는 존재 하지만, nginx.conf에 세팅된 경로가 아닌 경우
                 std::cout << "[DEBUG] exist in Server not nginx config" << std::endl;
                 setGeneralHeader("HTTP/1.1 404 Not Found");
                 data._statusCode = 404;
-                _phase = NOT_FOUND;
+                data._URIExtension = "html";
+                _phase = GET_STATIC_HTML;
             }
         } else if (_type == FileController::FILE) {
             setGeneralHeader("HTTP/1.1 200 OK");
@@ -217,16 +254,14 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             }
         } 
     }
-        
-    if (_phase == NOT_FOUND) {
-        responseNotFound(data);
-    } else if (_phase == AUTOINDEX) {
-        responseAutoIndex(data);
-    } else if (_phase == TEST) {
-        responseTest(data);
-    }
 
-    if (_phase == GET_FILE) {
+    if (_phase == GET_STATIC_HTML) {
+        _staticHtml = HTMLBody::getStaticHTML(data._statusCode, _root, data._URIFilePath);
+        setHTMLHeader(data._URIExtension, _staticHtml.length());
+        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+        _phase = DATA_SEND_LOOP;
+    }
+    else if (_phase == GET_FILE) {
         _file = new FileController(data._resAbsoluteFilePath, FileController::READ);
         setHTMLHeader(data._URIExtension, _file->length());
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
@@ -234,8 +269,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     }
 
     if (_phase == DATA_SEND_LOOP) {
-        // FIXME: 조금 더 이쁘장하게 수정해야 할 듯 합니다...
         if (_staticHtml.empty() == false) {
+            std::cout << "[DEBUG] CASE 1=========================================" << std::endl;
             size_t writeLength = send(_connectionFd, _staticHtml.c_str(), _staticHtml.length(), 0);
             if (writeLength != _staticHtml.length()) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
@@ -243,6 +278,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                 _phase = FINISH;
             }
         } else {
+            std::cout << "[DEBUG] CASE 2=========================================" << std::endl;
             char buf[RESPONSE_BUFFER_SIZE];
             int length = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
             if (length != 0) {

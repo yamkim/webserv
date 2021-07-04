@@ -19,7 +19,7 @@ class HTTPResponseHandler : public HTTPHandler {
         HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverBlock, const NginxConfig& nginxConf);
         virtual ~HTTPResponseHandler();
 
-        typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, CGI_RECV_LOOP, TEST, FINISH} Phase;
+        typedef enum e_Phase {FIND_RESOURCE, GET_STATIC_HTML, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, CGI_RECV_LOOP, TEST, FINISH} Phase;
         virtual HTTPResponseHandler::Phase process(HTTPData& data);
 
         void responseNotFound(const HTTPData& data);

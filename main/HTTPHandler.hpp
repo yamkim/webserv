@@ -30,7 +30,5 @@ class HTTPHandler {
         virtual ~HTTPHandler();
         void setGeneralHeader(std::string status);
         void convertHeaderMapToString(bool isCGI);
-    
-        std::map<std::string, std::string> getHeaders(void) const;
 };
 #endif
