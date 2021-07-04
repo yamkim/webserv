@@ -57,6 +57,17 @@ class HTMLBody {
             return (ret.str());
         }
 
+        static std::string getRedirectBody(const HTTPData& data) {
+            std::stringstream ret;
+            ret << "<head>";
+            ret << "<meta http-equiv=\"refresh\" content=\"0;URL=";
+            ret << "\'" << data._resAbsoluteFilePath << "\'\"";
+            ret << "/>";
+            ret << "</head>";
+            return (ret.str());
+        }
+
+
         //static std::string getStaticHTML(int statusCode, std::string root, std::string path) {
         static std::string getStaticHTML(const HTTPData& data) {
             std::string statusMsg;
@@ -69,6 +80,8 @@ class HTMLBody {
                 ret = getBasicHTMLBody(statusMsg);
             } else if (data._statusCode == 200) {
                 ret = getAutoIndexBody(data._root, data._URIFilePath);
+            } else if (data._statusCode == 301) {
+                ret = getRedirectBody(data);
             }
             return (ret);
         }

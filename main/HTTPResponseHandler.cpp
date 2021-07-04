@@ -94,7 +94,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             NginxConfig::LocationBlock tmpLocBlock = _serverConf.location[i];
             if (tmpExt.empty())
                 continue ;
-            std::cout << "[DEBUG] getMapValue[" << tmpExt << "]: " << tmpLocBlock.dirMap["cgi_pass"] << std::endl;
+            // std::cout << "[DEBUG] getMapValue[" << tmpExt << "]: " << tmpLocBlock.dirMap["cgi_pass"] << std::endl;
             _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
 
@@ -102,7 +102,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         if (_type == FileController::NOTFOUND) { // 서버컴퓨터에 존재하지 않는 경우
             setGeneralHeader("HTTP/1.1 404 Not Found");
             data._statusCode = 404;
-            _phase = NOT_FOUND;
+            _phase = GET_STATIC_HTML;
         } else if (_type == FileController::DIRECTORY) {
             // 현재 방식: location의 path와 정확히 일치하는 경로의 block만 취급
             bool isLocFlag = false;
@@ -146,33 +146,19 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                 //    -- 없음: index 확인 부로 바로 넘어가기
                 // 2-1. statusCode = tmpLocConf._return[0]
                 // 2-2. absolutePath = tmpLocConf._return[1]
-                // 2-3. 
                 if (!tmpLocConf._return.empty()){
                     // FIXME: setGeneralHeader에 들어갈 string도 status code에 따라서 처리하기
                     setGeneralHeader("HTTP/1.1 301 Moved Permanently");
                     data._statusCode = atoi(tmpLocConf._return[0].c_str());
                     data._resAbsoluteFilePath = tmpLocConf._return[1];
+                    data._URIExtension = "html";
                     std::cout << "[DEBUG] Redirection Case: status code: " << data._statusCode << std::endl;
                     std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
-                    // FIXME DATA 전송부 수정하기==========================
-                    _phase = DATA_SEND_LOOP;
+                    _phase = REDIRECT;
                 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-                
                 else { // index 확인부
-
                     // NOTE: location에 index가 없는 경우, server index로부터 상속
                     // NOTE: location에 index가 있는 경우, server index 무시하고 새로 확인
                     if (tmpLocConf.index.empty()) {
@@ -242,6 +228,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     } else if (_phase == GET_FILE) {
         _file = new FileController(data._resAbsoluteFilePath, FileController::READ);
         setHTMLHeader(data._URIExtension, _file->length());
+        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+        _phase = DATA_SEND_LOOP;
+    } else if (_phase == REDIRECT) {
+        _staticHtml = HTMLBody::getStaticHTML(data);
+        _headers["Location"] = data._resAbsoluteFilePath;
+        setHTMLHeader(data._URIExtension, _staticHtml.length());
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
     }
