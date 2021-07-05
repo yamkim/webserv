@@ -62,7 +62,7 @@ class HTMLBody {
             ret << "<head>";
             ret << "<meta http-equiv=\"refresh\" content=\"0;URL=";
             ret << "\'" << data._resAbsoluteFilePath << "\'\"";
-            ret << "/>";
+            ret << " />";
             ret << "</head>";
             return (ret.str());
         }

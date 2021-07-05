@@ -42,7 +42,7 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string getMIME(const std::string& extension) const;
         bool isCGI(std::string& URI);
         std::string getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec);
-        void setHTMLHeader(const std::string& extension, const long contentLength);
+        void setHTMLHeader(const HTTPData& data);
 
     private:
         Phase _phase;

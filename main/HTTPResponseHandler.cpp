@@ -31,9 +31,12 @@ std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     }
 }
 
-void HTTPResponseHandler::setHTMLHeader(const std::string& extension, const long contentLength) {
-    _headers["Content-Type"] = getMIME(extension);
-    std::stringstream ssLength(contentLength);
+void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
+    if (data._statusCode == 301) {
+        _headers["Location"] = data._resAbsoluteFilePath;
+    }
+    _headers["Content-Type"] = getMIME(data._URIExtension);
+    std::stringstream ssLength(data._resContentLength);
     _headers["Content-Length"] = ssLength.str();
     convertHeaderMapToString(false);
 }
@@ -98,9 +101,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
 
-        std::cout << "[DEBUG] data._root + data._URIFilePath: " << data._root + data._URIFilePath << std::endl;
         _type = FileController::checkType(data._root + data._URIFilePath);
-        std::cout << "[DEBUG] data._root + data._URIFilePath type: " << _type << std::endl;
         if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
             // 현재 방식: location의 path와 정확히 일치하는 경로의 block만 취급
             bool isLocFlag = false;
@@ -151,9 +152,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                     data._statusCode = atoi(tmpLocConf._return[0].c_str());
                     data._resAbsoluteFilePath = tmpLocConf._return[1];
                     data._URIExtension = "html";
-                    std::cout << "[DEBUG] Redirection Case: status code: " << data._statusCode << std::endl;
-                    std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
-                    _phase = REDIRECT;
+                    // std::cout << "[DEBUG] Redirection Case: status code: " << data._statusCode << std::endl;
+                    // std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
+                    _phase = GET_STATIC_HTML;
                 }
                 else { // index 확인부
                     // NOTE: location에 index가 없는 경우, server index로부터 상속
@@ -220,18 +221,15 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
 
     if (_phase == GET_STATIC_HTML) {
         _staticHtml = HTMLBody::getStaticHTML(data);
-        setHTMLHeader(data._URIExtension, _staticHtml.length());
+        // setHTMLHeader(data._URIExtension, _staticHtml.length());
+        data._resContentLength = _staticHtml.length();
+        setHTMLHeader(data);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
     } else if (_phase == GET_FILE) {
         _file = new FileController(data._resAbsoluteFilePath, FileController::READ);
-        setHTMLHeader(data._URIExtension, _file->length());
-        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-        _phase = DATA_SEND_LOOP;
-    } else if (_phase == REDIRECT) {
-        _staticHtml = HTMLBody::getStaticHTML(data);
-        _headers["Location"] = data._resAbsoluteFilePath;
-        setHTMLHeader(data._URIExtension, _staticHtml.length());
+        data._resContentLength = _file->length();
+        setHTMLHeader(data);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
     }
@@ -244,8 +242,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             writtenLengthOnBuf = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
             _phase = writtenLengthOnBuf == 0 ? FINISH : DATA_SEND_LOOP;
         } else {
-            buf = new char[_staticHtml.length() + 1];
-            writtenLengthOnBuf = strlcpy(buf, _staticHtml.c_str(), _staticHtml.length());
+            buf = new char[data._resContentLength + 1];
+            buf[data._resContentLength] = '\0';
+            writtenLengthOnBuf = strlcpy(buf, _staticHtml.c_str(), data._resContentLength + 1);
             _phase = FINISH;
         }
         size_t writtenLengthOnSocket = send(_connectionFd, buf, writtenLengthOnBuf, 0);
