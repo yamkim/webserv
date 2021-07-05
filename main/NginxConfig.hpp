@@ -25,6 +25,7 @@ class NginxConfig : public NginxParser {
             std::vector<std::string> try_files;
             std::vector<std::string> _return;
             std::vector<std::string> deny;
+            std::vector<std::string> index;
         };
         struct ServerBlock : NginxBlock{
             std::vector<std::string> dirCase;
@@ -127,6 +128,8 @@ class NginxConfig : public NginxParser {
             block.dirCase.push_back("try_files");
             block.dirCase.push_back("deny");
             block.dirCase.push_back("autoindex");
+            block.dirCase.push_back("index");
+            block.dirCase.push_back("cgi_pass");
 
             std::string buf = block.rawData;
             std::size_t pos = 0;
@@ -140,6 +143,9 @@ class NginxConfig : public NginxParser {
                 // std::cout << "identifier[location]: [" << tmpDir << "]" << std::endl;
                 if (find(block.dirCase.begin(), block.dirCase.end(), tmpDir) == block.dirCase.end()) {
                     throw std::string("Error: " + tmpDir + " is not in block[location] list.");
+                } else if (tmpDir == "index") {
+                    std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    block.index = getSplitBySpace(tmpVal);
                 } else if (tmpDir == "try_files") {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     block.try_files = getSplitBySpace(tmpVal);
@@ -158,7 +164,7 @@ class NginxConfig : public NginxParser {
                         throw std::string("Error: invalid number of arguments in location["+ tmpDir + " directive].");
                     }
                     block.dirMap[tmpDir] = tmpSplit[0];
-                    std::cout << "[DEBUG] dirMap[tmpDir] in location: " << block.dirMap[tmpDir] << std::endl;
+                    // std::cout << "[DEBUG] dirMap[tmpDir] in location: " << block.dirMap[tmpDir] << std::endl;
                 }
             }
         }
@@ -169,6 +175,7 @@ class NginxConfig : public NginxParser {
             block.dirCase.push_back("root");
             block.dirCase.push_back("index");
             block.dirCase.push_back("location");
+            block.dirCase.push_back("autoindex");
 
             std::string buf = block.rawData;
             std::size_t pos = 0;
@@ -200,7 +207,7 @@ class NginxConfig : public NginxParser {
                         throw std::string("Error: invalid number of arguments in server["+ tmpDir + " directive].");
                     }
                     block.dirMap[tmpDir] = tmpSplit[0];
-                    std::cout << "[DEBUG] dirMap[tmpDir] in server: " << block.dirMap[tmpDir] << std::endl;
+                    // std::cout << "[DEBUG] dirMap[tmpDir] in server: " << block.dirMap[tmpDir] << std::endl;
                 }
             }
         }
@@ -253,7 +260,7 @@ class NginxConfig : public NginxParser {
                         throw std::string("Error: invalid number of arguments in http["+ tmpDir + " directive].");
                     }
                     block.dirMap[tmpDir] = tmpSplit[0];
-                    std::cout << "[DEBUG] dirMap[tmpDir] in http: " << block.dirMap[tmpDir] << std::endl;
+                    // std::cout << "[DEBUG] dirMap[tmpDir] in http: " << block.dirMap[tmpDir] << std::endl;
                 }
             }
         }

@@ -15,34 +15,47 @@
 class HTTPResponseHandler : public HTTPHandler {
     private:
         HTTPResponseHandler();
-        std::string _serverIndex;
     public:
-        HTTPResponseHandler(int coneectionFd);
+        HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverBlock, const NginxConfig& nginxConf);
         virtual ~HTTPResponseHandler();
 
-        typedef enum e_Phase {FIND_RESOURCE, AUTOINDEX, CGI_RUN, CGI_REQ, GET_FILE, NOT_FOUND, DATA_SEND_LOOP, CGI_SEND_LOOP, CGI_RECV_LOOP, FINISH} Phase;
+        typedef enum e_Phase {
+            FIND_RESOURCE, 
+            GET_STATIC_HTML, 
+            GET_FILE, 
+            REDIRECT, 
+            CGI_RUN, 
+            CGI_REQ, 
+            DATA_SEND_LOOP, 
+            CGI_SEND_LOOP, 
+            CGI_RECV_LOOP, 
+            FINISH
+        } Phase;
         virtual HTTPResponseHandler::Phase process(HTTPData& data);
 
         void responseNotFound(const HTTPData& data);
         void responseAutoIndex(const HTTPData& data);
+        void responseTest(const HTTPData& data);
 
         int getCGIfd(void);
     private:
         std::string getMIME(const std::string& extension) const;
         bool isCGI(std::string& URI);
-        std::string getServerIndex(NginxConfig::ServerBlock server);
-        void setHTMLHeader(const std::string& extension, const long contentLength);
+        std::string getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec);
+        void setHTMLHeader(const HTTPData& data);
 
     private:
         Phase _phase;
-        std::string _root;
         FileController::Type _type;
 
-        std::string _absolutePath;
+        // root/data/index.html
         std::string _staticHtml;
         FileController* _file;
         CGISession* _cgi;
-        NginxConfig _nginxConfig;
+
+        std::string _serverIndex;
+        std::string _locIndex;
+        std::map<std::string, std::string> _cgiConfMap;
 };
 
 #endif

@@ -12,9 +12,8 @@
 //     _backlog = backlog;
 // }
 
-ListeningSocket::ListeningSocket(const NginxConfig::ServerBlock& conf) : Socket(-1, conf) {
-    _conf = conf;
-    _portNum = atoi(Utils::getMapValue(_conf.dirMap, "listen").c_str());
+ListeningSocket::ListeningSocket(const NginxConfig::ServerBlock& serverConf) : Socket(-1, serverConf) {
+    _portNum = atoi(Utils::getMapValue(_serverConf.dirMap, "listen").c_str());
     _backlog = 42;
 }
 

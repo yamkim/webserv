@@ -3,7 +3,7 @@
 #include <iostream>
 
 
-ConnectionSocket::ConnectionSocket(int listeningSocketFd) : Socket(-1) {
+ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig& nginxConf) : Socket(-1, serverConf), _nginxConf(nginxConf) {
     struct sockaddr_in myAddr;
     this->_socket = accept(listeningSocketFd, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
     if (this->_socket == -1) {
@@ -13,7 +13,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd) : Socket(-1) {
         throw ErrorHandler("Error: getsockname error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
     setConnectionData(_socketAddr, myAddr);
-    _req = new HTTPRequestHandler(_socket);
+    _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
     _res = NULL;
 }
 
@@ -27,7 +27,7 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     try {
         phase = _req->process(_data);
         if (phase == HTTPRequestHandler::FINISH) {
-            _res = new HTTPResponseHandler(_socket);
+            _res = new HTTPResponseHandler(_socket, _serverConf, _nginxConf);
         }
     } catch (const std::exception &error) {
         std::cout << error.what() << std::endl;

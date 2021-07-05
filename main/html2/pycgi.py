@@ -24,7 +24,7 @@ for i in range(1, 10):
     print(i)
     print("</b>")
     print("<br>")
-    time.sleep(0.01)
+    time.sleep(0.5)
 
 print('</body>')
 print('</html>')

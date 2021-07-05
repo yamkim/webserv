@@ -39,7 +39,6 @@ class FileController {
     public:
         FileController(std::string path, Mode mode);
         ~FileController();
-        FileController& operator=(const FileController& ref);
 
         static Type checkType(std::string path);
         int getFilesSize(void) const;

@@ -16,11 +16,11 @@ class Socket {
         struct sockaddr_in _socketAddr;
         int _socket;
         socklen_t _socketLen;
-        NginxConfig::ServerBlock _conf;
+        NginxConfig::ServerBlock _serverConf;
 
     public:
         Socket(int socket_);
-        Socket(int socket_, NginxConfig::ServerBlock conf_);
+        Socket(int socket_, const NginxConfig::ServerBlock& serverConf);
         virtual ~Socket();
         int getSocket() const;
         NginxConfig::ServerBlock getConfig() const;

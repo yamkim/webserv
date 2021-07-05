@@ -26,12 +26,12 @@ CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStre
     _envMap[std::string("SERVER_ADDR")] = data._hostIP;
     _envMap[std::string("SERVER_PORT")] = std::string("");
     _envMap[std::string("SERVER_NAME")] = std::string("");
-    _envMap[std::string("SCRIPT_FILENAME")] = data._requestAbsoluteFilePath;
+    _envMap[std::string("SCRIPT_FILENAME")] = data._resAbsoluteFilePath;
     _cgiArg = std::string("data=test");
 
     // setCGIargs(binary, absolutePath, cgiArg, envMap);
     _arg[0] = const_cast<char*>(data._CGIBinary.c_str());
-	_arg[1] = const_cast<char*>(data._requestAbsoluteFilePath.c_str());
+	_arg[1] = const_cast<char*>(data._resAbsoluteFilePath.c_str());
     if (data._URIQueryString.empty()) {
         _arg[2] = NULL;
     } else {

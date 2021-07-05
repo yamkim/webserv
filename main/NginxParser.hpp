@@ -7,6 +7,8 @@ class NginxParser : public Parser {
     private:
 
     public:
+        // NginxParser(){
+        // }
         NginxParser(const std::string& fileName) : Parser(fileName) {
         }
 

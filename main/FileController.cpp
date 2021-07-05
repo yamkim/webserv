@@ -35,16 +35,6 @@ FileController::~FileController() {
     }
 }
 
-FileController& FileController::operator=(const FileController& ref) {
-    _fd = ref._fd;
-    _type = ref._type;
-    _mode = ref._mode;
-    *_metaData = *ref._metaData;
-    _filesMetaData = ref._filesMetaData;
-
-    return (*this);
-}
-
 void FileController::getFilesOfFolder(std::string& path, std::vector<FileMetaData*>& vector) {
     struct dirent* dp;
     DIR* dir = opendir(path.c_str());
