@@ -98,12 +98,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
 
+        std::cout << "[DEBUG] data._root + data._URIFilePath: " << data._root + data._URIFilePath << std::endl;
         _type = FileController::checkType(data._root + data._URIFilePath);
-        if (_type == FileController::NOTFOUND) { // 서버컴퓨터에 존재하지 않는 경우
-            setGeneralHeader("HTTP/1.1 404 Not Found");
-            data._statusCode = 404;
-            _phase = GET_STATIC_HTML;
-        } else if (_type == FileController::DIRECTORY) {
+        std::cout << "[DEBUG] data._root + data._URIFilePath type: " << _type << std::endl;
+        if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
             // 현재 방식: location의 path와 정확히 일치하는 경로의 block만 취급
             bool isLocFlag = false;
             NginxConfig::LocationBlock tmpLocConf;
@@ -125,6 +123,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                     //      (ex. location /data/ab/ 인데, req uri: /data/a인 경우는 폴더가 아닌 파일)
                     // case 1. localhost:4242/data 받으면: localhost:4242/data/ 가 아니므로 오류..
                     // case 2. location path에 /data만 있는 경우에, /data/a를 받아도 에러가 나지 않도록 설정하기
+                    // case 3. localhost:4242/data는 불가능 localhost:4242/data/만 가능
                     tmpLocPath = tmpLocPath + std::string("/");
                     std::size_t j = 0;
                     for (; j < data._URIFilePath.size(); ++j) {
@@ -132,7 +131,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                             break ;
                         }
                     }
-                    if (j > 0 && (tmpLocPath[j - 1] == '/' && matchLen < j)) {
+                    if (j > 0 && (data._URIFilePath[j - 1] == '/' && matchLen < j)) {
                         isLocFlag = true;
                         matchLen = j;
                         tmpLocConf = _serverConf.location[i];
@@ -156,8 +155,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                     std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
                     _phase = REDIRECT;
                 }
-
-
                 else { // index 확인부
                     // NOTE: location에 index가 없는 경우, server index로부터 상속
                     // NOTE: location에 index가 있는 경우, server index 무시하고 새로 확인
@@ -195,9 +192,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                         _phase = GET_STATIC_HTML;
                     }
                 }
-
-
-
             } else {         // 서버컴퓨터에는 존재 하지만, nginx.conf에 세팅된 경로가 아닌 경우
                 std::cout << "[DEBUG] exist in Server not nginx config" << std::endl;
                 setGeneralHeader("HTTP/1.1 404 Not Found");
@@ -217,6 +211,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             } else {
                 _phase = GET_FILE;
             }
+        } else { // 서버컴퓨터에 존재하지 않는 경우
+            setGeneralHeader("HTTP/1.1 404 Not Found");
+            data._statusCode = 404;
+            _phase = GET_STATIC_HTML;
         } 
     }
 
