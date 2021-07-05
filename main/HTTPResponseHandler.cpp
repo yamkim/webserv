@@ -32,13 +32,15 @@ std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
 }
 
 void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
+    std::stringstream ssLength;
+    ssLength << data._resContentLength;
+    _headers["Content-Type"] = getMIME(data._URIExtension);
+    _headers["Content-Length"] = ssLength.str();
     if (data._statusCode == 301) {
         _headers["Location"] = data._resAbsoluteFilePath;
     }
-    _headers["Content-Type"] = getMIME(data._URIExtension);
-    std::stringstream ssLength(data._resContentLength);
-    _headers["Content-Length"] = ssLength.str();
     convertHeaderMapToString(false);
+    std::cout << "[DEBUG] headers: " << _headerString << std::endl;
 }
 
 // NOTE:
@@ -101,6 +103,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
 
+        // TODO: Redirection 완벽하게 구현 후, 슬래시가 뒤에 붙지 않은 폴더의 경우 리다이렉션으로 돌려주기
+        // TODO: location / 블록 없더라도 index.html이 켜지도록 동작해야함
         _type = FileController::checkType(data._root + data._URIFilePath);
         if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
             // 현재 방식: location의 path와 정확히 일치하는 경로의 block만 취급
@@ -114,6 +118,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                 if (data._URIFilePath == std::string("/") && tmpLocPath == std::string("/")) {
                     isLocFlag = true;
                     tmpLocConf = _serverConf.location[i];
+                    break ;
                 } else {
                     // NOTE: GUIDE LINE for Prefix Match
                     // - request uri로 /data/a가 들어오는 경우
@@ -152,11 +157,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                     data._statusCode = atoi(tmpLocConf._return[0].c_str());
                     data._resAbsoluteFilePath = tmpLocConf._return[1];
                     data._URIExtension = "html";
-                    // std::cout << "[DEBUG] Redirection Case: status code: " << data._statusCode << std::endl;
-                    // std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
+                    std::cout << "[DEBUG] Redirection Case: status code: " << data._statusCode << std::endl;
+                    std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
                     _phase = GET_STATIC_HTML;
-                }
-                else { // index 확인부
+                } else { // index 확인부
                     // NOTE: location에 index가 없는 경우, server index로부터 상속
                     // NOTE: location에 index가 있는 경우, server index 무시하고 새로 확인
                     if (tmpLocConf.index.empty()) {
