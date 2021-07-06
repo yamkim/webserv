@@ -47,42 +47,51 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
 // 1. root가 nginx.conf에 있는지 확인
 //    -- 있음: 요청받은 파일/폴더명(data._URIFilePath)을 가지고오기
 //            (ex. root: /User/yekim/, location: /data)
-//    -- 없음: 에러 띄우기
-// 2. cgi 관련 정보를 맵[key: 사용할 확장자명, value: binary pass 형태로 얻어두기
-// 3. 요청받은 파일/폴더명이 location 경로가 서버 컴퓨터에 존재하는지 확인
-//    -- 있음: 폴더인지 파일인지 확인
-//            -- 폴더인 경우: 4. nginx.conf server context의 location path를 순회
-//            -- 파일인 경우: cgi인지 확인하기
-//                         -- cgi인 경우: 6. cgi에 대한 처리
-//                         -- cgi가 아닌 경우: file에 대한 정보를 바로 반환 :: FINISH
-//    -- 없음: 404 Not Found 페이지 열림 :: FINISH
-// 4-1. location path와 일치하는 location인지 확인
-//      -- 일치: 5. 해당 location의 context에서 정보를 가져옴
-//      -- 불일치: 서버컴퓨터에는 존재하지만, nginx.conf에 세팅해두지 않은 경우, 404 Not Found 페이지 열림 :: FINISH
-// 4-2. index 페이지 세팅 -> TODO 만약, index로 cgi 파일이 사용되는 경우 추가
-//      -- nginx.conf의 index가 있는지 확인 및 서버에 index가 있는지 확인
-//         -- 있음: nginx.conf location context의 index 사용 
-//                 (cgi인 경우에는 다른 location 블록에 cgi가 적용됐더라도 사용 가능)
-//         -- 없음: _serverIndex를 그대로 사용.
-// 4-3. _locIndex/_serverIndex가 서버 컴퓨터에 있는지 확인
-//      -- 있음: cgi인지 확인하기
-//              -- cgi인 경우: 6. cgi에 대한 처리
-//              -- cgi가 아닌 경우: _serverIndex 파일 전송 :: FINISH
-//      -- 없음: autoindex가 켜져있는지 확인 (만약, location autoindex가 설정되어있지 않다면, server conf로부터 상속)
-//              -- on: autoindex 페이지 response :: FINISH
-//              -- off: 403 에러
+//    -- 없음: 에러 띄우기 (아직 구현 안됨)
+// 2. cgi 관련 정보를 맵[key: 사용할 확장자명, value: binary pass 형태로 얻어두기 (참고 1.)
+// 3. 요청받은 파일/폴더명을 모든 nginx.conf의 location 경로들과 비교하기 
+//    (일단 해당하는 req uri가 어떤 location block을 사용할지가 가장 중요!)
+//    # 가장 일치하는 로케이션 블록의 설정을 받아오게 될 것임.
+//    # 만약 location /data만 있다면, localhost:4242/data/a도 /data로 받아오게 됨. (파일이든 폴더든 상관 x)
+// 4. location 블록이 설정됨
+// 5. redirection 설정이 location block에 있는지 확인
+//    -- 있음: 바로 리다이렉션 시키기
+//    -- 없음: 6. request uri type 판단
+// 6. request uri의 type을 판단
+//    -- 폴더: 끝에 '/'가 붙었는지 확인
+//            -- 없음: '/'를 끝에 가지도록 리다이렉션
+//            -- 있음: nginx.conf에 server index가 설정되었는지 확인
+//                    -- 됨: location index가 설정되었는지 확인
+//                          -- 됨: * server index 관련 설정 무시하고 location index로 덮어쓰기
+//                                 * 서버 컴퓨터에 있는 index 파일인지 확인
+//                                   -- 있음: 파싱한 index에 대한 파일이 cgi인지 확인 -- (a)
+//                                           -- cgi임: phase = GET_CGI_RUN
+//                                           -- cgi아님: phase = GET_FILE
+//                                   -- 없음: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
+//                          -- 안됨: server index 사용하기
+//                    -- 안됨: autoindex 설정 되었는지 확인
+//                            -- 됨: autoindex 페이지 띄우기
+//                            -- 안됨: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
+//    -- 파일: cgi인지 확인하기 -- (a)
+//            -- cgi임: phase = GET_CGI_RUN
+//            -- cgi아님: phase = GET_FILE
+//    -- 없는: 404 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
+// @ error_page: nginx.conf에서 error_page 설정이 있는지 확인
+//               -- 있음: 해당 위치의 파일을 가져오기 => phase = GET_FILE
+//               -- 없음: 정적 파일 가져오기 => phase = GET_STATIC_HTML
+//   (ex. error_page  403 404 405 406 411 497 500 501 502 503 504 505 /error.html;)
+// 참고 사항
+// 1. cgi의 경우, 다른 location context에서 정의되어도 index로 사용 가능
+// 2. 
+
+
 // NOTE: cgi 파트 location 블록과 함께 사용하기
-// 6-1. req uri 경로에서 확장자 파싱하기
-// 6-2. 확장자가 location path를 순환하며 얻은 경로와 일치하는지 파악하기
+// 1. req uri 경로에서 확장자 파싱하기
+// 2. 확장자가 location path를 순환하며 얻은 경로와 일치하는지 파악하기
 //      -- 일치: 7. cgi 작업 전 필요한 변수 세팅하기
 //      -- 불일치: phase = GET_FILE
-// 7-1. 해당 location 블록 내부에서 바이너리 파일 위치 가져오기
-// 7-2. phase = CGI_RUN으로 변경하기
-
-// error_page directive 추가하기
-// 1. nginx.conf에 추가 후, vector로 파싱하기
-//    (ex. error_page  403 404 405 406 411 497 500 501 502 503 504 505 /error.html;)
-// 2. 
+// 3. 해당 location 블록 내부에서 바이너리 파일 위치 가져오기
+// 4. phase = CGI_RUN으로 변경하기
 
 // TODO
 // 1. try_files, return, deny 부분 추가하기
@@ -91,10 +100,10 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {
+        // 1
         data._root = _serverConf.dirMap["root"];
         _serverIndex = getIndexFile(data._root + data._URIFilePath, _serverConf.index);
-
-        // NOTE: CGI로 사용될 파일 확장자 parsing
+        // 2
         for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
             std::string tmpExt = HTTPData::getExtension(_serverConf.location[i].locationPath);
             NginxConfig::LocationBlock tmpLocBlock = _serverConf.location[i];
@@ -103,6 +112,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             // std::cout << "[DEBUG] getMapValue[" << tmpExt << "]: " << tmpLocBlock.dirMap["cgi_pass"] << std::endl;
             _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
+
+
+#if 0
 
         // TODO: Redirection 완벽하게 구현 후, 슬래시가 뒤에 붙지 않은 폴더의 경우 리다이렉션으로 돌려주기
         // TODO: location / 블록 없더라도 index.html이 켜지도록 동작해야함
@@ -154,7 +166,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                 // 2-2. absolutePath = tmpLocConf._return[1]
                 if (!tmpLocConf._return.empty()){
                     // FIXME: setGeneralHeader에 들어갈 string도 status code에 따라서 처리하기
-                    setGeneralHeader("HTTP/1.1 301 Moved Permanently");
+                    // setGeneralHeader("HTTP/1.1 301 Moved Permanently");
+                    setGeneralHeader("HTTP/1.1 302 Found");
                     data._statusCode = atoi(tmpLocConf._return[0].c_str());
                     data._resAbsoluteFilePath = tmpLocConf._return[1];
                     data._URIExtension = "html";
@@ -222,6 +235,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             data._statusCode = 404;
             _phase = GET_STATIC_HTML;
         } 
+#endif
     }
 
     if (_phase == GET_STATIC_HTML) {
