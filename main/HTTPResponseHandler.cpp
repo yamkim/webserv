@@ -53,7 +53,9 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
 //    (일단 해당하는 req uri가 어떤 location block을 사용할지가 가장 중요!)
 //    # 가장 일치하는 로케이션 블록의 설정을 받아오게 될 것임.
 //    # 만약 location /data만 있다면, localhost:4242/data/a도 /data로 받아오게 됨. (파일이든 폴더든 상관 x)
-// 4. location 블록이 설정됨
+// 4. 매칭되는 location 블록이 설정됨
+//    -- 블록 있음: 5. 블록 설정에 따라 진행
+//    -- 블록 없음: 추후 고민=============================
 // 5. redirection 설정이 location block에 있는지 확인
 //    -- 있음: 바로 리다이렉션 시키기
 //    -- 없음: 6. request uri type 판단
@@ -62,13 +64,13 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
 //            -- 없음: '/'를 끝에 가지도록 리다이렉션
 //            -- 있음: nginx.conf에 server index가 설정되었는지 확인
 //                    -- 됨: location index가 설정되었는지 확인
-//                          -- 됨: * server index 관련 설정 무시하고 location index로 덮어쓰기
-//                                 * 서버 컴퓨터에 있는 index 파일인지 확인
-//                                   -- 있음: 파싱한 index에 대한 파일이 cgi인지 확인 -- (a)
-//                                           -- cgi임: phase = GET_CGI_RUN
-//                                           -- cgi아님: phase = GET_FILE
-//                                   -- 없음: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
+//                          -- 됨: server index 관련 설정 무시하고 location index로 덮어쓰기
 //                          -- 안됨: server index 사용하기
+//                          서버 컴퓨터에 있는 index 파일인지 확인
+//                          -- 있음: 파싱한 index에 대한 파일이 cgi인지 확인 -- (a)
+//                                  -- cgi임: phase = GET_CGI_RUN
+//                                  -- cgi아님: phase = GET_FILE
+//                          -- 없음: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
 //                    -- 안됨: autoindex 설정 되었는지 확인
 //                            -- 됨: autoindex 페이지 띄우기
 //                            -- 안됨: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
