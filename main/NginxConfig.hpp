@@ -15,7 +15,6 @@ class NginxConfig : public NginxParser {
             std::string worker_processes;
         };
         struct TypesBlock : NginxBlock{
-            std::vector<std::string> typeVec;
             std::map<std::string, std::string> typeMap;
         };
         struct LocationBlock : NginxBlock {
@@ -98,12 +97,6 @@ class NginxConfig : public NginxParser {
     public:
 
         void setTypesBlock(struct TypesBlock& block) {
-            block.typeVec.push_back("text/html");
-            block.typeVec.push_back("text/css");
-            block.typeVec.push_back("text/jpeg");
-            block.typeVec.push_back("application/javascript");
-            block.typeVec.push_back("image/x-icon");
-
             std::string buf = block.rawData;
             std::size_t pos = 0;
             while (buf[pos]) {
@@ -113,12 +106,8 @@ class NginxConfig : public NginxParser {
                 }
                 std::size_t tmpPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, tmpPos, " ");
-                if (find(block.typeVec.begin(), block.typeVec.end(), tmpDir) == block.typeVec.end()) {
-                    throw std::string("Error: " + tmpDir + " is not in block[types] list.");
-                } else {
-                    std::string value = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
-                    setTypeMap(block.typeMap, tmpDir, value);
-                }
+                std::string value = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                setTypeMap(block.typeMap, tmpDir, value);
                 // std::cout << "identifier[types]: " << tmpDir << std::endl;
             }
         }
