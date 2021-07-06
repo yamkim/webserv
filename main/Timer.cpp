@@ -34,7 +34,7 @@ void Timer::CheckTimer(void (*del)(void*)) {
     gettimeofday(&time, NULL);
     std::vector<Pair>::iterator iter;
     for (iter = _timerList.begin(); iter != _timerList.end();) {
-        if ((*iter).expTime < time.tv_sec) {
+        if ((*iter).expTime <= time.tv_sec) {
             del((*iter).obj);
             iter = _timerList.erase(iter);
         } else {

@@ -33,6 +33,7 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
         std::cout << error.what() << std::endl;
         _data._statusCode = 400; // Bad Request
         // TODO: response에서 StatusCode를 인식해서 동작하게 해야 함.
+        // TODO: 07.06 오전: 얘는 어디서 사용 되나요?====================================
         phase = HTTPRequestHandler::FINISH;
     }
     return (phase);

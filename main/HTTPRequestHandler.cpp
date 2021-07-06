@@ -27,16 +27,21 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
             } else {
                 _contentLength = std::atoi(_headers["Content-Length"].c_str());
                 // std::cout << "_headers[] : " << _headers["Content-Length"] << std::endl;
-                char tmp[10];
-                srand(time(NULL));
-                for (int j = 0; j < 10; j++) {
-                    tmp[j] = char(std::rand() % ('Z' - 'A') + 'A');
+                if (_contentLength > std::atoi(_serverConf.dirMap["client_max_body_size"].c_str())) {
+                    data._statusCode = 413;
+                    _phase = FINISH;
+                } else {
+                    char tmp[10];
+                    srand(time(NULL));
+                    for (int j = 0; j < 10; j++) {
+                        tmp[j] = char(std::rand() % ('Z' - 'A') + 'A');
+                    }
+                    data._postFilePath = std::string(tmp, 10);
+                    _fileController = new FileController(std::string(tmp, 10), FileController::WRITE);
+                    data._reqContentType = _headers["Content-Type"];
+                    data._reqContentLength = _headers["Content-Length"];
+                    _phase = PARSE_BODY;
                 }
-                data._postFilePath = std::string(tmp, 10);
-                _fileController = new FileController(std::string(tmp, 10), FileController::WRITE);
-                data._reqContentType = _headers["Content-Type"];
-                data._reqContentLength = _headers["Content-Length"];
-                _phase = PARSE_BODY;
             }
         } else {
             _phase = PARSE_HEADER;
