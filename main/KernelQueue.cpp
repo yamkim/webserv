@@ -71,6 +71,14 @@ void* KernelQueue::getInstance(int index) {
     return (_getEvent[index].udata);
 }
 
+long KernelQueue::getData(int index) {
+    // NOTE: 필터의 특성에 대한 고유 데이터를 가져옴. (예를 들면 읽을수/쓸수 있는 버퍼 길이가 들어감.)
+    if (_pair.find(int(_getEvent[index].ident)) != _pair.end()) {
+        _pair[int(_getEvent[index].ident)]->stopMaster();
+    }
+    return (_getEvent[index].data);
+}
+
 KernelQueue::PairQueue::PairQueue(int kernelQueuefd) : Socket(-1) {
     _kernelQueuefd = kernelQueuefd;
     _master = NULL;

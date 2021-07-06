@@ -32,6 +32,7 @@ class KernelQueue {
         bool isWriteEvent(int index) const;
         int getFd(int index) const;
         void* getInstance(int index);
+        long getData(int index);
         void setPairEvent(int masterIndex, int slaveReadFd); // NOTE: 현재 호출된 이벤트의 인덱스와 새로 추가할 fd를 인수로 넣으면 자동으로 쌍이 생성되고 이벤트가 추가된다.
         void deletePairEvent(int masterIndex); // NOTE: 이벤트 쌍을 제거한다.
         // REVIEW: 이벤트의 대한 처리는 최대한 커널큐 내부에서 하기 위해 Nested Class 형식을 사용하였고 다형성을 위해 Socket 클래스를 상속 받습니다.
