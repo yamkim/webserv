@@ -15,6 +15,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::Ser
     setConnectionData(_socketAddr, myAddr);
     _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
     _res = NULL;
+    _dynamicBufferSize = 0;
 }
 
 ConnectionSocket::~ConnectionSocket(){
@@ -66,4 +67,11 @@ int ConnectionSocket::getCGIfd(void) {
 
 void ConnectionSocket::ConnectionSocketKiller(void* connectionsocket) {
     delete reinterpret_cast<ConnectionSocket*>(connectionsocket);
+}
+
+long ConnectionSocket::getDynamicBufferSize(void) {
+    return (_dynamicBufferSize);
+}
+void ConnectionSocket::setDynamicBufferSize(long dynamicBufferSize) {
+    _dynamicBufferSize = dynamicBufferSize;
 }

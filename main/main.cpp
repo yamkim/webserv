@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-    KernelQueue kq;
+    KernelQueue kq(1.0);
     NginxConfig nginxConfig("nginx.conf");
     try {
     #if 1
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
                     } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
                         // NOTE: Connection Socket Event 발생
                         ConnectionSocket* cSocket = dynamic_cast<ConnectionSocket*>(instance);
-                        
+                        cSocket->setDynamicBufferSize(data);
                         if (kq.isClose(i)) {
                             // NOTE: 연결 종료 여부 확인
                             timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);

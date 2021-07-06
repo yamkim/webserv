@@ -89,7 +89,7 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
 // 5. return 관련부분, cgi pass
 // - request로부터 오는 dataStatus에 따라서 먼저 출력하는 방법 모색 -> 생성자에서 처리?
 
-HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
+HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long bufferSize) {
     if (_phase == FIND_RESOURCE) {
         data._root = _serverConf.dirMap["root"];
         _serverIndex = getIndexFile(data._root + data._URIFilePath, _serverConf.index);
@@ -243,8 +243,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
         char *buf;
         size_t writtenLengthOnBuf;
         if (_staticHtml.empty()) {
-            buf = new char[RESPONSE_BUFFER_SIZE];
-            writtenLengthOnBuf = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
+            buf = new char[bufferSize];
+            writtenLengthOnBuf = read(_file->getFd(), buf, bufferSize);
             _phase = writtenLengthOnBuf == 0 ? FINISH : DATA_SEND_LOOP;
         } else {
             buf = new char[data._resContentLength + 1];
@@ -281,11 +281,15 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     }
     
     if (_phase == CGI_SEND_LOOP) {
-        char buf[RESPONSE_BUFFER_SIZE];
+        char* buf = new char[bufferSize];
 
-        int length = read(_file->getFd(), buf, RESPONSE_BUFFER_SIZE);
+        if (buf == NULL) {
+            throw ErrorHandler("Error: memory alloc error", ErrorHandler::CRITICAL, "HTTPResponseHandler::process");
+        }
+        int length = read(_file->getFd(), buf, bufferSize);
         if (length != 0) {
             int writeLength = write(_cgi->getInputStream(), buf, length);
+            delete [] buf;
             if (writeLength != length) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
@@ -296,11 +300,15 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     }
     
     if (_phase == CGI_RECV_LOOP) {
-        char buf[RESPONSE_BUFFER_SIZE];
+        char* buf = new char[bufferSize];
 
-        int length = read(_cgi->getOutputStream(), buf, RESPONSE_BUFFER_SIZE);
+        if (buf == NULL) {
+            throw ErrorHandler("Error: memory alloc error", ErrorHandler::CRITICAL, "HTTPResponseHandler::process");
+        }
+        int length = read(_cgi->getOutputStream(), buf, bufferSize);
         if (length != 0) {
             int writeLength = send(_connectionFd, buf, length, 0);
+            delete [] buf;
             if (writeLength != length) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }

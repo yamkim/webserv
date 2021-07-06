@@ -2,15 +2,13 @@
 
 #include <iostream>
 
-KernelQueue::KernelQueue() {
+KernelQueue::KernelQueue(float pollingTime) {
     _kernelQueuefd = kqueue();
     if (_kernelQueuefd == -1) {
         throw ErrorHandler("Error: Kernel Queue Generate Error.", ErrorHandler::CRITICAL, "KernelQueue::KernelQueue");
     }
-    // FIXME: 시간 설정 다른데서 하는게 깔끔할듯
-	// polling time = 1 sec
-	_pollingTime.tv_sec = 1;
-	_pollingTime.tv_nsec = 0;
+	_pollingTime.tv_sec = long(pollingTime);
+	_pollingTime.tv_nsec = long(pollingTime * 1000000000L) % 1000000000L;
 }
 
 KernelQueue::~KernelQueue() {

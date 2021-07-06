@@ -31,7 +31,7 @@ class HTTPResponseHandler : public HTTPHandler {
             CGI_RECV_LOOP, 
             FINISH
         } Phase;
-        virtual HTTPResponseHandler::Phase process(HTTPData& data);
+        virtual HTTPResponseHandler::Phase process(HTTPData& data, long bufferSize);
 
         void responseNotFound(const HTTPData& data);
         void responseAutoIndex(const HTTPData& data);

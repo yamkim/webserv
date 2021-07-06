@@ -21,8 +21,9 @@ class KernelQueue {
         struct timespec _pollingTime;
         void addEvent(int fd, int16_t event, void* instancePointer);
         void removeEvent(int fd, int16_t event, void* instancePointer);
-    public:
         KernelQueue();
+    public:
+        KernelQueue(float pollingTime);
         ~KernelQueue();
         int getEventsIndex(void);
         void addReadEvent(int fd, void* instancePointer);
