@@ -39,10 +39,14 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
 }
 
 void ConnectionSocket::setConnectionData(struct sockaddr_in _serverSocketAddr, struct sockaddr_in _clientSocketAddr) {
+    std::stringstream portString;
     _data._clientIP = std::string(inet_ntoa(_serverSocketAddr.sin_addr));
-    _data._clientPort = ntohs(_serverSocketAddr.sin_port);
+    portString << ntohs(_serverSocketAddr.sin_port);
+    _data._clientPort = std::string(portString.str());
     _data._hostIP = std::string(inet_ntoa(_clientSocketAddr.sin_addr));
-    _data._hostPort = ntohs(_clientSocketAddr.sin_port);
+    portString.clear();
+    portString << ntohs(_clientSocketAddr.sin_port);
+    _data._hostPort = std::string(portString.str());
 }
 
 HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
