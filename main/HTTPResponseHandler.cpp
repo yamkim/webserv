@@ -52,28 +52,26 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
 // 3. 요청받은 파일/폴더명을 모든 nginx.conf의 location 경로들과 비교하기 
 //    (일단 해당하는 req uri가 어떤 location block을 사용할지가 가장 중요!)
 //    # 가장 일치하는 로케이션 블록의 설정을 받아오게 될 것임.
-//    # 만약 location /data만 있다면, localhost:4242/data/a도 /data로 받아오게 됨. (파일이든 폴더든 상관 x)
 // 4. 매칭되는 location 블록이 설정됨
 //    -- 블록 있음: 5. 블록 설정에 따라 진행
 //    -- 블록 없음: 추후 고민=============================
-// 5. redirection 설정이 location block에 있는지 확인
-//    -- 있음: 바로 리다이렉션 시키기
-//    -- 없음: 6. request uri type 판단
-// 6. request uri의 type을 판단
+// 5. request uri의 type을 판단
 //    -- 폴더: 끝에 '/'가 붙었는지 확인
 //            -- 없음: '/'를 끝에 가지도록 리다이렉션
-//            -- 있음: nginx.conf에 server index가 설정되었는지 확인
-//                    -- 됨: location index가 설정되었는지 확인
-//                          -- 됨: server index 관련 설정 무시하고 location index로 덮어쓰기
-//                          -- 안됨: server index 사용하기
-//                          서버 컴퓨터에 있는 index 파일인지 확인
-//                          -- 있음: 파싱한 index에 대한 파일이 cgi인지 확인 -- (a)
-//                                  -- cgi임: phase = GET_CGI_RUN
-//                                  -- cgi아님: phase = GET_FILE
-//                          -- 없음: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
-//                    -- 안됨: autoindex 설정 되었는지 확인
-//                            -- 됨: autoindex 페이지 띄우기
-//                            -- 안됨: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
+//            -- 있음: redirection 설정이 되어있는지 확인
+//                    -- 됨: 바로 리다이렉션 시키기             
+//                    -- 안됨: nginx.conf에 server index가 설정되었는지 확인
+//                            -- 됨: location index가 설정되었는지 확인
+//                                  -- 됨: server index 관련 설정 무시하고 location index로 덮어쓰기
+//                                  -- 안됨: server index 사용하기
+//                                  서버 컴퓨터에 있는 index 파일인지 확인
+//                                  -- 있음: 파싱한 index에 대한 파일이 cgi인지 확인 -- (a)
+//                                          -- cgi임: phase = GET_CGI_RUN
+//                                          -- cgi아님: phase = GET_FILE
+//                                  -- 없음: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
+//                            -- 안됨: autoindex 설정 되었는지 확인
+//                                    -- 됨: autoindex 페이지 띄우기
+//                                    -- 안됨: 403 에러 띄우기 (에러페이지에 대한 설정 같이 넣기)
 //    -- 파일: cgi인지 확인하기 -- (a)
 //            -- cgi임: phase = GET_CGI_RUN
 //            -- cgi아님: phase = GET_FILE
@@ -114,95 +112,87 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
             // std::cout << "[DEBUG] getMapValue[" << tmpExt << "]: " << tmpLocBlock.dirMap["cgi_pass"] << std::endl;
             _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
+        std::cout << "[DEBUG] data._URIFilePath: [" << data._URIFilePath << "]" << std::endl;
 
-
-#if 0
-
-        // TODO: Redirection 완벽하게 구현 후, 슬래시가 뒤에 붙지 않은 폴더의 경우 리다이렉션으로 돌려주기
-        // TODO: location / 블록 없더라도 index.html이 켜지도록 동작해야함
-        _type = FileController::checkType(data._root + data._URIFilePath);
-        if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
-            // 현재 방식: location의 path와 정확히 일치하는 경로의 block만 취급
-            bool isLocFlag = false;
-            NginxConfig::LocationBlock tmpLocConf;
-            std::size_t matchLen = 0; 
-
-            std::cout << "[DEBUG] data._URIFilePath: [" << data._URIFilePath << "]" << std::endl;
-            for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
-                std::string tmpLocPath = _serverConf.location[i].locationPath;
-                if (data._URIFilePath == std::string("/") && tmpLocPath == std::string("/")) {
-                    isLocFlag = true;
-                    tmpLocConf = _serverConf.location[i];
+        // 3
+        bool isLocFlag = false;
+        NginxConfig::LocationBlock locConf;
+        std::size_t matchLen = 0; 
+        for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
+            // NOTE: GUIDE LINE for Prefix Match
+            // - request uri와 가장 일치하는 location 블록의 설정을 사용하되, 접근은 모두 request uri 기준으로하기!
+            // 1. location path를 순환하며, path가 request uri의 앞부분에 포함되는지 찾기
+            // 2. 만약 포함 된다면, 길이를 기억하기
+            // 3. 가장 긴 길이(가장 알맞은 경로)의 path를 갖는 location block의 설정을 사용하기
+            // 주의: 폴더/파일인지는 일단 상관 없음..! 여야하므로 항상 끝은 "/"로 끝나도록
+            //      (ex. location /data/ab/ 인데, req uri: /data/a인 경우는 폴더가 아닌 파일)
+            std::string tmpLocPath = _serverConf.location[i].locationPath;
+            std::size_t j = 0; // 1인 경우는 / 일 때이므로
+            for (; j < data._URIFilePath.size(); ++j) {
+                if (tmpLocPath[j] != data._URIFilePath[j]) {
                     break ;
-                } else {
-                    // NOTE: GUIDE LINE for Prefix Match
-                    // - request uri로 /data/a가 들어오는 경우
-                    // 1. location path를 순환하며, path가 request uri의 첫부분에 포함되는지 찾기
-                    // 2. 만약 포함 된다면, 길이를 기억하기
-                    // 3. 가장 긴 길이(가장 알맞은 경로)의 path를 갖는 location block을 사용하기
-                    // 주의: 폴더여야하므로 항상 끝은 "/"로 끝나도록
-                    //      (ex. location /data/ab/ 인데, req uri: /data/a인 경우는 폴더가 아닌 파일)
-                    // case 1. localhost:4242/data 받으면: localhost:4242/data/ 가 아니므로 오류..
-                    // case 2. location path에 /data만 있는 경우에, /data/a를 받아도 에러가 나지 않도록 설정하기
-                    // case 3. localhost:4242/data는 불가능 localhost:4242/data/만 가능
-                    tmpLocPath = tmpLocPath + std::string("/");
-                    std::size_t j = 0;
-                    for (; j < data._URIFilePath.size(); ++j) {
-                        if (tmpLocPath[j] != data._URIFilePath[j]) {
-                            break ;
-                        }
-                    }
-                    if (j > 0 && (data._URIFilePath[j - 1] == '/' && matchLen < j)) {
-                        isLocFlag = true;
-                        matchLen = j;
-                        tmpLocConf = _serverConf.location[i];
-                    }
                 }
             }
-            if (isLocFlag) {                    
-                // NOTE GUIDE LINE FOR REDIRECTION
-                // 1. tmpLocConf._return이 있는지 확인
-                //    -- 있음: 2. status code, path 파싱
-                //    -- 없음: index 확인 부로 바로 넘어가기
-                // 2-1. statusCode = tmpLocConf._return[0]
-                // 2-2. absolutePath = tmpLocConf._return[1]
-                if (!tmpLocConf._return.empty()){
-                    // FIXME: setGeneralHeader에 들어갈 string도 status code에 따라서 처리하기
-                    // setGeneralHeader("HTTP/1.1 301 Moved Permanently");
-                    setGeneralHeader("HTTP/1.1 302 Found");
-                    data._statusCode = atoi(tmpLocConf._return[0].c_str());
-                    data._resAbsoluteFilePath = tmpLocConf._return[1];
+            if (j == 1) { 
+                if (tmpLocPath == "/") { // 하나만 일치하는 경우, tmpLocPath가 "/"가 아니면 일치하는 location 블록이 없는 것.
+                    isLocFlag = true;
+                    matchLen = j;
+                    locConf = _serverConf.location[i];
+                }
+            } else {
+                if (matchLen < j) { // 더 많은 글자가 일치하는 location 블록이 있는 경우
+                    isLocFlag = true;
+                    matchLen = j;
+                    locConf = _serverConf.location[i];
+                }
+            }
+        }
+        std::cout << "[DEBUG] isLocFlag: " << isLocFlag << std::endl;
+        std::cout << "[DEBUG] locConf.locationPath: " << locConf.locationPath << std::endl;
+        if (isLocFlag) { // 4
+            _type = FileController::checkType(data._root + data._URIFilePath);
+            // if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
+            if (_type == FileController::DIRECTORY) {
+                // TODO: 끝에 "/"가 붙어있는지 확인하기
+                if (!locConf._return.empty()) { // redirection 시키는 것이 가장 우선순위가 높음
+                    setGeneralHeader("HTTP/1.1 301 Moved Permanently");
+                    // setGeneralHeader("HTTP/1.1 302 Found");
+                    data._statusCode = atoi(locConf._return[0].c_str());
+                    data._resAbsoluteFilePath = locConf._return[1];
                     data._URIExtension = "html";
                     std::cout << "[DEBUG] Redirection Case: status code: " << data._statusCode << std::endl;
                     std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
                     _phase = GET_STATIC_HTML;
-                } else { // index 확인부
-                    // NOTE: location에 index가 없는 경우, server index로부터 상속
-                    // NOTE: location에 index가 있는 경우, server index 무시하고 새로 확인
-                    if (tmpLocConf.index.empty()) {
-                        _locIndex = _serverIndex;
-                    } else { 
-                        _locIndex = getIndexFile(data._root + data._URIFilePath, tmpLocConf.index);
-                    }
-                    _type = FileController::checkType(data._root + data._URIFilePath + _locIndex);
-                    if (!_locIndex.empty() && _type == FileController::FILE) {
-                        setGeneralHeader("HTTP/1.1 200 OK");
-                        data._statusCode = 200;
-                        data._resAbsoluteFilePath = data._root + data._URIFilePath + _locIndex;
-                        data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                        std::cout << "[DEBUG] open location index file: " << data._resAbsoluteFilePath << std::endl;
-                        if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
-                            data._CGIBinary = _cgiConfMap[data._URIExtension];
-                            _phase = CGI_RUN;
+                } else { 
+                    _locIndex = locConf.index.empty()
+                                ? _serverIndex
+                                : getIndexFile(data._root + data._URIFilePath, locConf.index);
+
+                    if (!_locIndex.empty()) { // index file이 어떻게든 있는 경우
+                        // index 파일이 서버 컴퓨터에 있는지 판별
+                        FileController::Type indexType = FileController::checkType(data._root + data._URIFilePath + _locIndex);
+                        if (indexType == FileController::FILE) {
+                            setGeneralHeader("HTTP/1.1 200 OK");
+                            data._statusCode = 200;
+                            data._resAbsoluteFilePath = data._root + data._URIFilePath + _locIndex;
+                            data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
+                            std::cout << "[DEBUG] open location index file: " << data._resAbsoluteFilePath << std::endl;
+                            // 인덱스 파일이 cgi 파일인지 판별
+                            if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
+                                data._CGIBinary = _cgiConfMap[data._URIExtension];
+                                _phase = CGI_RUN;
+                            } else {
+                                _phase = GET_FILE;
+                            }
                         } else {
-                            _phase = GET_FILE;
+                            setGeneralHeader("HTTP/1.1 403 Forbidden");
+                            data._statusCode = 403;
                         }
-                    } else  {
-                        // location block에 autoindex 없으면 상속받기
-                        if (tmpLocConf.dirMap["autoindex"].empty()) {
-                            tmpLocConf.dirMap["autoindex"] = _serverConf.dirMap["autoindex"];
-                        }
-                        if (tmpLocConf.dirMap["autoindex"] == "on") {
+                    } else {                  // index file이 어디에도 설정되지 않은 경우
+                        locConf.dirMap["autoindex"] = locConf.dirMap["autoindex"].empty()
+                                                      ? _serverConf.dirMap["autoindex"]
+                                                      : locConf.dirMap["autoindex"];
+                        if (locConf.dirMap["autoindex"] == "on") {
                             setGeneralHeader("HTTP/1.1 200 OK");
                             data._statusCode = 200;
                         } else {
@@ -213,37 +203,38 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
                         _phase = GET_STATIC_HTML;
                     }
                 }
-            } else {         // 서버컴퓨터에는 존재 하지만, nginx.conf에 세팅된 경로가 아닌 경우
+            } else if (_type == FileController::FILE) {
+                setGeneralHeader("HTTP/1.1 200 OK");
+                data._statusCode = 200;
+                data._resAbsoluteFilePath = data._root + data._URIFilePath;
+                data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
+                std::cout << "[DEBUG] open location file (not index): " << data._resAbsoluteFilePath << std::endl;
+                if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
+                    data._CGIBinary = _cgiConfMap[data._URIExtension];
+                    _phase = CGI_RUN;
+                } else {
+                    _phase = GET_FILE;
+                }
+            } else {
                 std::cout << "[DEBUG] exist in Server not nginx config" << std::endl;
                 setGeneralHeader("HTTP/1.1 404 Not Found");
                 data._statusCode = 404;
                 data._URIExtension = "html";
                 _phase = GET_STATIC_HTML;
             }
-        } else if (_type == FileController::FILE) {
-            setGeneralHeader("HTTP/1.1 200 OK");
-            data._statusCode = 200;
-            data._resAbsoluteFilePath = data._root + data._URIFilePath;
-            data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-            std::cout << "[DEBUG] open location file (not index): " << data._resAbsoluteFilePath << std::endl;
-            if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
-                data._CGIBinary = _cgiConfMap[data._URIExtension];
-                _phase = CGI_RUN;
-            } else {
-                _phase = GET_FILE;
-            }
-        } else { // 서버컴퓨터에 존재하지 않는 경우
+        } else {
+            std::cout << "NOTFOUND ==================================" << std::endl;
             setGeneralHeader("HTTP/1.1 404 Not Found");
             data._statusCode = 404;
             _phase = GET_STATIC_HTML;
-        } 
-#endif
+        }
     }
 
     if (_phase == GET_STATIC_HTML) {
         _staticHtml = HTMLBody::getStaticHTML(data);
-        // setHTMLHeader(data._URIExtension, _staticHtml.length());
         data._resContentLength = _staticHtml.length();
+        std::cout << "DEBUG======================================" << std::endl;
+        std::cout << "[DEBUG] _staticHtml: " << _staticHtml << std::endl;
         setHTMLHeader(data);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;

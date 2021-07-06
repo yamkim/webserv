@@ -67,7 +67,6 @@ class HTMLBody {
             return (ret.str());
         }
 
-
         //static std::string getStaticHTML(int statusCode, std::string root, std::string path) {
         static std::string getStaticHTML(const HTTPData& data) {
             std::string statusMsg;
@@ -81,6 +80,8 @@ class HTMLBody {
             } else if (data._statusCode == 200) {
                 ret = getAutoIndexBody(data._root, data._URIFilePath);
             } else if (data._statusCode == 301) {
+                ret = getRedirectBody(data);
+            } else if (data._statusCode == 302) {
                 ret = getRedirectBody(data);
             }
             return (ret);
