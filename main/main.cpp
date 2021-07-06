@@ -49,7 +49,6 @@ int main(int argc, char *argv[])
                     } else if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
                         // NOTE: Listening Socket Event 발생
                         // NOTE: 부하 테스트를 진행하며 여러 요청이 올 때 한번에 여러 연결을 생성하도록 하였습니다. 해당 구간에서 다음과 같이 수정함으로 성능 개선을 확인하였습니다.
-                        std::cout << "[data : " << data << "]" << std::endl;
                         for (long i = 0; i < data; i++) {
                             ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket(), instance->getConfig(), nginxConfig);
                             timer.addObj(cSocket, std::atoi(instance->getConfig().dirMap["keepalive_timeout"].c_str()));

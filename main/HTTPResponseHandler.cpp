@@ -300,6 +300,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
     
     if (_phase == CGI_RECV_LOOP) {
+        // TODO: CGI가 주는 헤더를 별도로 파싱해야 함 (Status 때문에...)
         char* buf = new char[bufferSize];
 
         if (buf == NULL) {

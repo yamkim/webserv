@@ -17,8 +17,6 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
         data._statusCode = 200;
         if (getRequestLine(data) == true) {
             _phase = PARSE_HEADER;
-        } else {
-            _phase = PARSE_STARTLINE;
         }
     } else if (_phase == PARSE_HEADER) {
         if (getHeader() == true) {
@@ -26,7 +24,6 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
                 _phase = FINISH;
             } else {
                 _contentLength = std::atoi(_headers["Content-Length"].c_str());
-                // std::cout << "_headers[] : " << _headers["Content-Length"] << std::endl;
                 if (_contentLength > std::atoi(_serverConf.dirMap["client_max_body_size"].c_str())) {
                     data._statusCode = 413;
                     _phase = FINISH;
@@ -37,7 +34,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
                         tmp[j] = char(std::rand() % ('Z' - 'A') + 'A');
                     }
                     data._postFilePath = std::string(tmp, 10);
-                    _fileController = new FileController(std::string(tmp, 10), FileController::WRITE);
+                    _fileController = new FileController(data._postFilePath, FileController::WRITE);
                     data._reqContentType = _headers["Content-Type"];
                     data._reqContentLength = _headers["Content-Length"];
                     _phase = PARSE_BODY;
@@ -54,7 +51,6 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
         // std::cout << "readLength : " << readLength << std::endl;
         _contentLength -= readLength;
         if (_contentLength <= 0) {
-            // std::cout << "readLength + _contentLength : " << readLength + _contentLength << std::endl;
             readLength = write(_fileController->getFd(), buffer, readLength + _contentLength);
             _phase = FINISH;
         } else {
@@ -125,7 +121,7 @@ int HTTPRequestHandler::findNewLine(const char *buffer) {
 bool HTTPRequestHandler::setHeaderString(void) {
     char buffer[REQUEST_BUFFER_SIZE + 1];
 
-    int readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, MSG_PEEK);
+    ssize_t readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, MSG_PEEK);
     if (readLength == TRANS_ERROR) {
         throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::setHeaderString");
     }
@@ -133,10 +129,16 @@ bool HTTPRequestHandler::setHeaderString(void) {
     int newLinePosition = findNewLine(buffer);
     if (newLinePosition == -1) {
         readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, 0);
+        if (readLength == TRANS_ERROR) {
+            throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::setHeaderString");
+        }
         _headerString += std::string(buffer, readLength);
         return (false);
     } else {
         readLength = recv(_connectionFd, buffer, newLinePosition, 0);
+        if (readLength == TRANS_ERROR) {
+            throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::setHeaderString");
+        }
         _headerString += std::string(buffer, readLength);
         return (true);
     }
