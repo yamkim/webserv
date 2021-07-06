@@ -6,6 +6,22 @@
         <meta name="description" content="" />
         <meta name="author" content="" />
         <title>File Manager</title>
+        <style>
+            ol li {
+                list-style: none;
+                padding: 5px 0px 5px 5px;
+                margin-bottom: 5px;
+                border-bottom: 1px solid #354251;
+                font-size: 12px;
+            }
+            ol li:before {
+                list-style: none;
+                content: ">";
+                display: inline-block;
+                vertical-align: middle;
+                padding: 0px 5px 6px 0px;
+            }
+        </style>
     </head>
     <body>
 <?php
@@ -109,7 +125,7 @@ while (($filename = readdir($handle)) !== false) {
 closedir($handle);
 
 ?>
-<ul>
+<ol>
 <?php
 // 파일명 출력
 foreach ($files as $f) {
@@ -117,6 +133,6 @@ foreach ($files as $f) {
     echo "<br />";
 }
 ?>
-</ul>
+</ol>
     </body>
 <html>

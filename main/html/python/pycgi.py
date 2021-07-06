@@ -6,7 +6,7 @@ print("Content-type: text/html")
 print("")
 print('<html>')
 print('<head>')
-print('<title>HI</title>')
+print('<title>Python CGI Page</title>')
 print('</head>')
 print('<body>')
 

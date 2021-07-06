@@ -10,9 +10,9 @@ class HTTPData {
     public:
         // Connection Data
         std::string _hostIP;
-        int _hostPort;
+        std::string _hostPort;
         std::string _clientIP;
-        int _clientPort;
+        std::string _clientPort;
 
         // localhost:4242/data/index.html?id=123
         std::string _reqURI;          // /data/index.html?id=123
