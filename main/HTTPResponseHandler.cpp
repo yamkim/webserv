@@ -87,7 +87,6 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
 // TODO
 // 1. try_files, return, deny 부분 추가하기
 // 5. return 관련부분, cgi pass
-// - request로부터 오는 dataStatus에 따라서 먼저 출력하는 방법 모색 -> 생성자에서 처리?
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data) {
     if (_phase == FIND_RESOURCE) {

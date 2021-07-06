@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
                     } else if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
                         // NOTE: Listening Socket Event 발생
                         ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket(), instance->getConfig(), nginxConfig);
-                        timer.addObj(cSocket, std::atoi(instance->getConfig().dirMap["keepalive_timeout"].c_str()));
+                        timer.addObj(cSocket, 2);
                         kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
                     } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
                         // NOTE: Connection Socket Event 발생
@@ -59,11 +59,16 @@ int main(int argc, char *argv[])
                             timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
                             //delete cSocket;
                         } else if (kq.isReadEvent(i)) {
+                            // NOTE: Read Event
+                            // ============================================================================================
+                            // FIXME: HTTPRequest, HTTPResponse를 밖으로 빼고, 생성자에서 cSocket을 받는 식으로 대공사를 하면 어떨까요..?
+                            // ============================================================================================
                             if (cSocket->HTTPRequestProcess() == HTTPRequestHandler::FINISH) {
                                 // NOTE: to Write Event
                                 kq.modEventToWriteEvent(i);
                             }
                         } else if (kq.isWriteEvent(i)) {
+                            // NOTE: Write Event
                             HTTPResponseHandler::Phase phase = cSocket->HTTPResponseProcess();
                             if (phase == HTTPResponseHandler::FINISH) {
                                 kq.deletePairEvent(i);

@@ -176,8 +176,6 @@ class NginxConfig : public NginxParser {
             block.dirCase.push_back("index");
             block.dirCase.push_back("location");
             block.dirCase.push_back("autoindex");
-            block.dirCase.push_back("client_max_body_size");
-            block.dirCase.push_back("keepalive_timeout");
 
             std::string buf = block.rawData;
             std::size_t pos = 0;
@@ -208,7 +206,6 @@ class NginxConfig : public NginxParser {
                     if (tmpSplit.size() != 1) {
                         throw std::string("Error: invalid number of arguments in server["+ tmpDir + " directive].");
                     }
-                    // TODO[07.06]: keepalive timeout 숫자 아닌경우, 없는 경우 처리하기 ============
                     block.dirMap[tmpDir] = tmpSplit[0];
                     // std::cout << "[DEBUG] dirMap[tmpDir] in server: " << block.dirMap[tmpDir] << std::endl;
                 }
