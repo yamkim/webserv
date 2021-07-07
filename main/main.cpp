@@ -8,8 +8,12 @@
 
 int main(int argc, char *argv[])
 {
+    if (argc != 2) {
+        std::cerr << "\033[0;31m[err] bad grgument!\033[0m" << std::endl;
+        return (1);
+    }
     KernelQueue kq(1.0);
-    NginxConfig nginxConfig("nginx.conf");
+    NginxConfig nginxConfig(argv[1]);
     try {
     #if 1
     (void)argc, (void)argv;

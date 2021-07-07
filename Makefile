@@ -45,9 +45,9 @@ fclean: clean
 	rm -f $(TARGET)
 
 $(OBJ_PATH)%.o: $(SOURCE_PATH)%.cpp
-	@echo "$(YELLOW)generate object files$(END)"
+	@echo "$(YELLOW)generate object files ($< -> $@)$(END)"
 	@mkdir -p $(OBJ_PATH)
-	$(COMPILER) $(CFLAGS) -I$(HEADER) -c -o $@ $<
+	@$(COMPILER) $(CFLAGS) -I$(HEADER) -c -o $@ $<
 
 $(TARGET): $(OBJS)
 	@echo "$(YELLOW)webserv(normal) Build$(END)"
