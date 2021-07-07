@@ -77,6 +77,12 @@ class HTMLBody {
             } else if (data._statusCode == 403) {
                 statusMsg = "403 Forbidden";
                 ret = getBasicHTMLBody(statusMsg);
+            } else if (data._statusCode == 400) {
+                statusMsg = "400 Forbidden";
+                ret = getBasicHTMLBody(statusMsg);
+            } else if (data._statusCode == 413) {
+                statusMsg = "413 Request Entity Too Large";
+                ret = getBasicHTMLBody(statusMsg);
             } else if (data._statusCode == 200) {
                 ret = getAutoIndexBody(data._root, data._URIFilePath);
             } else if (data._statusCode == 301) {
