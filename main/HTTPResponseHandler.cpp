@@ -149,6 +149,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         if (!_serverConf.error_page.empty()) {
             _errorPageList = _serverConf.error_page;
             _serverErrorPage = getErrorPage(data._root, _serverConf.error_page);
+        } else {
+            _errorPageList.clear(); 
+            _serverErrorPage = "";
         }
 
         // 2
@@ -212,9 +215,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             //         -- 없음: error_page는 "", _errorPageList도 ""
             if (!locConf.error_page.empty()) {
                 _errorPageList = locConf.error_page;
-                _locErrorPage = getIndexFile(data._root, locConf.error_page);
+                _locErrorPage = getErrorPage(data._root, locConf.error_page);
             } else {
-                if (!_serverErrorPage.empty()) {
+                if (!_serverErrorPage.empty()) { // server error page가 있는 경우
                     _errorPageList = _serverConf.error_page;
                     _locErrorPage = _serverErrorPage;
                 } else {
@@ -263,7 +266,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                 }
                             } else {
                                 data._statusCode = 403;
-                                if (isErrorPageList(data._statusCode, _errorPageList)) {
+                                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
                                     setGeneralHeader("HTTP/1.1 200 OK");
                                     data._statusCode = 200;
                                     data._resAbsoluteFilePath = data._root + _locErrorPage;
@@ -287,7 +290,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                 _phase = GET_STATIC_HTML;
                             } else {
                                 data._statusCode = 403;
-                                if (isErrorPageList(data._statusCode, _errorPageList)) {
+                                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
                                     setGeneralHeader("HTTP/1.1 200 OK");
                                     data._statusCode = 200;
                                     data._resAbsoluteFilePath = data._root + _locErrorPage;
@@ -318,7 +321,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 }
             } else {
                 data._statusCode = 404;
-                if (isErrorPageList(data._statusCode, _errorPageList)) {
+                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
                     setGeneralHeader("HTTP/1.1 200 OK");
                     data._statusCode = 200;
                     data._resAbsoluteFilePath = data._root + _locErrorPage;
@@ -332,7 +335,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 }
             }
         } else {
-            if (isErrorPageList(data._statusCode, _errorPageList)) {
+            if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
                 setGeneralHeader("HTTP/1.1 200 OK");
                 data._statusCode = 200;
                 data._resAbsoluteFilePath = data._root + data._URIFilePath + _locErrorPage;
