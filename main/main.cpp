@@ -6,14 +6,19 @@
 #include <cstdlib>
 #include "Timer.hpp"
 
+#define CONF_PATH "./conf/nginx.conf"
+
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
+    const char* confPath = static_cast<const char *>(CONF_PATH);
+    if (argc == 2) {
+        confPath = argv[1];
+    } else if (argc > 2) {
         std::cerr << "\033[0;31m[err] bad grgument!\033[0m" << std::endl;
         return (1);
     }
     KernelQueue kq(1.0);
-    NginxConfig nginxConfig(argv[1]);
+    NginxConfig nginxConfig(confPath);
     try {
     #if 1
     (void)argc, (void)argv;
