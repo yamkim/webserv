@@ -12,14 +12,40 @@ HTTPResponseHandler::~HTTPResponseHandler() {
     delete _file;
 }
 
-std::string HTTPResponseHandler::getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec) {
+// NOTE location index 세팅을 위한 GUIDE LINE
+// 1. nginx.conf에 server에 index 세팅이 있는지 확인
+//    -- 있음: server index가 컴퓨터에 있는지 확인
+//            -- 있음: serverIndex = data._root + data._URIFilePath + *iter
+//            -- 없음: serverIndex = ""
+//    -- 없음: serverIndex = ""
+// 2. nginx.conf에 location에 대한 세팅이 있는지 확인
+//    -- 있음: location index가 컴퓨터에 있는지 확인
+//            -- 있음: locationIndex = data._root + data._URIFilePath + *iter
+//            -- 없음: locationIndex = serverIndex
+//    -- 없음: locationIndex = serverIndex
+std::string HTTPResponseHandler::getIndexPage(const HTTPData& data, std::vector<std::string>& serverIndexVec, std::vector<std::string>& locIndexVec) {
+    std::string absolutePath = data._root + data._URIFilePath;
+
     std::vector<std::string>::iterator iter;
-    for (iter = indexVec.begin(); iter != indexVec.end(); ++iter) {
+    std::string serverIndex;
+    for (iter = serverIndexVec.begin(); iter != serverIndexVec.end(); ++iter) {
         if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
-            return (*iter);
+            serverIndex = *iter;
+            break ;
         }
     }
-    return (std::string(""));
+    std::string locIndex;
+    for (iter = locIndexVec.begin(); iter != locIndexVec.end(); ++iter) {
+        if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
+            locIndex = *iter;
+            break ;
+        }
+    }
+    if (!locIndex.empty()) {
+        return (locIndex);
+    } else {
+        return (serverIndex);
+    }
 }
 
 std::string HTTPResponseHandler::getErrorPage(const std::string& absolutePath, std::vector<std::string>& errorPageVec) {
@@ -114,7 +140,7 @@ void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
     std::cout << "# Status Code: " << data._statusCode << std::endl;
     std::cout << "# Absolute File Path: " << data._resAbsoluteFilePath << std::endl;
     std::cout << "# URL Extension: " << data._URIExtension << std::endl;
-    std::cout << "# Location Context Index File: " << _locIndex << std::endl;
+    std::cout << "# Location Context Index File: " << _indexPage << std::endl;
     std::cout << "# Location Error Page File: " << _locErrorPage << std::endl;
     std::cout << "# Location Path: " << _locConf.locationPath << std::endl;
 }
@@ -195,19 +221,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         // 1
         data._serverName = _serverConf.dirMap["server_name"];
         data._root = _serverConf.dirMap["root"];
-        _serverIndex = getIndexFile(data._root + data._URIFilePath, _serverConf.index);
-        // server block에 error_page 세팅이 있는 경우
-        // -- 있음: error_page 찾아서 에러 파일이 존재하는지 찾기
-        //         -- 존재: error_page로 사용
-        //         -- 존재안함: error_page는 ""
-        // -- 없음: error_page는 ""
-        if (!_serverConf.error_page.empty()) {
-            _errorPageList = _serverConf.error_page;
-            _serverErrorPage = getErrorPage(data._root, _serverConf.error_page);
-        } else {
-            _errorPageList.clear(); 
-            _serverErrorPage = "";
-        }
 
         // 2
         for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
@@ -253,10 +266,20 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         }
         if (isLocFlag) { // 4
             // index page 세팅 및 error page 세팅
-            _locIndex = _locConf.index.empty()
-                        ? _serverIndex
-                        : getIndexFile(data._root + data._URIFilePath, _locConf.index);
+            _indexPage = getIndexPage(data, _serverConf.index, _locConf.index);
 
+            // server block에 error_page 세팅이 있는 경우
+            // -- 있음: error_page 찾아서 에러 파일이 존재하는지 찾기
+            //         -- 존재: error_page로 사용
+            //         -- 존재안함: error_page는 ""
+            // -- 없음: error_page는 ""
+            if (!_serverConf.error_page.empty()) {
+                _errorPageList = _serverConf.error_page;
+                _serverErrorPage = getErrorPage(data._root, _serverConf.error_page);
+            } else {
+                _errorPageList.clear(); 
+                _serverErrorPage = "";
+            }
             // location block에 error_page 세팅이 있는 경우
             // -- 있음: error_page 찾아서 에러 파일이 존재하는지 찾기
             //         -- 존재: error_page로 사용
@@ -293,13 +316,13 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                         data._URIExtension = "html";
                         _phase = GET_STATIC_HTML;
                     } else { 
-                        if (!_locIndex.empty()) { // index file이 어떻게든 있는 경우
+                        if (!_indexPage.empty()) { // index file이 어떻게든 있는 경우
                             // index 파일이 서버 컴퓨터에 있는지 판별
-                            FileController::Type indexType = FileController::checkType(data._root + data._URIFilePath + _locIndex);
+                            FileController::Type indexType = FileController::checkType(data._root + data._URIFilePath + _indexPage);
                             if (indexType == FileController::FILE) {
                                 data._statusCode = 200;
                                 setGeneralHeader(data._statusCode);
-                                data._resAbsoluteFilePath = data._root + data._URIFilePath + _locIndex;
+                                data._resAbsoluteFilePath = data._root + data._URIFilePath + _indexPage;
                                 data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
                                 // 인덱스 파일이 cgi 파일인지 판별
                                 if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
