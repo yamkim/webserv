@@ -2,15 +2,13 @@
 
 #include <iostream>
 
-KernelQueue::KernelQueue() {
+KernelQueue::KernelQueue(float pollingTime) {
     _kernelQueuefd = kqueue();
     if (_kernelQueuefd == -1) {
         throw ErrorHandler("Error: Kernel Queue Generate Error.", ErrorHandler::CRITICAL, "KernelQueue::KernelQueue");
     }
-    // FIXME: 시간 설정 다른데서 하는게 깔끔할듯
-	// polling time = 1 sec
-	_pollingTime.tv_sec = 1;
-	_pollingTime.tv_nsec = 0;
+	_pollingTime.tv_sec = long(pollingTime);
+	_pollingTime.tv_nsec = long(pollingTime * 1000000000L) % 1000000000L;
 }
 
 KernelQueue::~KernelQueue() {
@@ -69,6 +67,14 @@ void* KernelQueue::getInstance(int index) {
         _pair[int(_getEvent[index].ident)]->stopMaster();
     }
     return (_getEvent[index].udata);
+}
+
+long KernelQueue::getData(int index) {
+    // NOTE: 필터의 특성에 대한 고유 데이터를 가져옴. (예를 들면 읽을수/쓸수 있는 버퍼 길이가 들어감.)
+    if (_pair.find(int(_getEvent[index].ident)) != _pair.end()) {
+        _pair[int(_getEvent[index].ident)]->stopMaster();
+    }
+    return (_getEvent[index].data);
 }
 
 KernelQueue::PairQueue::PairQueue(int kernelQueuefd) : Socket(-1) {

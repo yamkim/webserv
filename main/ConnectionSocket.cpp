@@ -15,6 +15,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::Ser
     setConnectionData(_socketAddr, myAddr);
     _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
     _res = NULL;
+    _dynamicBufferSize = 0;
 }
 
 ConnectionSocket::~ConnectionSocket(){
@@ -26,15 +27,13 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     HTTPRequestHandler::Phase phase;
     try {
         phase = _req->process(_data);
-        if (phase == HTTPRequestHandler::FINISH) {
-            _res = new HTTPResponseHandler(_socket, _serverConf, _nginxConf);
-        }
     } catch (const std::exception &error) {
         std::cout << error.what() << std::endl;
-        _data._statusCode = 400; // Bad Request
-        // TODO: response에서 StatusCode를 인식해서 동작하게 해야 함.
-        // TODO: 07.06 오전: 얘는 어디서 사용 되나요?====================================
+        // NOTE: 일단 에러 발생 여부에 상관없이 페이즈가 끝나면 HTTPResponseHandler를 생성시키도록 변경하였습니다.
         phase = HTTPRequestHandler::FINISH;
+    }
+    if (phase == HTTPRequestHandler::FINISH) {
+        _res = new HTTPResponseHandler(_socket, _serverConf, _nginxConf);
     }
     return (phase);
 }
@@ -52,7 +51,7 @@ void ConnectionSocket::setConnectionData(struct sockaddr_in _serverSocketAddr, s
 
 HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
     HTTPResponseHandler::Phase phase;
-    phase = _res->process(_data);
+    phase = _res->process(_data, getDynamicBufferSize());
     return (phase);
 }
 
@@ -66,4 +65,11 @@ int ConnectionSocket::getCGIfd(void) {
 
 void ConnectionSocket::ConnectionSocketKiller(void* connectionsocket) {
     delete reinterpret_cast<ConnectionSocket*>(connectionsocket);
+}
+
+long ConnectionSocket::getDynamicBufferSize(void) {
+    return (_dynamicBufferSize);
+}
+void ConnectionSocket::setDynamicBufferSize(long dynamicBufferSize) {
+    _dynamicBufferSize = dynamicBufferSize;
 }

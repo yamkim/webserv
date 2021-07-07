@@ -13,6 +13,7 @@ class ConnectionSocket : public Socket {
         HTTPResponseHandler *_res;
         HTTPData _data;
         NginxConfig _nginxConf;
+        long _dynamicBufferSize;
     public:
         ConnectionSocket(int listeningSocket, const NginxConfig::ServerBlock& conf, const NginxConfig& nginxConfig);
         virtual ~ConnectionSocket();
@@ -24,6 +25,8 @@ class ConnectionSocket : public Socket {
         int getCGIfd(void);
         void setConnectionData(struct sockaddr_in _serverSocketAddr, struct sockaddr_in _clientSocektAddr);
         static void ConnectionSocketKiller(void* connectionsocket);
+        long getDynamicBufferSize(void);
+        void setDynamicBufferSize(long dynamicBufferSize);
 };
 
 #endif

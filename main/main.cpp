@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-    KernelQueue kq;
+    KernelQueue kq(1.0);
     NginxConfig nginxConfig("nginx.conf");
     try {
     #if 1
@@ -37,23 +37,27 @@ int main(int argc, char *argv[])
         while (true) {
             int result = kq.getEventsIndex();
             if (result == 0) {
-                timer.CheckTimer(ConnectionSocket::ConnectionSocketKiller);
                 std::cout << "waiting..." << std::endl;
             } else {
                 for (int i = 0; i < result; ++i) {
                     Socket* instance = reinterpret_cast<Socket*>(kq.getInstance(i));
+                    long data = kq.getData(i);
                     if (dynamic_cast<KernelQueue::PairQueue*>(instance) != NULL) {
                         // NOTE: CGI Event 발생
                         KernelQueue::PairQueue* pairQueue = reinterpret_cast<KernelQueue::PairQueue*>(instance);
                         pairQueue->stopSlave();
                     } else if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
                         // NOTE: Listening Socket Event 발생
-                        ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket(), instance->getConfig(), nginxConfig);
-                        timer.addObj(cSocket, std::atoi(instance->getConfig().dirMap["keepalive_timeout"].c_str()));
-                        kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
+                        // NOTE: 부하 테스트를 진행하며 여러 요청이 올 때 한번에 여러 연결을 생성하도록 하였습니다. 해당 구간에서 다음과 같이 수정함으로 성능 개선을 확인하였습니다.
+                        for (long i = 0; i < data; i++) {
+                            ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket(), instance->getConfig(), nginxConfig);
+                            timer.addObj(cSocket, std::atoi(instance->getConfig().dirMap["keepalive_timeout"].c_str()));
+                            kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
+                        }
                     } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
                         // NOTE: Connection Socket Event 발생
                         ConnectionSocket* cSocket = dynamic_cast<ConnectionSocket*>(instance);
+                        cSocket->setDynamicBufferSize(data);
                         if (kq.isClose(i)) {
                             // NOTE: 연결 종료 여부 확인
                             timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
@@ -75,8 +79,8 @@ int main(int argc, char *argv[])
                         }
                     }
                 }
-                timer.CheckTimer(ConnectionSocket::ConnectionSocketKiller);
             }
+            timer.CheckTimer(ConnectionSocket::ConnectionSocketKiller);
         }
     } catch (const std::exception &error) {
         std::cout << error.what() << std::endl;
