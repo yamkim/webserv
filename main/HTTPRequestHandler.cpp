@@ -15,7 +15,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
     // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
     if (_phase == PARSE_STARTLINE) {
         data._statusCode = 200;
-        if (getRequestLine(data) == true) {
+        if (getStartLine(data) == true) {
             _phase = PARSE_HEADER;
         }
     } else if (_phase == PARSE_HEADER) {
@@ -60,7 +60,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
     return _phase;
 }
 
-bool HTTPRequestHandler::getRequestLine(HTTPData& data) {
+bool HTTPRequestHandler::getStartLine(HTTPData& data) {
     if (setHeaderString() == false) {
         return (false);
     }
@@ -68,7 +68,7 @@ bool HTTPRequestHandler::getRequestLine(HTTPData& data) {
     _requestLine = _headerString;
     std::vector<std::string> tmp = Parser::getSplitBySpace(_requestLine);
     if (tmp.size() != 3) {
-        throw ErrorHandler("Error: invalid request line.", ErrorHandler::ALERT, "HTTPRequestHandler::getRequestLine");
+        throw ErrorHandler("Error: invalid request line.", ErrorHandler::ALERT, "HTTPRequestHandler::getStartLine");
     }
     if (   tmp[0] == std::string("GET")
         || tmp[0] == std::string("POST")

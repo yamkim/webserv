@@ -24,8 +24,6 @@ std::string HTTPResponseHandler::getIndexFile(const std::string& absolutePath, s
 
 std::string HTTPResponseHandler::getErrorPage(const std::string& absolutePath, std::vector<std::string>& errorPageVec) {
     std::vector<std::string>::iterator iter = errorPageVec.end() - 1;
-    std::cout << "[DEBUG] error_page from error_page list: " << *iter << std::endl;
-    std::cout << "[DEBUG] root + error_page from error_page list: " << absolutePath + *iter << std::endl;
     if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
         return (*iter);
     }
@@ -35,12 +33,9 @@ std::string HTTPResponseHandler::getErrorPage(const std::string& absolutePath, s
 bool HTTPResponseHandler::isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec) {
     std::stringstream ssStatusCode;
     ssStatusCode << statusCode;
-    std::cout << "[DEBUG] statusCode: " << ssStatusCode.str() << std::endl;  
     if (find(errorPageVec.begin(), errorPageVec.end(), ssStatusCode.str()) != errorPageVec.end()) {
-        std::cout << "[DEBUG] Error Page is searched in errorPageList============" << std::endl;
         return true;
     }
-    std::cout << "[DEBUG] Error Page is not searched in errorPageList============" << std::endl;
     return false;
 }
 
@@ -53,16 +48,61 @@ std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
     }
 }
 
+void HTTPResponseHandler::setGeneralHeader(int status) {
+    std::string startLine;
+    if (status == 200) {
+        startLine = std::string("HTTP/1.1 200 OK");
+    } else if (status == 301) {
+        startLine = std::string("HTTP/1.1 302 Found");
+    } else if (status == 302) {
+        startLine = std::string("HTTP/1.1 301 Moved Permanently");
+    } else if (status == 400) {
+        startLine = std::string("HTTP/1.1 400 Not Found");
+    } else if (status == 403) {
+        startLine = std::string("HTTP/1.1 403 Forbidden");
+    } else if (status == 404) {
+        startLine = std::string("HTTP/1.1 404 Not Found");
+    } else if (status == 413) {
+        startLine = std::string("HTTP/1.1 413 Payload Too Large");
+    } else {
+        // FIXME 없는 경우 어떻게 처리할지 생각해보기
+        startLine = "";        
+    }
+
+    time_t rawtime;
+    std::time(&rawtime);
+    struct tm* timeinfo = std::gmtime(&rawtime);
+    static char timeBuffer[48];
+    std::strftime(timeBuffer, 48, "%a, %d %b %Y %H:%M:%S %Z", timeinfo);
+
+    _headerString = startLine;
+    _headerString += "\r\n";
+    _headers["Connection"] = std::string("close");
+    _headers["Date"] = std::string(timeBuffer);
+    // _headers["Server"] = std::string("webserv/0.1");
+}
+
 void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
     std::stringstream ssLength;
     ssLength << data._resContentLength;
+    _headers["Server"] = data._serverName;
     _headers["Content-Type"] = getMIME(data._URIExtension);
     _headers["Content-Length"] = ssLength.str();
     if (data._statusCode == 301) {
         _headers["Location"] = data._resAbsoluteFilePath;
     }
     convertHeaderMapToString(false);
-    std::cout << "[DEBUG] headers: " << _headerString << std::endl;
+}
+
+void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
+    std::cout << "Response Information=============================" << std::endl;
+    std::cout << "# Request URL: " << data._reqURI << std::endl;
+    std::cout << "# Status Code: " << data._statusCode << std::endl;
+    std::cout << "# Absolute File Path: " << data._resAbsoluteFilePath << std::endl;
+    std::cout << "# URL Extension: " << data._URIExtension << std::endl;
+    std::cout << "# Location Context Index File: " << _locIndex << std::endl;
+    std::cout << "# Location Error Page File: " << _locErrorPage << std::endl;
+    std::cout << "# Location Path: " << _locConf.locationPath << std::endl;
 }
 
 // NOTE:
@@ -139,6 +179,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     // }
     if (_phase == FIND_RESOURCE) {
         // 1
+        data._serverName = _serverConf.dirMap["server_name"];
         data._root = _serverConf.dirMap["root"];
         _serverIndex = getIndexFile(data._root + data._URIFilePath, _serverConf.index);
         // server block에 error_page 세팅이 있는 경우
@@ -160,14 +201,11 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             NginxConfig::LocationBlock tmpLocBlock = _serverConf.location[i];
             if (tmpExt.empty())
                 continue ;
-            // std::cout << "[DEBUG] getMapValue[" << tmpExt << "]: " << tmpLocBlock.dirMap["cgi_pass"] << std::endl;
             _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
         }
-        std::cout << "[DEBUG] data._URIFilePath: [" << data._URIFilePath << "]" << std::endl;
 
         // 3
         bool isLocFlag = false;
-        NginxConfig::LocationBlock locConf;
         std::size_t matchLen = 0; 
         for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
             // NOTE: GUIDE LINE for Prefix Match
@@ -177,6 +215,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             // 3. 가장 긴 길이(가장 알맞은 경로)의 path를 갖는 location block의 설정을 사용하기
             // 주의: 폴더/파일인지는 일단 상관 없음..! 여야하므로 항상 끝은 "/"로 끝나도록
             //      (ex. location /data/ab/ 인데, req uri: /data/a인 경우는 폴더가 아닌 파일)
+            // 새로운 예외: location /data/ab만 있으면, req uri: /data/는 403 에러.. ==> 무조건, location path보다 req uri가 더 길어야한다..!
             std::string tmpLocPath = _serverConf.location[i].locationPath;
             std::size_t j = 0; // 1인 경우는 / 일 때이므로
             for (; j < data._URIFilePath.size(); ++j) {
@@ -188,23 +227,21 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 if (tmpLocPath == "/") { // 하나만 일치하는 경우, tmpLocPath가 "/"가 아니면 일치하는 location 블록이 없는 것.
                     isLocFlag = true;
                     matchLen = j;
-                    locConf = _serverConf.location[i];
+                    _locConf = _serverConf.location[i];
                 }
             } else {
-                if (matchLen < j) { // 더 많은 글자가 일치하는 location 블록이 있는 경우
+                if (matchLen < j && (data._URIFilePath.size() >= tmpLocPath.size())) { // 더 많은 글자가 일치하는 location 블록이 있는 경우
                     isLocFlag = true;
                     matchLen = j;
-                    locConf = _serverConf.location[i];
+                    _locConf = _serverConf.location[i];
                 }
             }
         }
-        std::cout << "[DEBUG] isLocFlag: " << isLocFlag << std::endl;
-        std::cout << "[DEBUG] locConf.locationPath: " << locConf.locationPath << std::endl;
         if (isLocFlag) { // 4
             // index page 세팅 및 error page 세팅
-            _locIndex = locConf.index.empty()
+            _locIndex = _locConf.index.empty()
                         ? _serverIndex
-                        : getIndexFile(data._root + data._URIFilePath, locConf.index);
+                        : getIndexFile(data._root + data._URIFilePath, _locConf.index);
 
             // location block에 error_page 세팅이 있는 경우
             // -- 있음: error_page 찾아서 에러 파일이 존재하는지 찾기
@@ -213,9 +250,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             // -- 없음: serverBlock의  error_page가 있나?
             //         -- 있음: server error_page 사용, _errorPageList는 server꺼로 사용
             //         -- 없음: error_page는 "", _errorPageList도 ""
-            if (!locConf.error_page.empty()) {
-                _errorPageList = locConf.error_page;
-                _locErrorPage = getErrorPage(data._root, locConf.error_page);
+            if (!_locConf.error_page.empty()) {
+                _errorPageList = _locConf.error_page;
+                _locErrorPage = getErrorPage(data._root, _locConf.error_page);
             } else {
                 if (!_serverErrorPage.empty()) { // server error page가 있는 경우
                     _errorPageList = _serverConf.error_page;
@@ -224,39 +261,32 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     _locErrorPage = "";
                 }
             }
-            std::cout << "[DEBUG] location error_page path: ===========" << _locErrorPage << std::endl;
             _type = FileController::checkType(data._root + data._URIFilePath);
             // if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
             if (_type == FileController::DIRECTORY) {
                 // TODO: 끝에 "/"가 붙어있는지 확인하기
                 if (data._URIFilePath[data._URIFilePath.size() - 1] != '/') {
-                    setGeneralHeader("HTTP/1.1 301 Moved Permanently");
-                    // setGeneralHeader("HTTP/1.1 302 Found");
                     data._statusCode = 301;
+                    setGeneralHeader(data._statusCode);
                     data._resAbsoluteFilePath = data._URIFilePath + "/";
                     data._URIExtension = "html";
-                    std::cout << "[DEBUG] Directory without '/' is redirected to: " << data._resAbsoluteFilePath << std::endl;
                     _phase = GET_STATIC_HTML;
                 } else {
-                    if (!locConf._return.empty()) { // redirection 시키는 것이 가장 우선순위가 높음
-                    setGeneralHeader("HTTP/1.1 301 Moved Permanently");
-                    // setGeneralHeader("HTTP/1.1 302 Found");
-                    data._statusCode = atoi(locConf._return[0].c_str());
-                    data._resAbsoluteFilePath = locConf._return[1];
-                    data._URIExtension = "html";
-                    std::cout << "[DEBUG] Redirection Case: status code: " << data._statusCode << std::endl;
-                    std::cout << "[DEBUG] Redirection Case: absolute path: " << data._resAbsoluteFilePath << std::endl;
-                    _phase = GET_STATIC_HTML;
+                    if (!_locConf._return.empty()) { // redirection 시키는 것이 가장 우선순위가 높음
+                        data._statusCode = atoi(_locConf._return[0].c_str());
+                        setGeneralHeader(data._statusCode);
+                        data._resAbsoluteFilePath = _locConf._return[1];
+                        data._URIExtension = "html";
+                        _phase = GET_STATIC_HTML;
                     } else { 
                         if (!_locIndex.empty()) { // index file이 어떻게든 있는 경우
                             // index 파일이 서버 컴퓨터에 있는지 판별
                             FileController::Type indexType = FileController::checkType(data._root + data._URIFilePath + _locIndex);
                             if (indexType == FileController::FILE) {
-                                setGeneralHeader("HTTP/1.1 200 OK");
                                 data._statusCode = 200;
+                                setGeneralHeader(data._statusCode);
                                 data._resAbsoluteFilePath = data._root + data._URIFilePath + _locIndex;
                                 data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                                std::cout << "[DEBUG] open location index file: " << data._resAbsoluteFilePath << std::endl;
                                 // 인덱스 파일이 cgi 파일인지 판별
                                 if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
                                     data._CGIBinary = _cgiConfMap[data._URIExtension];
@@ -267,52 +297,48 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                             } else {
                                 data._statusCode = 403;
                                 if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
-                                    setGeneralHeader("HTTP/1.1 200 OK");
                                     data._statusCode = 200;
+                                    setGeneralHeader(data._statusCode);
                                     data._resAbsoluteFilePath = data._root + _locErrorPage;
                                     data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                                    std::cout << "[DEBUG] open location error_page file: " << data._resAbsoluteFilePath << std::endl;
                                     _phase = GET_FILE;
                                 } else {
-                                    setGeneralHeader("HTTP/1.1 403 Forbidden");
+                                    setGeneralHeader(data._statusCode);
                                     data._URIExtension = "html";
                                     _phase = GET_STATIC_HTML;
                                 }
                             }
                         } else {                  // index file이 어디에도 설정되지 않은 경우
-                            locConf.dirMap["autoindex"] = locConf.dirMap["autoindex"].empty()
+                            _locConf.dirMap["autoindex"] = _locConf.dirMap["autoindex"].empty()
                                                         ? _serverConf.dirMap["autoindex"]
-                                                        : locConf.dirMap["autoindex"];
-                            if (locConf.dirMap["autoindex"] == "on") {
-                                setGeneralHeader("HTTP/1.1 200 OK");
+                                                        : _locConf.dirMap["autoindex"];
+                            if (_locConf.dirMap["autoindex"] == "on") {
                                 data._statusCode = 200;
+                                setGeneralHeader(data._statusCode);
                                 data._URIExtension = "html";
                                 _phase = GET_STATIC_HTML;
                             } else {
                                 data._statusCode = 403;
                                 if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
-                                    setGeneralHeader("HTTP/1.1 200 OK");
                                     data._statusCode = 200;
+                                    setGeneralHeader(data._statusCode);
                                     data._resAbsoluteFilePath = data._root + _locErrorPage;
                                     data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                                    std::cout << "[DEBUG] open location error_page file: " << data._resAbsoluteFilePath << std::endl;
                                     _phase = GET_FILE;
                                 } else {
-                                    setGeneralHeader("HTTP/1.1 403 Forbidden");
+                                    setGeneralHeader(data._statusCode);
                                     data._URIExtension = "html";
                                     _phase = GET_STATIC_HTML;
                                 }
                             }
                         }
                     }
-
                 }
             } else if (_type == FileController::FILE) {
-                setGeneralHeader("HTTP/1.1 200 OK");
                 data._statusCode = 200;
+                setGeneralHeader(data._statusCode);
                 data._resAbsoluteFilePath = data._root + data._URIFilePath;
                 data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                std::cout << "[DEBUG] open location file (not index): " << data._resAbsoluteFilePath << std::endl;
                 if (_cgiConfMap.find(data._URIExtension) != _cgiConfMap.end()) {
                     data._CGIBinary = _cgiConfMap[data._URIExtension];
                     _phase = CGI_RUN;
@@ -322,40 +348,36 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             } else {
                 data._statusCode = 404;
                 if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
-                    setGeneralHeader("HTTP/1.1 200 OK");
                     data._statusCode = 200;
+                    setGeneralHeader(data._statusCode);
                     data._resAbsoluteFilePath = data._root + _locErrorPage;
                     data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                    std::cout << "[DEBUG] open location error_page file: " << data._resAbsoluteFilePath << std::endl;
                     _phase = GET_FILE;
                 } else {
-                    setGeneralHeader("HTTP/1.1 404 Not Found");
+                    setGeneralHeader(data._statusCode);
                     data._URIExtension = "html";
                     _phase = GET_STATIC_HTML;
                 }
             }
         } else {
             if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
-                setGeneralHeader("HTTP/1.1 200 OK");
                 data._statusCode = 200;
+                setGeneralHeader(data._statusCode);
                 data._resAbsoluteFilePath = data._root + data._URIFilePath + _locErrorPage;
                 data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                std::cout << "[DEBUG] open location error_page file: " << data._resAbsoluteFilePath << std::endl;
                 _phase = GET_FILE;
             } else {
-                setGeneralHeader("HTTP/1.1 404 Not Found");
                 data._statusCode = 404;
+                setGeneralHeader(data._statusCode);
                 data._URIExtension = "html";
                 _phase = GET_STATIC_HTML;
             }
         }
+        showResponseInformation(data);
     }
-
     if (_phase == GET_STATIC_HTML) {
         _staticHtml = HTMLBody::getStaticHTML(data);
         data._resContentLength = _staticHtml.length();
-        std::cout << "DEBUG======================================" << std::endl;
-        std::cout << "[DEBUG] _staticHtml: " << _staticHtml << std::endl;
         setHTMLHeader(data);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;

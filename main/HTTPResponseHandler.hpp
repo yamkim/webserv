@@ -16,7 +16,7 @@ class HTTPResponseHandler : public HTTPHandler {
     private:
         HTTPResponseHandler();
     public:
-        HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverBlock, const NginxConfig& nginxConf);
+        HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig& nginxConf);
         virtual ~HTTPResponseHandler();
 
         typedef enum e_Phase {
@@ -44,7 +44,9 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec);
         std::string getErrorPage(const std::string& absolutePath, std::vector<std::string>& errorPageVec);
         bool isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec);
+        void setGeneralHeader(int status);
         void setHTMLHeader(const HTTPData& data);
+        void showResponseInformation(HTTPData& data);
 
     private:
         Phase _phase;
@@ -55,6 +57,7 @@ class HTTPResponseHandler : public HTTPHandler {
         FileController* _file;
         CGISession* _cgi;
 
+        NginxConfig::LocationBlock _locConf;
         std::string _serverIndex;
         std::string _locIndex;
         std::string _serverErrorPage;
