@@ -47,6 +47,8 @@ class HTTPResponseHandler : public HTTPHandler {
         void setGeneralHeader(int status);
         void setHTMLHeader(const HTTPData& data);
         void showResponseInformation(HTTPData& data);
+        HTTPResponseHandler::Phase setError(HTTPData& data);
+ 
 
     private:
         Phase _phase;

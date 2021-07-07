@@ -94,6 +94,20 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
     convertHeaderMapToString(false);
 }
 
+HTTPResponseHandler::Phase HTTPResponseHandler::setError(HTTPData& data) {
+    if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
+        data._statusCode = 200;
+        setGeneralHeader(data._statusCode);
+        data._resAbsoluteFilePath = data._root + _locErrorPage;
+        data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
+        return (GET_FILE);
+    } else {
+        setGeneralHeader(data._statusCode);
+        data._URIExtension = "html";
+        return (GET_STATIC_HTML);
+    }
+}
+
 void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
     std::cout << "Response Information=============================" << std::endl;
     std::cout << "# Request URL: " << data._reqURI << std::endl;
@@ -296,17 +310,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                 }
                             } else {
                                 data._statusCode = 403;
-                                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
-                                    data._statusCode = 200;
-                                    setGeneralHeader(data._statusCode);
-                                    data._resAbsoluteFilePath = data._root + _locErrorPage;
-                                    data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                                    _phase = GET_FILE;
-                                } else {
-                                    setGeneralHeader(data._statusCode);
-                                    data._URIExtension = "html";
-                                    _phase = GET_STATIC_HTML;
-                                }
+                                _phase = setError(data);
                             }
                         } else {                  // index file이 어디에도 설정되지 않은 경우
                             _locConf.dirMap["autoindex"] = _locConf.dirMap["autoindex"].empty()
@@ -347,17 +351,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 }
             } else {
                 data._statusCode = 404;
-                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
-                    data._statusCode = 200;
-                    setGeneralHeader(data._statusCode);
-                    data._resAbsoluteFilePath = data._root + _locErrorPage;
-                    data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                    _phase = GET_FILE;
-                } else {
-                    setGeneralHeader(data._statusCode);
-                    data._URIExtension = "html";
-                    _phase = GET_STATIC_HTML;
-                }
+                _phase = setError(data);
             }
         } else {
             if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
@@ -368,9 +362,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 _phase = GET_FILE;
             } else {
                 data._statusCode = 404;
-                setGeneralHeader(data._statusCode);
-                data._URIExtension = "html";
-                _phase = GET_STATIC_HTML;
+                _phase = setError(data);
             }
         }
         showResponseInformation(data);
