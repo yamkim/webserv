@@ -42,6 +42,8 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string getMIME(const std::string& extension) const;
         bool isCGI(std::string& URI);
         std::string getIndexFile(const std::string& absolutePath, std::vector<std::string>& indexVec);
+        std::string getErrorPage(const std::string& absolutePath, std::vector<std::string>& errorPageVec);
+        bool isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec);
         void setHTMLHeader(const HTTPData& data);
 
     private:
@@ -55,6 +57,9 @@ class HTTPResponseHandler : public HTTPHandler {
 
         std::string _serverIndex;
         std::string _locIndex;
+        std::string _serverErrorPage;
+        std::string _locErrorPage;
+        std::vector<std::string> _errorPageList;
         std::map<std::string, std::string> _cgiConfMap;
 };
 

@@ -3,6 +3,9 @@
 
 #include "NginxParser.hpp"
 
+// TODO: conf 파싱부분 수정
+// - error_page 부분 제일 마지막에 파일명이 와야함
+
 class NginxConfig : public NginxParser {
     public:
         struct NginxBlock {
@@ -25,10 +28,12 @@ class NginxConfig : public NginxParser {
             std::vector<std::string> _return;
             std::vector<std::string> deny;
             std::vector<std::string> index;
+            std::vector<std::string> error_page;
         };
         struct ServerBlock : NginxBlock{
             std::vector<std::string> dirCase;
             std::vector<std::string> index;
+            std::vector<std::string> error_page;
             std::vector<struct LocationBlock> location;
         };
         struct HttpBlock : NginxBlock{
@@ -118,6 +123,7 @@ class NginxConfig : public NginxParser {
             block.dirCase.push_back("deny");
             block.dirCase.push_back("autoindex");
             block.dirCase.push_back("index");
+            block.dirCase.push_back("error_page");
             block.dirCase.push_back("cgi_pass");
 
             std::string buf = block.rawData;
@@ -135,6 +141,9 @@ class NginxConfig : public NginxParser {
                 } else if (tmpDir == "index") {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     block.index = getSplitBySpace(tmpVal);
+                } else if (tmpDir == "error_page") {
+                    std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    block.error_page = getSplitBySpace(tmpVal);
                 } else if (tmpDir == "try_files") {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     block.try_files = getSplitBySpace(tmpVal);
@@ -165,6 +174,7 @@ class NginxConfig : public NginxParser {
             block.dirCase.push_back("index");
             block.dirCase.push_back("location");
             block.dirCase.push_back("autoindex");
+            block.dirCase.push_back("error_page");
             block.dirCase.push_back("client_max_body_size");
             block.dirCase.push_back("keepalive_timeout");
 
@@ -191,6 +201,9 @@ class NginxConfig : public NginxParser {
                 } else if (tmpDir == "index") {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     block.index = getSplitBySpace(tmpVal);
+                } else if (tmpDir == "error_page") {
+                    std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
+                    block.error_page = getSplitBySpace(tmpVal);
                 } else {
                     std::string tmpVal = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";"));
                     std::vector<std::string> tmpSplit = getSplitBySpace(tmpVal);
