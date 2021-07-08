@@ -246,19 +246,20 @@ void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long bufferSize) {
     // TODO: 해당하는 로케이션의 설정에서 status 코드 적용시키기
-    // if (data._statusCode == 400 || data._statusCode == 413) {
-    //     if (data._statusCode == 400) {
-    //         std::cout << "[DEBUG] HTTP/1.1 400 error test" << std::endl;
-    //         setGeneralHeader("HTTP/1.1 400 Not Found");
-    //         data._URIExtension = "html";
-    //         _phase = GET_STATIC_HTML;
-    //     } else if (data._statusCode == 413) {
-    //         std::cout << "[DEBUG] HTTP/1.1 413 error test" << std::endl;
-    //         setGeneralHeader("HTTP/1.1 413 Payload Too Large");
-    //         data._URIExtension = "html";
-    //         _phase = GET_STATIC_HTML;
-    //     }
-    // }
+    if (data._statusCode == 400 || data._statusCode == 413) {
+        // if (data._statusCode == 400) {
+        //     std::cout << "[DEBUG] HTTP/1.1 400 error test" << std::endl;
+        //     setGeneralHeader("HTTP/1.1 400 Not Found");
+        //     data._URIExtension = "html";
+        //     _phase = GET_STATIC_HTML;
+        //}
+        if (data._statusCode == 413) {
+            std::cout << "[DEBUG] HTTP/1.1 413 error test" << std::endl;
+            setGeneralHeader(data._statusCode);
+            data._URIExtension = "html";
+            _phase = GET_STATIC_HTML;
+        }
+    }
     if (_phase == FIND_RESOURCE) {
         // 1
         data._serverName = _serverConf.dirMap["server_name"];
