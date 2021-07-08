@@ -365,24 +365,21 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
 
     if (_phase == DATA_SEND_LOOP) {
-        char *buf;
         size_t writtenLengthOnBuf;
+        size_t buflen = _staticHtml.empty() ? bufferSize : data._resContentLength + 1;
+        Buffer buf(buflen);
         if (_staticHtml.empty()) {
-            buf = new char[bufferSize];
-            writtenLengthOnBuf = read(_file->getFd(), buf, bufferSize);
+            writtenLengthOnBuf = read(_file->getFd(), *buf, buflen);
             _phase = writtenLengthOnBuf == 0 ? FINISH : DATA_SEND_LOOP;
         } else {
-            buf = new char[data._resContentLength + 1];
-            buf[data._resContentLength] = '\0';
-            writtenLengthOnBuf = strlcpy(buf, _staticHtml.c_str(), data._resContentLength + 1);
+            (*buf)[buflen - 1] = '\0';
+            writtenLengthOnBuf = strlcpy(*buf, _staticHtml.c_str(), buflen);
             _phase = FINISH;
         }
-        size_t writtenLengthOnSocket = send(_connectionFd, buf, writtenLengthOnBuf, 0);
+        size_t writtenLengthOnSocket = send(_connectionFd, *buf, writtenLengthOnBuf, 0);
         if (writtenLengthOnSocket != writtenLengthOnBuf) {
-            delete [] buf;
             throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
         }
-        delete [] buf;
     } 
 
     if (_phase == CGI_RUN) {
@@ -404,15 +401,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
     
     if (_phase == CGI_SEND_LOOP) {
-        char* buf = new char[bufferSize];
-
-        if (buf == NULL) {
-            throw ErrorHandler("Error: memory alloc error", ErrorHandler::CRITICAL, "HTTPResponseHandler::process");
-        }
-        int length = read(_file->getFd(), buf, bufferSize);
+        Buffer buf(bufferSize);
+        int length = read(_file->getFd(), *buf, bufferSize);
         if (length != 0) {
-            int writeLength = write(_cgi->getInputStream(), buf, length);
-            delete [] buf;
+            int writeLength = write(_cgi->getInputStream(), *buf, length);
             if (writeLength != length) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
@@ -423,11 +415,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
     
     if (_phase == CGI_RECV_HEAD_LOOP) {
-        char* buf = new char[bufferSize + 1];
-        if (buf == NULL) {
-            throw ErrorHandler("Error: memory alloc error", ErrorHandler::CRITICAL, "HTTPResponseHandler::process");
-        }
-        int length = read(_cgi->getOutputStream(), buf, bufferSize);
+        Buffer buf(bufferSize);
+        int length = read(_cgi->getOutputStream(), *buf, bufferSize);
         // NOTE: stdio는 라인바이라인으로 버퍼가 넘어가는데 여기서 eof가 오면 500 error임.
         if (length == 0) {
             // FIXME: 실제로 넘어가면 세그멘테이션 오류 발생, 또 헤더가 404로 되어있는것도 수정해야 함.
@@ -435,12 +424,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             setGeneralHeader("HTTP/1.1 404 Not Found");
             data._URIExtension = "html";
             _phase = GET_STATIC_HTML;
-            delete [] buf;
         } else if (length < 0) {
-            delete [] buf;
             throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
         } else {
-            _CGIReceive += std::string(buf, length);
+            _CGIReceive += std::string(*buf, length);
             size_t spliter1 = _CGIReceive.find("\r\n\r\n");
             size_t spliter2 = _CGIReceive.find("\n\n");
             std::string header;
@@ -477,34 +464,25 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 send(_connectionFd, _headerString.data(), _headerString.length(), 0);
                 _phase = CGI_RECV_BODY_LOOP;
             }
-            delete [] buf;
         }
     }
     
     if (_phase == CGI_RECV_BODY_LOOP) {
         std::cout << "CGI_RECV_BODY_LOOP" << std::endl;
-        // TODO: CGI가 주는 헤더를 별도로 파싱해야 함 (Status 때문에...)
-        char* buf = new char[bufferSize];
-
-        if (buf == NULL) {
-            throw ErrorHandler("Error: memory alloc error", ErrorHandler::CRITICAL, "HTTPResponseHandler::process");
-        }
+        Buffer buf(bufferSize);
         if (_CGIReceive.empty()) {
-            ssize_t length = read(_cgi->getOutputStream(), buf, bufferSize);
+            ssize_t length = read(_cgi->getOutputStream(), *buf, bufferSize);
             if (length == 0) {
-                delete [] buf;
                 _phase = FINISH;
             } else if (length < 0) {
                 throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             } else {
-                ssize_t writeLength = send(_connectionFd, buf, length, 0);
-                delete [] buf;
+                ssize_t writeLength = send(_connectionFd, *buf, length, 0);
                 if (writeLength != length) {
                     throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
                 }
             }
         } else {
-            delete [] buf;
             size_t writeLength = send(_connectionFd, _CGIReceive.c_str(), _CGIReceive.length(), 0);
             if (writeLength != _CGIReceive.length()) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");

@@ -23,6 +23,16 @@ class HTTPHandler {
         std::string _headerString;
         NginxConfig::ServerBlock _serverConf;
         NginxConfig _nginxConf;
+        class Buffer {
+            private:
+                int _bufferSize;
+                char* _buffer;
+                Buffer();
+            public:
+                Buffer(size_t bufferSize);
+                ~Buffer();
+                char* operator*(void);
+        };
 
     public:
         HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf);

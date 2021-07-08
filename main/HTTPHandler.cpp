@@ -1,5 +1,20 @@
 #include "HTTPHandler.hpp"
 
+HTTPHandler::Buffer::Buffer(size_t bufferSize) {
+    _buffer = new char[bufferSize];
+    if (_buffer == NULL) {
+        throw ErrorHandler("Error: memory alloc error", ErrorHandler::CRITICAL, "HTTPHandler::Buffer::Buffer");
+    }
+}
+
+HTTPHandler::Buffer::~Buffer() {
+    delete [] _buffer;
+}
+
+char* HTTPHandler::Buffer::operator*(void) {
+    return (_buffer);
+}
+
 HTTPHandler::HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf) : _serverConf(serverConf), _nginxConf(nginxConf) {
 	_connectionFd = connectionFd;
 	_headerString = std::string("");
