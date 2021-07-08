@@ -39,5 +39,6 @@ class HTTPHandler {
         virtual ~HTTPHandler();
         void setGeneralHeader(std::string status);
         void convertHeaderMapToString();
+        std::pair<std::string, std::string> getHTTPHeader(const std::string& str, std::size_t& endPos);
 };
 #endif

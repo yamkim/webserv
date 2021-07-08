@@ -437,18 +437,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             if (header.empty() == false) {
                 std::size_t pos = 0;
                 while (header.length() > pos) {
-                    std::string key = Parser::getIdentifier(header, pos, ": ");
-                    if (key.empty()) {
-                        throw ErrorHandler("Error: HTTP Header key error.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeader");
-                    }
-                    pos += 2;
-                    std::string value = Parser::getIdentifier(header, pos, "\r\n");
-                    if (value.empty()) {
-                        throw ErrorHandler("Error: HTTP Header value error.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeader");
-                    }
-                    pos += 2;
-                    _headers[key] = value;
-                    std::cout << key << " -> " << value << std::endl;
+                    _headers.insert(getHTTPHeader(header, pos));
                 }
                 if (_headers.find("Status") == _headers.end()) {
                     setGeneralHeader("HTTP/1.1 200 OK");

@@ -95,16 +95,7 @@ bool HTTPRequestHandler::getHeader(void) {
     }
 
     std::size_t pos = 0;
-    std::string key = Parser::getIdentifier(_headerString, pos, ": ");
-    if (key.empty()) {
-        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeader");
-    }
-    pos += 2;
-    std::string value = Parser::getIdentifier(_headerString, pos, "\r\n");
-    if (value.empty()) {
-        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPRequestHandler::getHeader");
-    }
-    _headers[key] = value;
+    _headers.insert(getHTTPHeader(_headerString, pos));
     _headerString.clear();
     return (false);
 }

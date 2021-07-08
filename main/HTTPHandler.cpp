@@ -53,3 +53,18 @@ void HTTPHandler::convertHeaderMapToString(void) {
     }
     _headerString += "\r\n";
 }
+
+std::pair<std::string, std::string> HTTPHandler::getHTTPHeader(const std::string& str, std::size_t& endPos) {
+    std::pair<std::string, std::string> pair;
+    pair.first = Parser::getIdentifier(str, endPos, ": ");
+    if (pair.first.empty()) {
+        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPHandler::getHTTPHeader");
+    }
+    endPos += 2;
+    pair.second = Parser::getIdentifier(str, endPos, "\r\n");
+    if (pair.second.empty()) {
+        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPHandler::getHTTPHeader");
+    }
+    endPos += 2;
+    return (pair);
+}
