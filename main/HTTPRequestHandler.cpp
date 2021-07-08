@@ -89,7 +89,7 @@ bool HTTPRequestHandler::getHeader(void) {
     if (setHeaderString() == false) {
         return (false);
     }
-    if (_headerString == std::string("\r\n") || _headerString == std::string("\n")) {
+    if (_headerString == std::string("\r\n")) {
         _headerString.clear();
         return (true);
     }
@@ -110,11 +110,11 @@ bool HTTPRequestHandler::getHeader(void) {
 }
 
 int HTTPRequestHandler::findNewLine(const char *buffer) {
-    const char* n = std::strstr(buffer, "\n");
+    const char* n = std::strstr(buffer, "\r\n");
     if (n == NULL) {
         return (-1);
     } else {
-        return (n - buffer + 1);
+        return (n - buffer + 2);
     }
 }
 

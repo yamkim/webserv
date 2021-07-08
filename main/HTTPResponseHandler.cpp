@@ -428,15 +428,11 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
         } else {
             _CGIReceive += std::string(*buf, length);
-            size_t spliter1 = _CGIReceive.find("\r\n\r\n");
-            size_t spliter2 = _CGIReceive.find("\n\n");
+            size_t spliter = _CGIReceive.find("\r\n\r\n");
             std::string header;
-            if (spliter1 != std::string::npos) {
-                header = _CGIReceive.substr(0, spliter1);
-                _CGIReceive = _CGIReceive.substr(spliter1 + 4);
-            } else if (spliter2 != std::string::npos) {
-                header = _CGIReceive.substr(0, spliter2);
-                _CGIReceive = _CGIReceive.substr(spliter2 + 2);
+            if (spliter != std::string::npos) {
+                header = _CGIReceive.substr(0, spliter);
+                _CGIReceive = _CGIReceive.substr(spliter + 4);
             }
             if (header.empty() == false) {
                 std::size_t pos = 0;
