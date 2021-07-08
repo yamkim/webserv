@@ -415,40 +415,48 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
     
     if (_phase == CGI_RECV_HEAD_LOOP) {
+        bool sendHeader = false;
         Buffer buf(bufferSize);
         int length = read(_cgi->getOutputStream(), *buf, bufferSize);
-        // NOTE: stdio는 라인바이라인으로 버퍼가 넘어가는데 여기서 eof가 오면 500 error임.
-        if (length == 0) {
-            // FIXME: 실제로 넘어가면 세그멘테이션 오류 발생, 또 헤더가 404로 되어있는것도 수정해야 함.
-            data._statusCode = 500;
-            setGeneralHeader("HTTP/1.1 404 Not Found");
+        std::cout << "length : " << length << std::endl;
+        try { // 500 internal error 감지
+            // NOTE: stdio는 라인바이라인으로 버퍼가 넘어가는데 여기서 eof(len = 0)가 오면 500 error임.
+            if (length <= 0) {
+                throw ErrorHandler("Error: CGI Internal Error", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+            } else {
+                _CGIReceive += std::string(*buf, length);
+                size_t spliter = _CGIReceive.find("\r\n\r\n");
+                std::string header;
+                if (spliter != std::string::npos) {
+                    header = _CGIReceive.substr(0, spliter);
+                    _CGIReceive = _CGIReceive.substr(spliter + 4);
+                    std::size_t pos = 0;
+                    while (header.length() > pos) {
+                        _headers.insert(getHTTPHeader(header, pos));
+                    }
+                    if (_headers.find("Status") == _headers.end()) {
+                        setGeneralHeader("HTTP/1.1 200 OK");
+                    } else {
+                        setGeneralHeader(std::string("HTTP/1.1 ") + _headers["Status"]);
+                        _headers.erase("Status");
+                    }
+                    sendHeader = true;
+                }
+            }
+        } catch(const std::exception& e) {
+            std::cout << e.what() << std::endl;
+            setGeneralHeader("HTTP/1.1 500 Internal Server Error");
+            data._statusCode = 404; // FIXME: 추후에 500으로 수정해야 함
             data._URIExtension = "html";
             _phase = GET_STATIC_HTML;
-        } else if (length < 0) {
-            throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
-        } else {
-            _CGIReceive += std::string(*buf, length);
-            size_t spliter = _CGIReceive.find("\r\n\r\n");
-            std::string header;
-            if (spliter != std::string::npos) {
-                header = _CGIReceive.substr(0, spliter);
-                _CGIReceive = _CGIReceive.substr(spliter + 4);
+        }
+        if (sendHeader == true) {
+            convertHeaderMapToString();
+            size_t writeLength = send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+            if (writeLength != _headerString.length()) {
+                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
-            if (header.empty() == false) {
-                std::size_t pos = 0;
-                while (header.length() > pos) {
-                    _headers.insert(getHTTPHeader(header, pos));
-                }
-                if (_headers.find("Status") == _headers.end()) {
-                    setGeneralHeader("HTTP/1.1 200 OK");
-                } else {
-                    setGeneralHeader(std::string("HTTP/1.1 ") + _headers["Status"]);
-                    _headers.erase("Status");
-                }
-                convertHeaderMapToString();
-                send(_connectionFd, _headerString.data(), _headerString.length(), 0);
-                _phase = CGI_RECV_BODY_LOOP;
-            }
+            _phase = CGI_RECV_BODY_LOOP;
         }
     }
     
