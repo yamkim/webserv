@@ -21,7 +21,7 @@ HTTPResponseHandler::~HTTPResponseHandler() {
 // 2. nginx.conf에 location에 대한 세팅이 있는지 확인
 //    -- 있음: location index가 컴퓨터에 있는지 확인
 //            -- 있음: locationIndex = data._root + data._URIFilePath + *iter
-//            -- 없음: locationIndex = serverIndex
+//            -- 없음: ""
 //    -- 없음: locationIndex = serverIndex
 std::string HTTPResponseHandler::getIndexPage(const HTTPData& data, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec) {
     std::string absolutePath = data._root + data._URIFilePath;
@@ -35,14 +35,14 @@ std::string HTTPResponseHandler::getIndexPage(const HTTPData& data, const std::v
         }
     }
     std::string locIndex;
-    for (iter = locIndexVec.begin(); iter != locIndexVec.end(); ++iter) {
-        if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
-            locIndex = *iter;
-            break ;
+    if (!locIndexVec.empty()) {
+        for (iter = locIndexVec.begin(); iter != locIndexVec.end(); ++iter) {
+            if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
+                return (*iter);
+                break ;
+            }
         }
-    }
-    if (!locIndex.empty()) {
-        return (locIndex);
+        return ("");
     } else {
         return (serverIndex);
     }
@@ -182,7 +182,7 @@ void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
     std::cout << "# Status Code: " << data._statusCode << std::endl;
     std::cout << "# Absolute File Path: " << data._resAbsoluteFilePath << std::endl;
     std::cout << "# URL Extension: " << data._URIExtension << std::endl;
-    std::cout << "# Location Context Index File: " << _indexPage << std::endl;
+    std::cout << "# Location Index Page File: " << _indexPage << std::endl;
     std::cout << "# Location Error Page File: " << _errorPage << std::endl;
     std::cout << "# Location Path: " << _locConf.locationPath << std::endl;
 }
@@ -360,17 +360,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                 _phase = GET_STATIC_HTML;
                             } else {
                                 data._statusCode = 403;
-                                if (!_errorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
-                                    data._statusCode = 200;
-                                    setGeneralHeader(data._statusCode);
-                                    data._resAbsoluteFilePath = data._root + _errorPage;
-                                    data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
-                                    _phase = GET_FILE;
-                                } else {
-                                    setGeneralHeader(data._statusCode);
-                                    data._URIExtension = "html";
-                                    _phase = GET_STATIC_HTML;
-                                }
+                                _phase = setError(data);
                             }
                         }
                     }
