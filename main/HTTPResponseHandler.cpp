@@ -23,10 +23,10 @@ HTTPResponseHandler::~HTTPResponseHandler() {
 //            -- 있음: locationIndex = data._root + data._URIFilePath + *iter
 //            -- 없음: locationIndex = serverIndex
 //    -- 없음: locationIndex = serverIndex
-std::string HTTPResponseHandler::getIndexPage(const HTTPData& data, std::vector<std::string>& serverIndexVec, std::vector<std::string>& locIndexVec) {
+std::string HTTPResponseHandler::getIndexPage(const HTTPData& data, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec) {
     std::string absolutePath = data._root + data._URIFilePath;
 
-    std::vector<std::string>::iterator iter;
+    std::vector<std::string>::const_iterator iter;
     std::string serverIndex;
     for (iter = serverIndexVec.begin(); iter != serverIndexVec.end(); ++iter) {
         if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
@@ -48,12 +48,55 @@ std::string HTTPResponseHandler::getIndexPage(const HTTPData& data, std::vector<
     }
 }
 
-std::string HTTPResponseHandler::getErrorPage(const std::string& absolutePath, std::vector<std::string>& errorPageVec) {
-    std::vector<std::string>::iterator iter = errorPageVec.end() - 1;
-    if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
-        return (*iter);
+// NOTE - 설정해야 되는 부분: _errorPage, _errorPageList
+// server block에 error_page 세팅이 있는 경우
+// -- 있음: error_page 찾아서 에러 파일이 존재하는지 찾기
+//         -- 존재: error_page로 사용
+//         -- 존재안함: error_page는 ""
+// -- 없음: error_page는 ""
+// location block에 error_page 세팅이 있는 경우
+// -- 있음: error_page 찾아서 에러 파일이 존재하는지 찾기
+//         -- 존재: error_page로 사용
+//         -- 존재안함: error_page는 ""
+// -- 없음: serverBlock의  error_page가 있나?
+//         -- 있음: server error_page 사용, _errorPageList는 server꺼로 사용
+//         -- 없음: error_page는 "", _errorPageList도 ""
+std::string HTTPResponseHandler::getErrorPage(const HTTPData& data, const std::vector<std::string>& serverErrorPageVec, const std::vector<std::string>& locErrorPageVec) {
+    std::string absolutePath = data._root + data._URIFilePath;
+    std::string serverErrorPage;
+    std::vector<std::string>::const_iterator iter = serverErrorPageVec.end() - 1;
+    if (!serverErrorPageVec.empty()) {
+        if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
+           _errorPageList  = serverErrorPageVec;
+            serverErrorPage = *iter;
+        } else {
+            _errorPageList.clear(); 
+            serverErrorPage = "";
+        }
+    } else {
+        _errorPageList.clear(); 
+        serverErrorPage = "";
     }
-    return (std::string(""));
+    std::string locErrorPage;
+    iter = locErrorPageVec.end() - 1;
+    if (!locErrorPageVec.empty()) {     // loc error page가 있는 경우
+        if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
+            _errorPageList = locErrorPageVec;
+            locErrorPage = *iter;
+        } else {
+            _errorPageList.clear();
+            locErrorPage = "";
+        }
+    } else {                            // loc error page가 없는 경우
+        if (!serverErrorPage.empty()) { // server error page가 있는 경우
+            _errorPageList = serverErrorPageVec;
+            locErrorPage = serverErrorPage;
+        } else {
+            _errorPageList.clear();
+            locErrorPage = "";
+        }
+    }
+    return locErrorPage;
 }
 
 bool HTTPResponseHandler::isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec) {
@@ -105,7 +148,6 @@ void HTTPResponseHandler::setGeneralHeader(int status) {
     _headerString += "\r\n";
     _headers["Connection"] = std::string("close");
     _headers["Date"] = std::string(timeBuffer);
-    // _headers["Server"] = std::string("webserv/0.1");
 }
 
 void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
@@ -121,10 +163,10 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::setError(HTTPData& data) {
-    if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
+    if (!_errorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
         data._statusCode = 200;
         setGeneralHeader(data._statusCode);
-        data._resAbsoluteFilePath = data._root + _locErrorPage;
+        data._resAbsoluteFilePath = data._root + _errorPage;
         data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
         return (GET_FILE);
     } else {
@@ -141,7 +183,7 @@ void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
     std::cout << "# Absolute File Path: " << data._resAbsoluteFilePath << std::endl;
     std::cout << "# URL Extension: " << data._URIExtension << std::endl;
     std::cout << "# Location Context Index File: " << _indexPage << std::endl;
-    std::cout << "# Location Error Page File: " << _locErrorPage << std::endl;
+    std::cout << "# Location Error Page File: " << _errorPage << std::endl;
     std::cout << "# Location Path: " << _locConf.locationPath << std::endl;
 }
 
@@ -267,37 +309,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         if (isLocFlag) { // 4
             // index page 세팅 및 error page 세팅
             _indexPage = getIndexPage(data, _serverConf.index, _locConf.index);
+            _errorPage = getErrorPage(data, _serverConf.error_page, _locConf.error_page);
 
-            // server block에 error_page 세팅이 있는 경우
-            // -- 있음: error_page 찾아서 에러 파일이 존재하는지 찾기
-            //         -- 존재: error_page로 사용
-            //         -- 존재안함: error_page는 ""
-            // -- 없음: error_page는 ""
-            if (!_serverConf.error_page.empty()) {
-                _errorPageList = _serverConf.error_page;
-                _serverErrorPage = getErrorPage(data._root, _serverConf.error_page);
-            } else {
-                _errorPageList.clear(); 
-                _serverErrorPage = "";
-            }
-            // location block에 error_page 세팅이 있는 경우
-            // -- 있음: error_page 찾아서 에러 파일이 존재하는지 찾기
-            //         -- 존재: error_page로 사용
-            //         -- 존재안함: error_page는 ""
-            // -- 없음: serverBlock의  error_page가 있나?
-            //         -- 있음: server error_page 사용, _errorPageList는 server꺼로 사용
-            //         -- 없음: error_page는 "", _errorPageList도 ""
-            if (!_locConf.error_page.empty()) {
-                _errorPageList = _locConf.error_page;
-                _locErrorPage = getErrorPage(data._root, _locConf.error_page);
-            } else {
-                if (!_serverErrorPage.empty()) { // server error page가 있는 경우
-                    _errorPageList = _serverConf.error_page;
-                    _locErrorPage = _serverErrorPage;
-                } else {
-                    _locErrorPage = "";
-                }
-            }
+            
             _type = FileController::checkType(data._root + data._URIFilePath);
             // if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
             if (_type == FileController::DIRECTORY) {
@@ -346,10 +360,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                 _phase = GET_STATIC_HTML;
                             } else {
                                 data._statusCode = 403;
-                                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
+                                if (!_errorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
                                     data._statusCode = 200;
                                     setGeneralHeader(data._statusCode);
-                                    data._resAbsoluteFilePath = data._root + _locErrorPage;
+                                    data._resAbsoluteFilePath = data._root + _errorPage;
                                     data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
                                     _phase = GET_FILE;
                                 } else {
@@ -377,10 +391,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 _phase = setError(data);
             }
         } else {
-            if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
+            if (!_errorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
                 data._statusCode = 200;
                 setGeneralHeader(data._statusCode);
-                data._resAbsoluteFilePath = data._root + data._URIFilePath + _locErrorPage;
+                data._resAbsoluteFilePath = data._root + data._URIFilePath + _errorPage;
                 data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
                 _phase = GET_FILE;
             } else {

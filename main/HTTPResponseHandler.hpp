@@ -42,8 +42,9 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string getMIME(const std::string& extension) const;
         bool isCGI(std::string& URI);
         // std::string getIndexPage(const std::string& absolutePath, std::vector<std::string>& indexVec);
-        std::string getIndexPage(const HTTPData& data, std::vector<std::string>& serveIndexVec, std::vector<std::string>& locIndexVec);
-        std::string getErrorPage(const std::string& absolutePath, std::vector<std::string>& errorPageVec);
+        std::string getIndexPage(const HTTPData& data, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec);
+        std::string getErrorPage(const HTTPData& data, const std::vector<std::string>& serverErrorPageVec, const std::vector<std::string>& locErrorPageVec);
+        // std::string getErrorPage(const std::string& absolutePath, std::vector<std::string>& errorPageVec);
         bool isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec);
         void setGeneralHeader(int status);
         void setHTMLHeader(const HTTPData& data);
@@ -61,10 +62,8 @@ class HTTPResponseHandler : public HTTPHandler {
         CGISession* _cgi;
 
         NginxConfig::LocationBlock _locConf;
-        std::string _serverIndex;
         std::string _indexPage;
-        std::string _serverErrorPage;
-        std::string _locErrorPage;
+        std::string _errorPage;
         std::vector<std::string> _errorPageList;
         std::map<std::string, std::string> _cgiConfMap;
 };
