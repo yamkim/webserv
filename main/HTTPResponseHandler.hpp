@@ -28,7 +28,8 @@ class HTTPResponseHandler : public HTTPHandler {
             CGI_REQ, 
             DATA_SEND_LOOP, 
             CGI_SEND_LOOP, 
-            CGI_RECV_LOOP, 
+            CGI_RECV_HEAD_LOOP, 
+            CGI_RECV_BODY_LOOP, 
             FINISH
         } Phase;
         virtual HTTPResponseHandler::Phase process(HTTPData& data, long bufferSize);
@@ -59,6 +60,7 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string _locIndex;
         std::string _serverErrorPage;
         std::string _locErrorPage;
+        std::string _CGIReceive;
         std::vector<std::string> _errorPageList;
         std::map<std::string, std::string> _cgiConfMap;
 };

@@ -28,7 +28,7 @@ void HTTPHandler::setGeneralHeader(std::string status) {
     _headers["Connection"] = std::string("close");
 }
 
-void HTTPHandler::convertHeaderMapToString(bool isCGI) {
+void HTTPHandler::convertHeaderMapToString(void) {
     std::map<std::string, std::string>::iterator iter;
     for (iter = _headers.begin(); iter != _headers.end(); ++iter) {
         _headerString += iter->first;
@@ -36,7 +36,5 @@ void HTTPHandler::convertHeaderMapToString(bool isCGI) {
         _headerString += iter->second;
         _headerString += "\r\n";
     }
-    if (isCGI == false) {
-        _headerString += "\r\n";
-    }
+    _headerString += "\r\n";
 }

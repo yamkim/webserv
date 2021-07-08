@@ -28,6 +28,6 @@ class HTTPHandler {
         HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf);
         virtual ~HTTPHandler();
         void setGeneralHeader(std::string status);
-        void convertHeaderMapToString(bool isCGI);
+        void convertHeaderMapToString();
 };
 #endif
