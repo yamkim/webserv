@@ -21,6 +21,7 @@ class HTTPResponseHandler : public HTTPHandler {
 
         typedef enum e_Phase {
             FIND_RESOURCE, 
+            PRE_STATUSCODE_CHECK, 
             GET_STATIC_HTML, 
             GET_FILE, 
             REDIRECT, 

@@ -2,7 +2,7 @@
 
 // FIXME : 리스폰스에 URI 외에 더 다양한 아규먼트를 집어넣어야 하는데 어떤 형식으로 집어넣을지 고민 중입니다. 추후에 수정하겠습니다.
 HTTPResponseHandler::HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig& nginxConf) : HTTPHandler(connectionFd, serverConf, nginxConf) {
-    _phase = FIND_RESOURCE;
+    _phase = PRE_STATUSCODE_CHECK;
     _file = NULL;
     _cgi = NULL;
 }
@@ -38,14 +38,17 @@ std::string HTTPResponseHandler::getIndexPage(const HTTPData& data, const std::v
     if (!locIndexVec.empty()) {
         for (iter = locIndexVec.begin(); iter != locIndexVec.end(); ++iter) {
             if (FileController::checkType(absolutePath + *iter) == FileController::FILE) {
-                return (*iter);
+                locIndex = *iter;
                 break ;
             }
         }
-        return ("");
+        if (iter == locIndexVec.end()) {
+            locIndex.clear();
+        }
     } else {
-        return (serverIndex);
+        locIndex = serverIndex;
     }
+    return locIndex;
 }
 
 // NOTE - 설정해야 되는 부분: _errorPage, _errorPageList
@@ -96,6 +99,7 @@ std::string HTTPResponseHandler::getErrorPage(const HTTPData& data, const std::v
             locErrorPage = "";
         }
     }
+    std::cout << "[DEBUG] returned page: " << locErrorPage << std::endl;
     return locErrorPage;
 }
 
@@ -249,20 +253,16 @@ void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
 
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long bufferSize) {
     // TODO: 해당하는 로케이션의 설정에서 status 코드 적용시키기
-    if (data._statusCode == 400 || data._statusCode == 413) {
-        // if (data._statusCode == 400) {
-        //     std::cout << "[DEBUG] HTTP/1.1 400 error test" << std::endl;
-        //     setGeneralHeader("HTTP/1.1 400 Not Found");
-        //     data._URIExtension = "html";
-        //     _phase = GET_STATIC_HTML;
-        //}
-        if (data._statusCode == 413) {
-            std::cout << "[DEBUG] HTTP/1.1 413 error test" << std::endl;
+    if (_phase == PRE_STATUSCODE_CHECK) {
+        if (data._statusCode != 200) {
             setGeneralHeader(data._statusCode);
             data._URIExtension = "html";
             _phase = GET_STATIC_HTML;
+        } else {
+            _phase = FIND_RESOURCE; 
         }
     }
+    
     if (_phase == FIND_RESOURCE) {
         // 1
         data._serverName = _serverConf.dirMap["server_name"];
@@ -345,7 +345,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                     data._CGIBinary = _cgiConfMap[data._URIExtension];
                                     _phase = CGI_RUN;
                                 } else {
-                                    setGeneralHeader("HTTP/1.1 200 OK");
+                                    data._statusCode = 200;
+                                    setGeneralHeader(data._statusCode);
                                     _phase = GET_FILE;
                                 }
                             } else {
@@ -377,7 +378,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     data._CGIBinary = _cgiConfMap[data._URIExtension];
                     _phase = CGI_RUN;
                 } else {
-                    setGeneralHeader("HTTP/1.1 200 OK");
                     _phase = GET_FILE;
                 }
             } else {
