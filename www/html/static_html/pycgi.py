@@ -19,12 +19,5 @@ if "data" not in form:
 else:
     print("<b>data : " + form["data"].value + "</b>")
 
-for i in range(1, 10):
-    print("<b>")
-    print(i)
-    print("</b>")
-    print("<br>")
-    time.sleep(0.5)
-
 print('</body>')
 print('</html>')

@@ -16,12 +16,13 @@ class HTTPRequestHandler : public HTTPHandler {
         typedef enum e_Phase {PARSE_STARTLINE, PARSE_HEADER, PARSE_BODY, FINISH} Phase;
         virtual HTTPRequestHandler::Phase process(HTTPData& data);
     private:
+        bool getStartLine(HTTPData& data);
         std::string _requestLine;
         Phase _phase;
         long _contentLength;
         FileController* _fileController;
         HTTPRequestHandler();
-        bool getRequestLine(HTTPData& data);
+
         bool getHeader(void);
         int findNewLine(const char *buffer);
         bool setHeaderString(void);

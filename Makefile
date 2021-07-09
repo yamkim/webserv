@@ -23,7 +23,7 @@ HEADER = $(SOURCE_PATH)
 CPP_CODES = $(addprefix $(SOURCE_PATH), $(FILES))
 OBJS = $(subst $(SOURCE_PATH), $(OBJ_PATH), ${CPP_CODES:%.cpp=%.o})
 COMPILER = clang++
-CFLAGS = -Wall -Wextra -Werror
+CFLAGS = -Wall -Wextra -Werror -g3 -fsanitize=address
 
 GREEN = \033[0;32m
 RED = \033[0;31m
@@ -45,13 +45,13 @@ fclean: clean
 	rm -f $(TARGET)
 
 $(OBJ_PATH)%.o: $(SOURCE_PATH)%.cpp
-	@echo "$(YELLOW)generate object files ($< -> $@)$(END)"
+	@echo "$(YELLOW)generate object files ($< -> $@)$(END)" 1> /dev/null
 	@mkdir -p $(OBJ_PATH)
 	@$(COMPILER) $(CFLAGS) -I$(HEADER) -c -o $@ $<
 
 $(TARGET): $(OBJS)
 	@echo "$(YELLOW)webserv(normal) Build$(END)"
-	$(COMPILER) $(CFLAGS) $(OBJS) -I$(HEADER) -o $(TARGET)
+	@$(COMPILER) $(CFLAGS) $(OBJS) -I$(HEADER) -o $(TARGET)
 	@echo "$(GREEN)Build Finish!$(END)"
 
 re: fclean all
