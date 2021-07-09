@@ -5,7 +5,7 @@ FileController::FileController(std::string path, Mode mode) : _mode(mode) {
     _metaData = NULL;
     _path = toAbsolutePath(path);
     if (_path.empty()) {
-        return ; // err
+        throw ErrorHandler("Error: path is empty.", ErrorHandler::ALERT, "FileController::FileController");
     }
     if (_mode == READ) {
         _type = checkType(_path);

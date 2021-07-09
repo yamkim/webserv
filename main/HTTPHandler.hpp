@@ -38,7 +38,7 @@ class HTTPHandler {
         HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf);
         virtual ~HTTPHandler();
         void setGeneralHeader(std::string status);
-        void convertHeaderMapToString();
+        void convertHeaderMapToString(void);
         std::pair<std::string, std::string> getHTTPHeader(const std::string& str, std::size_t& endPos);
 };
 #endif

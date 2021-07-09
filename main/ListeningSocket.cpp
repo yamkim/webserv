@@ -1,35 +1,18 @@
 #include "ListeningSocket.hpp"
 
-// ListeningSocket::ListeningSocket() : Socket(-1, conf) {
-//     _ip = NULL;
-//     _portNum = 4200;
-//     _backlog = 42;
-// }
-
-// ListeningSocket::ListeningSocket(int portNum, int backlog) : Socket(-1) {
-//     _ip = NULL;
-//     _portNum = portNum;
-//     _backlog = backlog;
-// }
-
 ListeningSocket::ListeningSocket(const NginxConfig::ServerBlock& serverConf) : Socket(-1, serverConf) {
     _portNum = atoi(Utils::getMapValue(_serverConf.dirMap, "listen").c_str());
     _backlog = 42;
 }
 
-// ListeningSocket::ListeningSocket(int portNum, int backlog, const char* ip) : Socket(-1) {
-//     _ip = ip;
-//     _portNum = portNum;
-//     _backlog = backlog;
-// }
-
-// TODO close allow function인지 확인하기..
 ListeningSocket::~ListeningSocket() {
+    close(_socket);
 }
 
 void ListeningSocket::setSocket() {
+    char optval[1024];
     this->_socket = socket(PF_INET, SOCK_STREAM, 0);
-    setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, (char *)_optval, OPTVAL_BUFFER_SIZE);
+    setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, (char *)optval, 1024);
     if (this->_socket == -1) {
         throw ErrorHandler("Error: server socket open error.", ErrorHandler::CRITICAL, "ListeningSocket::setSocket");
     }

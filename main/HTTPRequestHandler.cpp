@@ -1,7 +1,6 @@
 #include "HTTPRequestHandler.hpp"
 
 HTTPRequestHandler::HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig& nginxConf) : HTTPHandler(connectionFd, serverConf, nginxConf) {
-    // REVIEW : accept에서 클라이언트의 IP와 포트도 받을 수 있도록 하면 좋을것 같습니다.
     _phase = PARSE_STARTLINE;
     _contentLength = -1;
     _fileController = NULL;
@@ -12,7 +11,6 @@ HTTPRequestHandler::~HTTPRequestHandler() {
 }
 
 HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
-    // NOTE : 클라이언트로부터 데이터를 완전히 수신할 때까지의 동작을 제어하는 메인 메소드입니다.
     if (_phase == PARSE_STARTLINE) {
         data._statusCode = 200;
         if (getRequestLine(data) == true) {
@@ -44,11 +42,8 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
             _phase = PARSE_HEADER;
         }
     } else if (_phase == PARSE_BODY) {
-        // std::cout << "_contentLength : " << _contentLength << std::endl;
         char buffer[REQUEST_BUFFER_SIZE + 1];
-
         int readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, 0);
-        // std::cout << "readLength : " << readLength << std::endl;
         _contentLength -= readLength;
         if (_contentLength <= 0) {
             readLength = write(_fileController->getFd(), buffer, readLength + _contentLength);
@@ -57,14 +52,13 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
             readLength = write(_fileController->getFd(), buffer, readLength);
         }
     }
-    return _phase;
+    return (_phase);
 }
 
 bool HTTPRequestHandler::getRequestLine(HTTPData& data) {
     if (setHeaderString() == false) {
         return (false);
     }
-
     _requestLine = _headerString;
     std::vector<std::string> tmp = Parser::getSplitBySpace(_requestLine);
     if (tmp.size() != 3) {
@@ -81,7 +75,6 @@ bool HTTPRequestHandler::getRequestLine(HTTPData& data) {
         throw ErrorHandler("Error: invalid request line.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
     }
     _headerString.clear();
-
     return (true);
 }
 
@@ -93,7 +86,6 @@ bool HTTPRequestHandler::getHeader(void) {
         _headerString.clear();
         return (true);
     }
-
     std::size_t pos = 0;
     _headers.insert(getHTTPHeader(_headerString, pos));
     _headerString.clear();
@@ -111,7 +103,6 @@ int HTTPRequestHandler::findNewLine(const char *buffer) {
 
 bool HTTPRequestHandler::setHeaderString(void) {
     char buffer[REQUEST_BUFFER_SIZE + 1];
-
     ssize_t readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, MSG_PEEK);
     if (readLength == TRANS_ERROR) {
         throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::setHeaderString");
