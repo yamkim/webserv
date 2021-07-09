@@ -61,7 +61,7 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
     if (data._statusCode == 301) {
         _headers["Location"] = data._resAbsoluteFilePath;
     }
-    convertHeaderMapToString(false);
+    convertHeaderMapToString();
     std::cout << "[DEBUG] headers: " << _headerString << std::endl;
 }
 
@@ -149,9 +149,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         if (!_serverConf.error_page.empty()) {
             _errorPageList = _serverConf.error_page;
             _serverErrorPage = getErrorPage(data._root, _serverConf.error_page);
-        } else {
-            _errorPageList.clear(); 
-            _serverErrorPage = "";
         }
 
         // 2
@@ -215,9 +212,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             //         -- 없음: error_page는 "", _errorPageList도 ""
             if (!locConf.error_page.empty()) {
                 _errorPageList = locConf.error_page;
-                _locErrorPage = getErrorPage(data._root, locConf.error_page);
+                _locErrorPage = getIndexFile(data._root, locConf.error_page);
             } else {
-                if (!_serverErrorPage.empty()) { // server error page가 있는 경우
+                if (!_serverErrorPage.empty()) {
                     _errorPageList = _serverConf.error_page;
                     _locErrorPage = _serverErrorPage;
                 } else {
@@ -252,7 +249,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                             // index 파일이 서버 컴퓨터에 있는지 판별
                             FileController::Type indexType = FileController::checkType(data._root + data._URIFilePath + _locIndex);
                             if (indexType == FileController::FILE) {
-                                setGeneralHeader("HTTP/1.1 200 OK");
                                 data._statusCode = 200;
                                 data._resAbsoluteFilePath = data._root + data._URIFilePath + _locIndex;
                                 data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
@@ -262,11 +258,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                     data._CGIBinary = _cgiConfMap[data._URIExtension];
                                     _phase = CGI_RUN;
                                 } else {
+                                    setGeneralHeader("HTTP/1.1 200 OK");
                                     _phase = GET_FILE;
                                 }
                             } else {
                                 data._statusCode = 403;
-                                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
+                                if (isErrorPageList(data._statusCode, _errorPageList)) {
                                     setGeneralHeader("HTTP/1.1 200 OK");
                                     data._statusCode = 200;
                                     data._resAbsoluteFilePath = data._root + _locErrorPage;
@@ -290,7 +287,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                 _phase = GET_STATIC_HTML;
                             } else {
                                 data._statusCode = 403;
-                                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
+                                if (isErrorPageList(data._statusCode, _errorPageList)) {
                                     setGeneralHeader("HTTP/1.1 200 OK");
                                     data._statusCode = 200;
                                     data._resAbsoluteFilePath = data._root + _locErrorPage;
@@ -308,7 +305,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
 
                 }
             } else if (_type == FileController::FILE) {
-                setGeneralHeader("HTTP/1.1 200 OK");
                 data._statusCode = 200;
                 data._resAbsoluteFilePath = data._root + data._URIFilePath;
                 data._URIExtension = HTTPData::getExtension(data._resAbsoluteFilePath);
@@ -317,11 +313,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     data._CGIBinary = _cgiConfMap[data._URIExtension];
                     _phase = CGI_RUN;
                 } else {
+                    setGeneralHeader("HTTP/1.1 200 OK");
                     _phase = GET_FILE;
                 }
             } else {
                 data._statusCode = 404;
-                if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
+                if (isErrorPageList(data._statusCode, _errorPageList)) {
                     setGeneralHeader("HTTP/1.1 200 OK");
                     data._statusCode = 200;
                     data._resAbsoluteFilePath = data._root + _locErrorPage;
@@ -335,7 +332,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 }
             }
         } else {
-            if (!_locErrorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
+            if (isErrorPageList(data._statusCode, _errorPageList)) {
                 setGeneralHeader("HTTP/1.1 200 OK");
                 data._statusCode = 200;
                 data._resAbsoluteFilePath = data._root + data._URIFilePath + _locErrorPage;
@@ -368,24 +365,21 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
 
     if (_phase == DATA_SEND_LOOP) {
-        char *buf;
         size_t writtenLengthOnBuf;
+        size_t buflen = _staticHtml.empty() ? bufferSize : data._resContentLength + 1;
+        Buffer buf(buflen);
         if (_staticHtml.empty()) {
-            buf = new char[bufferSize];
-            writtenLengthOnBuf = read(_file->getFd(), buf, bufferSize);
+            writtenLengthOnBuf = read(_file->getFd(), *buf, buflen);
             _phase = writtenLengthOnBuf == 0 ? FINISH : DATA_SEND_LOOP;
         } else {
-            buf = new char[data._resContentLength + 1];
-            buf[data._resContentLength] = '\0';
-            writtenLengthOnBuf = strlcpy(buf, _staticHtml.c_str(), data._resContentLength + 1);
+            (*buf)[buflen - 1] = '\0';
+            writtenLengthOnBuf = strlcpy(*buf, _staticHtml.c_str(), buflen);
             _phase = FINISH;
         }
-        size_t writtenLengthOnSocket = send(_connectionFd, buf, writtenLengthOnBuf, 0);
+        size_t writtenLengthOnSocket = send(_connectionFd, *buf, writtenLengthOnBuf, 0);
         if (writtenLengthOnSocket != writtenLengthOnBuf) {
-            delete [] buf;
             throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
         }
-        delete [] buf;
     } 
 
     if (_phase == CGI_RUN) {
@@ -393,15 +387,13 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         delete _cgi;
         _cgi = new CGISession(data);
         _cgi->makeCGIProcess();
-        fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
-        convertHeaderMapToString(true);
-        send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+        //fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
         _phase = CGI_REQ;
     }
     
     if (_phase == CGI_REQ) {
         if (data._postFilePath.empty()) {
-            _phase = CGI_RECV_LOOP;
+            _phase = CGI_RECV_HEAD_LOOP;
         } else {
             _file = new FileController(data._postFilePath, FileController::READ);
             _phase = CGI_SEND_LOOP;
@@ -409,40 +401,87 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
     
     if (_phase == CGI_SEND_LOOP) {
-        char* buf = new char[bufferSize];
-
-        if (buf == NULL) {
-            throw ErrorHandler("Error: memory alloc error", ErrorHandler::CRITICAL, "HTTPResponseHandler::process");
-        }
-        int length = read(_file->getFd(), buf, bufferSize);
+        Buffer buf(bufferSize);
+        int length = read(_file->getFd(), *buf, bufferSize);
         if (length != 0) {
-            int writeLength = write(_cgi->getInputStream(), buf, length);
-            delete [] buf;
+            int writeLength = write(_cgi->getInputStream(), *buf, length);
             if (writeLength != length) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
         } else {
             _file->del();
-            _phase = CGI_RECV_LOOP;
+            _phase = CGI_RECV_HEAD_LOOP;
         }
     }
     
-    if (_phase == CGI_RECV_LOOP) {
-        // TODO: CGI가 주는 헤더를 별도로 파싱해야 함 (Status 때문에...)
-        char* buf = new char[bufferSize];
-
-        if (buf == NULL) {
-            throw ErrorHandler("Error: memory alloc error", ErrorHandler::CRITICAL, "HTTPResponseHandler::process");
+    if (_phase == CGI_RECV_HEAD_LOOP) {
+        bool sendHeader = false;
+        Buffer buf(bufferSize);
+        int length = read(_cgi->getOutputStream(), *buf, bufferSize);
+        std::cout << "length : " << length << std::endl;
+        try { // 500 internal error 감지
+            // NOTE: stdio는 라인바이라인으로 버퍼가 넘어가는데 여기서 eof(len = 0)가 오면 500 error임.
+            if (length <= 0) {
+                throw ErrorHandler("Error: CGI Internal Error", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+            } else {
+                _CGIReceive += std::string(*buf, length);
+                size_t spliter = _CGIReceive.find("\r\n\r\n");
+                std::string header;
+                if (spliter != std::string::npos) {
+                    header = _CGIReceive.substr(0, spliter);
+                    _CGIReceive = _CGIReceive.substr(spliter + 4);
+                    std::size_t pos = 0;
+                    while (header.length() > pos) {
+                        _headers.insert(getHTTPHeader(header, pos));
+                    }
+                    if (_headers.find("Status") == _headers.end()) {
+                        setGeneralHeader("HTTP/1.1 200 OK");
+                    } else {
+                        setGeneralHeader(std::string("HTTP/1.1 ") + _headers["Status"]);
+                        _headers.erase("Status");
+                    }
+                    sendHeader = true;
+                }
+            }
+        } catch(const std::exception& e) {
+            std::cout << e.what() << std::endl;
+            setGeneralHeader("HTTP/1.1 500 Internal Server Error");
+            data._statusCode = 404; // FIXME: 추후에 500으로 수정해야 함
+            data._URIExtension = "html";
+            _phase = GET_STATIC_HTML;
         }
-        int length = read(_cgi->getOutputStream(), buf, bufferSize);
-        if (length != 0) {
-            int writeLength = send(_connectionFd, buf, length, 0);
-            delete [] buf;
-            if (writeLength != length) {
+        if (sendHeader == true) {
+            convertHeaderMapToString();
+            size_t writeLength = send(_connectionFd, _headerString.data(), _headerString.length(), 0);
+            if (writeLength != _headerString.length()) {
                 throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
             }
+            _phase = CGI_RECV_BODY_LOOP;
+        }
+    }
+    
+    if (_phase == CGI_RECV_BODY_LOOP) {
+        std::cout << "CGI_RECV_BODY_LOOP" << std::endl;
+        Buffer buf(bufferSize);
+        if (_CGIReceive.empty()) {
+            ssize_t length = read(_cgi->getOutputStream(), *buf, bufferSize);
+            if (length == 0) {
+                _phase = FINISH;
+            } else if (length < 0) {
+                throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+            } else {
+                ssize_t writeLength = send(_connectionFd, *buf, length, 0);
+                if (writeLength != length) {
+                    throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                }
+            }
         } else {
-            _phase = FINISH;
+            size_t writeLength = send(_connectionFd, _CGIReceive.c_str(), _CGIReceive.length(), 0);
+            if (writeLength != _CGIReceive.length()) {
+                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+            } else {
+                _CGIReceive.clear();
+            }
         }
     }
     return (_phase);

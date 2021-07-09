@@ -6,17 +6,7 @@ ErrorHandler::ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode) : 
 
 ErrorHandler::ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode, const char* at) : _errmsg(errmsg), _at(at), _errcode(errcode) {}
 
-ErrorHandler::ErrorHandler(const ErrorHandler & errorhandler) {
-	if (this != &errorhandler)
-		*this = errorhandler;
-}
-
 ErrorHandler::~ErrorHandler() throw() {}
-
-ErrorHandler & ErrorHandler::operator=(const ErrorHandler & errorhandler) {
-	(void) errorhandler;
-	return (*this);
-}
 
 ErrorHandler::ErrCode ErrorHandler::getErrorcode(void) const {
 	return (_errcode);

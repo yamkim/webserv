@@ -1,7 +1,5 @@
 #include "KernelQueue.hpp"
 
-#include <iostream>
-
 KernelQueue::KernelQueue(float pollingTime) {
     _kernelQueuefd = kqueue();
     if (_kernelQueuefd == -1) {
@@ -70,7 +68,6 @@ void* KernelQueue::getInstance(int index) {
 }
 
 long KernelQueue::getData(int index) {
-    // NOTE: 필터의 특성에 대한 고유 데이터를 가져옴. (예를 들면 읽을수/쓸수 있는 버퍼 길이가 들어감.)
     if (_pair.find(int(_getEvent[index].ident)) != _pair.end()) {
         _pair[int(_getEvent[index].ident)]->stopMaster();
     }
@@ -114,7 +111,6 @@ void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd) {
             0,
             reinterpret_cast<void*>(_pair[_getEvent[masterIndex].ident]));
     _pair[_getEvent[masterIndex].ident]->setPairQueue(master, slave);
-    // std::cout << "[DEBUG] : GEN " << _pair[_getEvent[masterIndex].ident] << std::endl;
     if (kevent(_kernelQueuefd, &slave, 1, NULL, 0, NULL) == -1) {
         throw ErrorHandler("Error: Kernel Queue setPairEvent Error.", ErrorHandler::CRITICAL, "KernelQueue::setPairEvent");
     }

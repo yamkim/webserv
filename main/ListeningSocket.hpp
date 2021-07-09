@@ -2,14 +2,13 @@
 #define LISTENINGSOCKET_HPP
 
 #include "Socket.hpp"
+#include "Utils.hpp"
 
-#define OPTVAL_BUFFER_SIZE 1024
 class ListeningSocket : public Socket {
     private:
         int _backlog;
         int _portNum;
         const char* _ip;
-        char _optval[OPTVAL_BUFFER_SIZE];
         ListeningSocket();
 
     public:
@@ -17,7 +16,6 @@ class ListeningSocket : public Socket {
         ListeningSocket(int portNum, int backlog, const char* ip);
         ListeningSocket(const NginxConfig::ServerBlock& serverConfig);
         virtual ~ListeningSocket();
-
         void setSocket();
         void setSocketAddress();
         void bindSocket();

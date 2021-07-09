@@ -24,7 +24,6 @@ class Socket {
         virtual ~Socket();
         int getSocket() const;
         NginxConfig::ServerBlock getConfig() const;
-
         virtual int runSocket() = 0;
 };
 
