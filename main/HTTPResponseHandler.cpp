@@ -312,7 +312,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             _indexPage = getIndexPage(data, _serverConf.index, _locConf.index);
             _errorPage = getErrorPage(data, _serverConf.error_page, _locConf.error_page);
 
-            
             _type = FileController::checkType(data._root + data._URIFilePath);
             // if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
             if (_type == FileController::DIRECTORY) {
