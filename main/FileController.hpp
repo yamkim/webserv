@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-
 #include "ErrorHandler.hpp"
 
 class FileController {
@@ -39,7 +38,6 @@ class FileController {
     public:
         FileController(std::string path, Mode mode);
         ~FileController();
-
         static Type checkType(std::string path);
         int getFilesSize(void) const;
         FileMetaData* getFiles(int i) const;

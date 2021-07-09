@@ -1,8 +1,5 @@
 #include "ConnectionSocket.hpp"
 
-#include <iostream>
-
-
 ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig& nginxConf) : Socket(-1, serverConf), _nginxConf(nginxConf) {
     struct sockaddr_in myAddr;
     this->_socket = accept(listeningSocketFd, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
@@ -27,9 +24,8 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     HTTPRequestHandler::Phase phase;
     try {
         phase = _req->process(_data);
-    } catch (const std::exception &error) {
-        std::cout << error.what() << std::endl;
-        // NOTE: 일단 에러 발생 여부에 상관없이 페이즈가 끝나면 HTTPResponseHandler를 생성시키도록 변경하였습니다.
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << "\n";
         phase = HTTPRequestHandler::FINISH;
     }
     if (phase == HTTPRequestHandler::FINISH) {

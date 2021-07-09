@@ -1,8 +1,6 @@
 #ifndef ERRORHANDLER_HPP
 #define ERRORHANDLER_HPP
 
-// NOTE 에러 양식 : *시간 [*에러종류] : *에러 종류(*errno에 대한 에러 메시지) (in *발생 위치)
-
 #include <exception>
 #include <ctime>
 #include <string>
@@ -19,11 +17,9 @@ class ErrorHandler : public std::exception {
 		ErrorHandler();
 		ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode);
 		ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode, const char* at);
-		ErrorHandler(const ErrorHandler & errorhandler);
 		virtual ~ErrorHandler() throw();
-		ErrorHandler & operator=(const ErrorHandler & errorhandler);
 		ErrorHandler::ErrCode getErrorcode(void) const;
-		static char *getTime(void);
+		static char* getTime(void);
 		virtual const char* what() const throw();
 };
 

@@ -24,7 +24,7 @@ void Timer::delObj(void* obj, void (*del)(void*)) {
             del((*iter).obj);
             iter = _timerList.erase(iter);
         } else {
-            iter++;
+            ++iter;
         }
     }
 }
@@ -38,7 +38,7 @@ void Timer::CheckTimer(void (*del)(void*)) {
             del((*iter).obj);
             iter = _timerList.erase(iter);
         } else {
-            iter++;
+            ++iter;
         }
     }
 }

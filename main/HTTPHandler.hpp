@@ -23,10 +23,23 @@ class HTTPHandler {
         std::string _headerString;
         NginxConfig::ServerBlock _serverConf;
         NginxConfig _nginxConf;
+        class Buffer {
+            private:
+                int _bufferSize;
+                char* _buffer;
+                Buffer();
+            public:
+                Buffer(size_t bufferSize);
+                ~Buffer();
+                char* operator*(void);
+        };
 
     public:
         HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf);
         virtual ~HTTPHandler();
-        void convertHeaderMapToString(bool isCGI);
+
+        void setGeneralHeader(std::string status);
+        void convertHeaderMapToString(void);
+        std::pair<std::string, std::string> getHTTPHeader(const std::string& str, std::size_t& endPos);
 };
 #endif
