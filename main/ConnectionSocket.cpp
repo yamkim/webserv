@@ -27,6 +27,8 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     } catch (const std::exception& error) {
         std::cerr << error.what() << std::endl;
         phase = HTTPRequestHandler::FINISH;
+        // FIXME: 에러가 발생한 상황은 일단 모두 400 배드리퀘로 처리함.
+        _data._statusCode = 400;
     }
     if (phase == HTTPRequestHandler::FINISH) {
         _res = new HTTPResponseHandler(_socket, _serverConf, _nginxConf);

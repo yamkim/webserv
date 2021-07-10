@@ -130,7 +130,7 @@ void HTTPResponseHandler::setGeneralHeader(int status) {
     } else if (status == 302) {
         startLine = std::string("HTTP/1.1 301 Moved Permanently");
     } else if (status == 400) {
-        startLine = std::string("HTTP/1.1 400 Not Found");
+        startLine = std::string("HTTP/1.1 400 Bad Request");
     } else if (status == 403) {
         startLine = std::string("HTTP/1.1 403 Forbidden");
     } else if (status == 404) {
