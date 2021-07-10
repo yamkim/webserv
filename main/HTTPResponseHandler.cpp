@@ -470,7 +470,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         try { // 500 internal error 감지
             // NOTE: stdio는 라인바이라인으로 버퍼가 넘어가는데 여기서 eof(len = 0)가 오면 500 error임.
             if (length <= 0) {
-                throw ErrorHandler("Error: CGI Internal Error", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                throw ErrorHandler("Error: CGI HTTP Header Error", ErrorHandler::NORMAL, "HTTPResponseHandler::process");
             } else {
                 _CGIReceive += std::string(*buf, length);
                 size_t spliter = _CGIReceive.find("\r\n\r\n");

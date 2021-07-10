@@ -45,14 +45,14 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
 }
 
 void ConnectionSocket::setConnectionData(struct sockaddr_in _serverSocketAddr, struct sockaddr_in _clientSocketAddr) {
-    std::stringstream portString;
+    std::stringstream clientPortString;
+    std::stringstream hostPortString;
     _data._clientIP = std::string(inet_ntoa(_serverSocketAddr.sin_addr));
-    portString << ntohs(_serverSocketAddr.sin_port);
-    _data._clientPort = std::string(portString.str());
+    clientPortString << ntohs(_serverSocketAddr.sin_port);
+    _data._clientPort = std::string(clientPortString.str());
     _data._hostIP = std::string(inet_ntoa(_clientSocketAddr.sin_addr));
-    portString.clear();
-    portString << ntohs(_clientSocketAddr.sin_port);
-    _data._hostPort = std::string(portString.str());
+    hostPortString << ntohs(_clientSocketAddr.sin_port);
+    _data._hostPort = std::string(hostPortString.str());
 }
 
 HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
