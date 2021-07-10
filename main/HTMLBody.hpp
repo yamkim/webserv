@@ -8,6 +8,10 @@
 #include "FileController.hpp"
 #include "ErrorHandler.hpp"
 
+#ifndef WEBSERV_VERSION
+#define WEBSERV_VERSION "0.0.0"
+#endif
+
 class HTMLBody {
     public:
         static std::string getBasicHTMLBody(const std::string& statusMsg);

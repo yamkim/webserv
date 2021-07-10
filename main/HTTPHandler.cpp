@@ -34,7 +34,7 @@ void HTTPHandler::setGeneralHeader(std::string status) {
     _headerString += "\r\n";
 
     _headers["Date"] = std::string(timeBuffer);
-    _headers["Server"] = std::string("webserv/0.1");
+    _headers["Server"] = std::string("webserv/") + std::string(WEBSERV_VERSION);
     _headers["Connection"] = std::string("close");
 }
 

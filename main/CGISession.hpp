@@ -11,6 +11,10 @@
 #include "HTTPHandler.hpp"
 #include "HTTPData.hpp"
 
+#ifndef WEBSERV_VERSION
+#define WEBSERV_VERSION "0.0.0"
+#endif
+
 class CGISession {
 	private:
 		pid_t _pid;

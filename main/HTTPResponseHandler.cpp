@@ -159,7 +159,7 @@ void HTTPResponseHandler::setGeneralHeader(int status) {
 void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
     std::stringstream ssLength;
     ssLength << data._resContentLength;
-    _headers["Server"] = data._serverName;
+    _headers["Server"] = std::string("webserv/") + std::string(WEBSERV_VERSION);
     _headers["Content-Type"] = getMIME(data._URIExtension);
     _headers["Content-Length"] = ssLength.str();
     if (data._statusCode == 301) {
