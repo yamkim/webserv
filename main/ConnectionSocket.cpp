@@ -25,7 +25,7 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     try {
         phase = _req->process(_data);
     } catch (const std::exception& error) {
-        std::cerr << error.what() << "\n";
+        std::cerr << error.what() << std::endl;
         phase = HTTPRequestHandler::FINISH;
     }
     if (phase == HTTPRequestHandler::FINISH) {

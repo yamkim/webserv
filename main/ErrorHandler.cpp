@@ -26,6 +26,7 @@ char * ErrorHandler::getTime(void) {
 const char* ErrorHandler::what() const throw() {
 	static std::string rtn;
 
+    rtn.clear();
 	rtn.append(getTime());
 	if (_errcode == NORMAL) {
 		rtn.append(" [normal] ");

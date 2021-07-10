@@ -1,15 +1,15 @@
 #include <iostream>
 #include "ListeningSocket.hpp"
 #include "ConnectionSocket.hpp"
-#include <vector>
 #include "KernelQueue.hpp"
-#include <cstdlib>
 #include "Timer.hpp"
 
 #define CONF_PATH "./conf/nginx.conf"
 
 int main(int argc, char *argv[])
 {
+    Timer timer;
+    KernelQueue kq(1.0);
     const char* confPath = static_cast<const char *>(CONF_PATH);
     if (argc == 2) {
         confPath = argv[1];
@@ -17,31 +17,17 @@ int main(int argc, char *argv[])
         std::cerr << "\033[0;31m[err] bad grgument!\033[0m" << std::endl;
         return (1);
     }
-    KernelQueue kq(1.0);
     NginxConfig nginxConfig(confPath);
     try {
-    #if 1
-    (void)argc, (void)argv;
-    for (int i = 0; i < (int)nginxConfig._http.server.size(); i++) {
-        ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i]);
-        if (lSocket->runSocket())
-            return (1);
-        kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
+        for (size_t i = 0; i < nginxConfig._http.server.size(); i++) {
+            ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i]);
+            lSocket->runSocket();
+            kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
+        }
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << std::endl;
+        return (1);
     }
-    } catch (const std::string& e) {
-        std::cout << e << std::endl;
-        return 1;
-    }
-    #else
-    for (int i = 1; i < argc; i++) {
-        ListeningSocket* lSocket = new ListeningSocket(std::atoi(argv[i]), 42);
-        if (lSocket->runSocket())
-            return (1);
-        kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
-    }
-    #endif
-#if 1
-    Timer timer;
     try {
         while (true) {
             int result = kq.getEventsIndex();
@@ -91,10 +77,9 @@ int main(int argc, char *argv[])
             }
             timer.CheckTimer(ConnectionSocket::ConnectionSocketKiller);
         }
-    } catch (const std::exception &error) {
+    } catch (const std::exception& error) {
         std::cout << error.what() << std::endl;
         return (1);
     }
-#endif
     return (0);
 }

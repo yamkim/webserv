@@ -498,8 +498,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     sendHeader = true;
                 }
             }
-        } catch(const std::exception& e) {
-            std::cout << e.what() << std::endl;
+        } catch (const std::exception& error) {
+            std::cerr << error.what() << std::endl;
             data._statusCode = 500;
             setGeneralHeader(data._statusCode);
             data._URIExtension = "html";
