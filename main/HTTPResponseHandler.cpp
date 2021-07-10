@@ -140,8 +140,8 @@ void HTTPResponseHandler::setGeneralHeader(int status) {
     } else if (status == 500) {
         startLine = std::string("HTTP/1.1 500 Internal Server Error");
     } else {
-        // FIXME 없는 경우 어떻게 처리할지 생각해보기
-        startLine = "";        
+        // FIXME 없는 경우 어떻게 처리할지 생각해보기 -> 에러핸들러로 처리했습니다
+        throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTTPResponseHandler::setGeneralHeader");   
     }
 
     time_t rawtime;
@@ -399,7 +399,9 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         showResponseInformation(data);
     }
     if (_phase == GET_STATIC_HTML) {
+        std::cout << "GET_STATIC_HTML" << std::endl;
         _staticHtml = HTMLBody::getStaticHTML(data);
+        std::cout << _staticHtml << std::endl;
         data._resContentLength = _staticHtml.length();
         setHTMLHeader(data);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
@@ -416,6 +418,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         size_t writtenLengthOnBuf;
         size_t buflen = _staticHtml.empty() ? bufferSize : data._resContentLength + 1;
         Buffer buf(buflen);
+        std::cout << _staticHtml << std::endl;
+        std::cout << _staticHtml.empty() << std::endl;
         if (_staticHtml.empty()) {
             writtenLengthOnBuf = read(_file->getFd(), *buf, buflen);
             _phase = writtenLengthOnBuf == 0 ? FINISH : DATA_SEND_LOOP;

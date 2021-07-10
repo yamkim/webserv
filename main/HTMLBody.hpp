@@ -6,6 +6,7 @@
 #include <iomanip>
 #include "HTTPData.hpp"
 #include "FileController.hpp"
+#include "ErrorHandler.hpp"
 
 class HTMLBody {
     public:

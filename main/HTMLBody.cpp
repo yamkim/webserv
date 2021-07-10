@@ -73,12 +73,17 @@ std::string HTMLBody::getStaticHTML(const HTTPData& data) {
     } else if (data._statusCode == 413) {
         statusMsg = "413 Request Entity Too Large";
         ret = getBasicHTMLBody(statusMsg);
+    } else if (data._statusCode == 500) {
+        statusMsg = "500 Internal Server Error";
+        ret = getBasicHTMLBody(statusMsg);
     } else if (data._statusCode == 200) {
         ret = getAutoIndexBody(data._root, data._URIFilePath);
     } else if (data._statusCode == 301) {
         ret = getRedirectBody(data);
     } else if (data._statusCode == 302) {
         ret = getRedirectBody(data);
+    } else {
+        throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTMLBody::getStaticHTML");
     }
     return (ret);
 }
