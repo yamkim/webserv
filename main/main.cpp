@@ -6,11 +6,21 @@
 
 #define CONF_PATH "./conf/nginx.conf"
 
+#ifndef WEBSERV_VERSION
+#define WEBSERV_VERSION "0.0.0"
+#endif
+
 int main(int argc, char *argv[])
 {
     Timer timer;
     KernelQueue kq(1.0);
     const char* confPath = static_cast<const char *>(CONF_PATH);
+    std::cout << "\033[1;31m                    '||                                      \033[0m" << std::endl;
+    std::cout << "\033[1;33m... ... ...   ....   || ...   ....    ....  ... ..  .... ... \033[0m" << std::endl;
+    std::cout << "\033[1;32m ||  ||  |  .|...||  ||'  || ||. '  .|...||  ||' ''  '|.  |  \033[0m" << std::endl;
+    std::cout << "\033[1;34m  ||| |||   ||       ||    | . '|.. ||       ||       '|.|   \033[0m" << std::endl;
+    std::cout << "\033[1;35m   |   |     '|...'  '|...'  |'..|'  '|...' .||.       '|    \033[0m" << std::endl;
+    std::cout << "                          \033[1;37mver " << WEBSERV_VERSION << " by joopark \xf0\x9f\xa4\x9d yekim\033[0m" << std::endl;
     if (argc == 2) {
         confPath = argv[1];
     } else if (argc > 2) {
