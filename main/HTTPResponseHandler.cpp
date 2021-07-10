@@ -399,9 +399,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         showResponseInformation(data);
     }
     if (_phase == GET_STATIC_HTML) {
-        std::cout << "GET_STATIC_HTML" << std::endl;
         _staticHtml = HTMLBody::getStaticHTML(data);
-        std::cout << _staticHtml << std::endl;
         data._resContentLength = _staticHtml.length();
         setHTMLHeader(data);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
@@ -418,8 +416,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         size_t writtenLengthOnBuf;
         size_t buflen = _staticHtml.empty() ? bufferSize : data._resContentLength + 1;
         Buffer buf(buflen);
-        std::cout << _staticHtml << std::endl;
-        std::cout << _staticHtml.empty() << std::endl;
         if (_staticHtml.empty()) {
             writtenLengthOnBuf = read(_file->getFd(), *buf, buflen);
             _phase = writtenLengthOnBuf == 0 ? FINISH : DATA_SEND_LOOP;
@@ -516,7 +512,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
     
     if (_phase == CGI_RECV_BODY_LOOP) {
-        std::cout << "CGI_RECV_BODY_LOOP" << std::endl;
         Buffer buf(bufferSize);
         if (_CGIReceive.empty()) {
             ssize_t length = read(_cgi->getOutputStream(), *buf, bufferSize);
