@@ -17,12 +17,12 @@ CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStre
     _envMap[std::string("SERVER_PROTOCOL")] = std::string("HTTP/1.1");
     _envMap[std::string("REQUEST_SCHEME")] = data._reqMethod;
     _envMap[std::string("GATEWAY_INTERFACE")] = std::string("CGI/1.1");
-    _envMap[std::string("SERVER_SOFTWARE")] = std::string("WEBSERV/0.1");
+    _envMap[std::string("SERVER_SOFTWARE")] = std::string("webserv/") + std::string(WEBSERV_VERSION);
     _envMap[std::string("REMOTE_ADDR")] = data._clientIP;
     _envMap[std::string("REMOTE_PORT")] = data._clientPort;
     _envMap[std::string("SERVER_ADDR")] = data._hostIP;
     _envMap[std::string("SERVER_PORT")] = data._hostPort;
-    _envMap[std::string("SERVER_NAME")] = std::string("");
+    _envMap[std::string("SERVER_NAME")] = data._serverName;
     _envMap[std::string("SCRIPT_FILENAME")] = data._resAbsoluteFilePath;
 
     _arg[0] = const_cast<char*>(data._CGIBinary.c_str());

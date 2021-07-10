@@ -50,8 +50,8 @@ int ListeningSocket::runSocket() {
         this->bindSocket();
         this->listenSocket();
         this->fcntlSocket();
-    } catch (const std::exception &error) {
-        std::cout << error.what() << std::endl;
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << std::endl;
         return (1);
     }
     return (0);

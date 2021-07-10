@@ -130,7 +130,7 @@ void HTTPResponseHandler::setGeneralHeader(int status) {
     } else if (status == 302) {
         startLine = std::string("HTTP/1.1 301 Moved Permanently");
     } else if (status == 400) {
-        startLine = std::string("HTTP/1.1 400 Not Found");
+        startLine = std::string("HTTP/1.1 400 Bad Request");
     } else if (status == 403) {
         startLine = std::string("HTTP/1.1 403 Forbidden");
     } else if (status == 404) {
@@ -140,8 +140,8 @@ void HTTPResponseHandler::setGeneralHeader(int status) {
     } else if (status == 500) {
         startLine = std::string("HTTP/1.1 500 Internal Server Error");
     } else {
-        // FIXME 없는 경우 어떻게 처리할지 생각해보기
-        startLine = "";        
+        // FIXME 없는 경우 어떻게 처리할지 생각해보기 -> 에러핸들러로 처리했습니다
+        throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTTPResponseHandler::setGeneralHeader");   
     }
 
     time_t rawtime;
@@ -159,7 +159,7 @@ void HTTPResponseHandler::setGeneralHeader(int status) {
 void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
     std::stringstream ssLength;
     ssLength << data._resContentLength;
-    _headers["Server"] = data._serverName;
+    _headers["Server"] = std::string("webserv/") + std::string(WEBSERV_VERSION);
     _headers["Content-Type"] = getMIME(data._URIExtension);
     _headers["Content-Length"] = ssLength.str();
     if (data._statusCode == 301) {
@@ -470,7 +470,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         try { // 500 internal error 감지
             // NOTE: stdio는 라인바이라인으로 버퍼가 넘어가는데 여기서 eof(len = 0)가 오면 500 error임.
             if (length <= 0) {
-                throw ErrorHandler("Error: CGI Internal Error", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                throw ErrorHandler("Error: CGI HTTP Header Error", ErrorHandler::NORMAL, "HTTPResponseHandler::process");
             } else {
                 _CGIReceive += std::string(*buf, length);
                 size_t spliter = _CGIReceive.find("\r\n\r\n");
@@ -494,8 +494,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     sendHeader = true;
                 }
             }
-        } catch(const std::exception& e) {
-            std::cout << e.what() << std::endl;
+        } catch (const std::exception& error) {
+            std::cerr << error.what() << std::endl;
             data._statusCode = 500;
             setGeneralHeader(data._statusCode);
             data._URIExtension = "html";
@@ -512,7 +512,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     }
     
     if (_phase == CGI_RECV_BODY_LOOP) {
-        std::cout << "CGI_RECV_BODY_LOOP" << std::endl;
         Buffer buf(bufferSize);
         if (_CGIReceive.empty()) {
             ssize_t length = read(_cgi->getOutputStream(), *buf, bufferSize);

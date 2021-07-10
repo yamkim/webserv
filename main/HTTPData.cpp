@@ -23,7 +23,7 @@ std::string HTTPData::getExtension(std::string URI) {
 }
 
 void HTTPData::setURIelements(void) {
-    std::size_t foundQuestion = _reqURI.rfind("?");
+    std::size_t foundQuestion = _reqURI.find("?");
     if (foundQuestion == std::string::npos) {
         _URIFilePath = _reqURI;
     } else {

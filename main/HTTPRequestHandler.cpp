@@ -44,12 +44,18 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
     } else if (_phase == PARSE_BODY) {
         char buffer[REQUEST_BUFFER_SIZE + 1];
         int readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, 0);
+        if (readLength == -1) {
+            throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
+        }
         _contentLength -= readLength;
         if (_contentLength <= 0) {
             readLength = write(_fileController->getFd(), buffer, readLength + _contentLength);
             _phase = FINISH;
         } else {
             readLength = write(_fileController->getFd(), buffer, readLength);
+        }
+        if (readLength == -1) {
+            throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
         }
     }
     return (_phase);
@@ -62,7 +68,7 @@ bool HTTPRequestHandler::getStartLine(HTTPData& data) {
     _requestLine = _headerString;
     std::vector<std::string> tmp = Parser::getSplitBySpace(_requestLine);
     if (tmp.size() != 3) {
-        throw ErrorHandler("Error: invalid request line.", ErrorHandler::ALERT, "HTTPRequestHandler::getStartLine");
+        throw ErrorHandler("Error: invalid HTTP Header.", ErrorHandler::NORMAL, "HTTPRequestHandler::getStartLine");
     }
     if (   tmp[0] == std::string("GET")
         || tmp[0] == std::string("POST")
@@ -72,7 +78,7 @@ bool HTTPRequestHandler::getStartLine(HTTPData& data) {
         data._reqURI = tmp[1];
         data.setURIelements();
     } else {
-        throw ErrorHandler("Error: invalid request line.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
+        throw ErrorHandler("Error: invalid HTTP Header.", ErrorHandler::NORMAL, "HTTPRequestHandler::process");
     }
     _headerString.clear();
     return (true);

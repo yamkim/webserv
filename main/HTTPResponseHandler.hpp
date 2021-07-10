@@ -12,6 +12,10 @@
 #include "NginxConfig.hpp"
 #include "HTMLBody.hpp"
 
+#ifndef WEBSERV_VERSION
+#define WEBSERV_VERSION "0.0.0"
+#endif
+
 class HTTPResponseHandler : public HTTPHandler {
     private:
         HTTPResponseHandler();
