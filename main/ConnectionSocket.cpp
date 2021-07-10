@@ -25,10 +25,18 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     try {
         phase = _req->process(_data);
     } catch (const std::exception& error) {
+        /** NOTE
+         * 파싱 에러 (데이터는 받았지만 클라이언트가 이상한 데이터를 줄 때) : 400 (error level : NORMAL)
+         * 내부 에러 (내부적인 변수 할당 실패 등) : 500 (error level : ALERT / CRITICAL)
+         */
+        ErrorHandler *err = dynamic_cast<ErrorHandler *>(const_cast<std::exception*>(&error));
         std::cerr << error.what() << std::endl;
         phase = HTTPRequestHandler::FINISH;
-        // FIXME: 에러가 발생한 상황은 일단 모두 400 배드리퀘로 처리함.
-        _data._statusCode = 400;
+        if (err != NULL && err->getErrorcode() == ErrorHandler::NORMAL) {
+            _data._statusCode = 400;
+        } else {
+            _data._statusCode = 500;
+        }
     }
     if (phase == HTTPRequestHandler::FINISH) {
         _res = new HTTPResponseHandler(_socket, _serverConf, _nginxConf);
