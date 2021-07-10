@@ -29,11 +29,11 @@ const char* ErrorHandler::what() const throw() {
     rtn.clear();
 	rtn.append(getTime());
 	if (_errcode == NORMAL) {
-		rtn.append(" [normal] ");
+		rtn.append("\033[0;32m [normal] ");
 	} else if (_errcode == ALERT) {
-		rtn.append(" [alert] ");
+		rtn.append("\033[0;33m [alert] ");
 	} else if (_errcode == CRITICAL) {
-		rtn.append(" [critical] ");
+		rtn.append("\033[0;31m [critical] ");
 	}
 	rtn.append(_errmsg);
 	if (errno != 0) {
@@ -45,5 +45,6 @@ const char* ErrorHandler::what() const throw() {
 		rtn.append(" at ");
 		rtn.append(_at);
 	}
+    rtn.append("\033[0m");
 	return (rtn.c_str());
 }
