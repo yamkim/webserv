@@ -97,6 +97,7 @@ class Parser {
             if (checker && str.find(delimiter) == std::string::npos) {
                 std::cout << "[DEBUG] String: " << str << std::endl;
                 throw std::string("Error: There is no delimiter[" + delimiter + "]. Parser::getIdentifier");
+                // throw ErrorHandler(std::string("Error: There is no delimiter["+ delimiter + "].").c_str(), ErrorHandler::CRITICAL, "Parser::getIdentifier");
             }
 
             while ((str[endPos] != '\0') && isCharInString(delimiter, str[endPos])) {

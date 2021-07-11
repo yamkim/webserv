@@ -48,7 +48,7 @@ class HTTPResponseHandler : public HTTPHandler {
 
         int getCGIfd(void);
     private:
-        std::string getMIME(const std::string& extension) const;
+        std::string getMIME(const std::string& extension);
         bool isCGI(std::string& URI);
         // std::string getIndexPage(const std::string& absolutePath, std::vector<std::string>& indexVec);
         std::string getIndexPage(const HTTPData& data, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec);

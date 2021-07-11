@@ -112,10 +112,10 @@ bool HTTPResponseHandler::isErrorPageList(int statusCode, std::vector<std::strin
     return false;
 }
 
-std::string HTTPResponseHandler::getMIME(const std::string& extension) const {
+std::string HTTPResponseHandler::getMIME(const std::string& extension) {
     std::map<std::string, std::string> mime = _nginxConf._http.types.typeMap;
     if(extension == std::string("") || mime.find(extension) == mime.end()) {
-        return (mime["default_type"]);
+        return (_nginxConf._http.dirMap["default_type"]);
     } else {
         return (mime[extension]);
     }
@@ -191,7 +191,7 @@ void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
     std::cout << "# URL Extension: " << data._URIExtension << std::endl;
     std::cout << "# Location Index Page File: " << _indexPage << std::endl;
     std::cout << "# Location Error Page File: " << _errorPage << std::endl;
-    std::cout << "# Location Path: " << _locConf.locationPath << std::endl;
+    std::cout << "# Location Path: " << _locConf._locationPath << std::endl;
 
 }
 
@@ -271,7 +271,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
 
         // 2
         for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
-            std::string tmpExt = HTTPData::getExtension(_serverConf.location[i].locationPath);
+            std::string tmpExt = HTTPData::getExtension(_serverConf.location[i]._locationPath);
             NginxConfig::LocationBlock tmpLocBlock = _serverConf.location[i];
             if (tmpExt.empty())
                 continue ;
@@ -290,7 +290,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             // 주의: 폴더/파일인지는 일단 상관 없음..! 여야하므로 항상 끝은 "/"로 끝나도록
             //      (ex. location /data/ab/ 인데, req uri: /data/a인 경우는 폴더가 아닌 파일)
             // 새로운 예외: location /data/ab만 있으면, req uri: /data/는 403 에러.. ==> 무조건, location path보다 req uri가 더 길어야한다..!
-            std::string tmpLocPath = _serverConf.location[i].locationPath;
+            std::string tmpLocPath = _serverConf.location[i]._locationPath;
             std::size_t j = 0; // 1인 경우는 / 일 때이므로
             for (; j < data._URIFilePath.size(); ++j) {
                 if (tmpLocPath[j] != data._URIFilePath[j]) {
