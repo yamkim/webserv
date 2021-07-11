@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     // - 숫자인 경우
     // - 매개변수의 개수
     // - 뒤에서, 사용하지 않는 변수들을 어떻게 대체할 것인지
+    #if 0
     try {
         NginxConfig::NginxConfig nginxConfig(confPath);
         std::cout << "[DEBUG] types: " << nginxConfig._http.types.typeMap["html"] << std::endl;
@@ -37,17 +38,20 @@ int main(int argc, char *argv[])
         std::cout << error << std::endl;
         return (1);
     }
+    # else 
+    #endif
 
 #if 0
     try {
-    #if 1
-    (void)argc, (void)argv;
-    for (int i = 0; i < (int)nginxConfig._http.server.size(); i++) {
-        ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i]);
-        if (lSocket->runSocket())
-            return (1);
-        kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
-    }
+        NginxConfig::NginxConfig nginxConfig(confPath);
+        #if 1
+        (void)argc, (void)argv;
+        for (std::size_t i = 0; i < nginxConfig._http.server.size(); i++) {
+            ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i]);
+            if (lSocket->runSocket())
+                return (1);
+            kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
+        }
     } catch (const std::string& e) {
         std::cout << e << std::endl;
         return 1;
@@ -60,9 +64,19 @@ int main(int argc, char *argv[])
         kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
     }
     #endif
+#endif
 #if 1
     Timer timer;
     try {
+        NginxConfig::NginxConfig nginxConfig(confPath);
+        (void)argc, (void)argv;
+        for (std::size_t i = 0; i < nginxConfig._http.server.size(); i++) {
+            ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i]);
+            if (lSocket->runSocket())
+                return (1);
+            kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));
+        }
+
         while (true) {
             int result = kq.getEventsIndex();
             if (result == 0) {
@@ -114,8 +128,10 @@ int main(int argc, char *argv[])
     } catch (const std::exception &error) {
         std::cout << error.what() << std::endl;
         return (1);
+    } catch (const std::string& e) {
+        std::cout << e << std::endl;
+        return 1;
     }
-#endif
 #endif
     return (0);
 }

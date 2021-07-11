@@ -267,7 +267,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     if (_phase == FIND_RESOURCE) {
         // 1
         data._serverName = _serverConf.dirMap["server_name"];
-        data._root = _serverConf.dirMap["root"];
+        data._root = _serverConf.dirMap["root"].empty() ? DEFAULT_ROOT : _serverConf.dirMap["root"];
 
         // 2
         for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
@@ -311,14 +311,14 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 }
             }
         }
+        // TODO: root에 따라서 변하는 경우, 처리할지 말지 고민: location block 내에도 root가 올 수 있음
         if (isLocFlag) { // 4
             // index page 세팅 및 error page 세팅
             _indexPage = getIndexPage(data, _serverConf.index, _locConf.index);
             _errorPage = getErrorPage(data, _serverConf.error_page, _locConf.error_page);
+            data._root = _locConf.dirMap["root"].empty() ? data._root : _locConf.dirMap["root"];
             _type = FileController::checkType(data._root + data._URIFilePath);
-            // if (_type == FileController::DIRECTORY && data._URIFilePath[data._URIFilePath.size() - 1] == '/') {
             if (_type == FileController::DIRECTORY) {
-                // TODO: 끝에 "/"가 붙어있는지 확인하기
                 if (data._URIFilePath[data._URIFilePath.size() - 1] != '/') {
                     data._statusCode = 301;
                     setGeneralHeader(data._statusCode);

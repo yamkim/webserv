@@ -12,6 +12,7 @@
 #include "NginxConfig.hpp"
 #include "HTMLBody.hpp"
 
+#define DEFAULT_ROOT std::string("/usr/share/nginx/html")
 class HTTPResponseHandler : public HTTPHandler {
     private:
         HTTPResponseHandler();
@@ -46,7 +47,6 @@ class HTTPResponseHandler : public HTTPHandler {
         // std::string getIndexPage(const std::string& absolutePath, std::vector<std::string>& indexVec);
         std::string getIndexPage(const HTTPData& data, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec);
         std::string getErrorPage(const HTTPData& data, const std::vector<std::string>& serverErrorPageVec, const std::vector<std::string>& locErrorPageVec);
-        // std::string getErrorPage(const std::string& absolutePath, std::vector<std::string>& errorPageVec);
         bool isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec);
         void setGeneralHeader(int status);
         void setHTMLHeader(const HTTPData& data);
