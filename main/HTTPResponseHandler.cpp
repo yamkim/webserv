@@ -140,7 +140,6 @@ void HTTPResponseHandler::setGeneralHeader(int status) {
     } else if (status == 500) {
         startLine = std::string("HTTP/1.1 500 Internal Server Error");
     } else {
-        // FIXME 없는 경우 어떻게 처리할지 생각해보기 -> 에러핸들러로 처리했습니다
         throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTTPResponseHandler::setGeneralHeader");   
     }
 
@@ -195,6 +194,53 @@ void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
 
 }
 
+void HTTPResponseHandler::setCGIConfigMap() {
+    for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
+        std::string tmpExt = HTTPData::getExtension(_serverConf.location[i]._locationPath);
+        NginxConfig::LocationBlock tmpLocBlock = _serverConf.location[i];
+        if (tmpExt.empty())
+            continue ;
+        _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
+    }
+}
+
+// NOTE: GUIDE LINE for Prefix Match
+// - request uri와 가장 일치하는 location 블록의 설정을 사용하되, 접근은 모두 request uri 기준으로하기!
+// 1. location path를 순환하며, path가 request uri의 앞부분에 포함되는지 찾기
+// 2. 만약 포함 된다면, 길이를 기억하기
+// 3. 가장 긴 길이(가장 알맞은 경로)의 path를 갖는 location block의 설정을 사용하기
+// 주의: 폴더/파일인지는 일단 상관 없음..! 여야하므로 항상 끝은 "/"로 끝나도록
+//      (ex. location /data/ab/ 인데, req uri: /data/a인 경우는 폴더가 아닌 파일)
+// 새로운 예외: location /data/ab만 있으면, req uri: /data/는 403 에러.. ==> 무조건, location path보다 req uri가 더 길어야한다..!
+NginxConfig::LocationBlock HTTPResponseHandler::getMatchingLocationConfiguration(const HTTPData& data) {
+    NginxConfig::LocationBlock ret;
+    bool isLocFlag = false;
+    std::size_t matchLen = 0; 
+    for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
+        std::string tmpLocPath = _serverConf.location[i]._locationPath;
+        std::size_t j = 0; // 1인 경우는 / 일 때이므로
+        for (; j < data._URIFilePath.size(); ++j) {
+            if (tmpLocPath[j] != data._URIFilePath[j]) {
+                break ;
+            }
+        }
+        if (j == 1) { 
+            if (tmpLocPath == "/") { // 하나만 일치하는 경우, tmpLocPath가 "/"가 아니면 일치하는 location 블록이 없는 것.
+                isLocFlag = true;
+                matchLen = j;
+                ret = _serverConf.location[i];
+            }
+        } else {
+            if (matchLen < j && (data._URIFilePath.size() >= tmpLocPath.size())) { // 더 많은 글자가 일치하는 location 블록이 있는 경우
+                isLocFlag = true;
+                matchLen = j;
+                ret = _serverConf.location[i];
+            }
+        }
+    }
+    return ret;
+}
+
 // NOTE:
 // 1. root가 nginx.conf에 있는지 확인
 //    -- 있음: 요청받은 파일/폴더명(data._URIFilePath)을 가지고오기
@@ -247,11 +293,6 @@ void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
 // 3. 해당 location 블록 내부에서 바이너리 파일 위치 가져오기
 // 4. phase = CGI_RUN으로 변경하기
 
-// TODO
-// 1. try_files, return, deny 부분 추가하기
-// 5. return 관련부분, cgi pass
-// - request로부터 오는 dataStatus에 따라서 먼저 출력하는 방법 모색 -> 생성자에서 처리?
-
 HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long bufferSize) {
     // TODO: 해당하는 로케이션의 설정에서 status 코드 적용시키기
     if (_phase == PRE_STATUSCODE_CHECK) {
@@ -270,49 +311,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         data._root = _serverConf.dirMap["root"].empty() ? DEFAULT_ROOT : _serverConf.dirMap["root"];
 
         // 2
-        for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
-            std::string tmpExt = HTTPData::getExtension(_serverConf.location[i]._locationPath);
-            NginxConfig::LocationBlock tmpLocBlock = _serverConf.location[i];
-            if (tmpExt.empty())
-                continue ;
-            _cgiConfMap[tmpExt] = tmpLocBlock.dirMap["cgi_pass"];
-        }
+        setCGIConfigMap();
 
         // 3
-        bool isLocFlag = false;
-        std::size_t matchLen = 0; 
-        for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
-            // NOTE: GUIDE LINE for Prefix Match
-            // - request uri와 가장 일치하는 location 블록의 설정을 사용하되, 접근은 모두 request uri 기준으로하기!
-            // 1. location path를 순환하며, path가 request uri의 앞부분에 포함되는지 찾기
-            // 2. 만약 포함 된다면, 길이를 기억하기
-            // 3. 가장 긴 길이(가장 알맞은 경로)의 path를 갖는 location block의 설정을 사용하기
-            // 주의: 폴더/파일인지는 일단 상관 없음..! 여야하므로 항상 끝은 "/"로 끝나도록
-            //      (ex. location /data/ab/ 인데, req uri: /data/a인 경우는 폴더가 아닌 파일)
-            // 새로운 예외: location /data/ab만 있으면, req uri: /data/는 403 에러.. ==> 무조건, location path보다 req uri가 더 길어야한다..!
-            std::string tmpLocPath = _serverConf.location[i]._locationPath;
-            std::size_t j = 0; // 1인 경우는 / 일 때이므로
-            for (; j < data._URIFilePath.size(); ++j) {
-                if (tmpLocPath[j] != data._URIFilePath[j]) {
-                    break ;
-                }
-            }
-            if (j == 1) { 
-                if (tmpLocPath == "/") { // 하나만 일치하는 경우, tmpLocPath가 "/"가 아니면 일치하는 location 블록이 없는 것.
-                    isLocFlag = true;
-                    matchLen = j;
-                    _locConf = _serverConf.location[i];
-                }
-            } else {
-                if (matchLen < j && (data._URIFilePath.size() >= tmpLocPath.size())) { // 더 많은 글자가 일치하는 location 블록이 있는 경우
-                    isLocFlag = true;
-                    matchLen = j;
-                    _locConf = _serverConf.location[i];
-                }
-            }
-        }
+        _locConf = getMatchingLocationConfiguration(data);
         // TODO: root에 따라서 변하는 경우, 처리할지 말지 고민: location block 내에도 root가 올 수 있음
-        if (isLocFlag) { // 4
+        if (!_locConf._locationPath.empty()) { // 4
             // index page 세팅 및 error page 세팅
             _indexPage = getIndexPage(data, _serverConf.index, _locConf.index);
             _errorPage = getErrorPage(data, _serverConf.error_page, _locConf.error_page);

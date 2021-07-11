@@ -42,9 +42,6 @@ class HTTPResponseHandler : public HTTPHandler {
         } Phase;
         virtual HTTPResponseHandler::Phase process(HTTPData& data, long bufferSize);
 
-        void responseNotFound(const HTTPData& data);
-        void responseAutoIndex(const HTTPData& data);
-        void responseTest(const HTTPData& data);
 
         int getCGIfd(void);
     private:
@@ -58,6 +55,9 @@ class HTTPResponseHandler : public HTTPHandler {
         void setHTMLHeader(const HTTPData& data);
         void showResponseInformation(HTTPData& data);
         HTTPResponseHandler::Phase setError(HTTPData& data);
+
+        void setCGIConfigMap();
+        NginxConfig::LocationBlock getMatchingLocationConfiguration(const HTTPData& data);
  
 
     private:
