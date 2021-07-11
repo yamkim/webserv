@@ -22,7 +22,7 @@ class HTTPHandler {
         int _connectionFd;
         std::string _headerString;
         NginxConfig::ServerBlock _serverConf;
-        NginxConfig _nginxConf;
+        NginxConfig::NginxConfig _nginxConf;
         class Buffer {
             private:
                 int _bufferSize;
@@ -35,7 +35,7 @@ class HTTPHandler {
         };
 
     public:
-        HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf);
+        HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig::NginxConfig& nginxConf);
         virtual ~HTTPHandler();
 
         void setGeneralHeader(std::string status);

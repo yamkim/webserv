@@ -22,7 +22,7 @@ class NginxParser : public Parser {
 
         // 매개변수 pos 이후로 브라켓 세트를 만듭니다.
         // 열린 브라켓인지 닫힌 브라켓인지, 각 브라켓의 index는 무엇인지를 함께 담습니다.
-        void findBlockSet(const std::string& buf, std::stack<int>st, std::vector<std::pair<std::string, std::size_t> >& vec, std::size_t& pos) {
+        static void findBlockSet(const std::string& buf, std::stack<int>st, std::vector<std::pair<std::string, std::size_t> >& vec, std::size_t& pos) {
             while (!(buf[pos] == '\0' || buf[pos] == '{' || buf[pos] == '}')) {
                 ++pos;
             }
@@ -44,7 +44,7 @@ class NginxParser : public Parser {
 
         // 매개변수 pos 이후로 가장 큰 블록을 읽어옵니다.
         // 내부에 블록이 중첩되어 있더라도 이들을 포함한 큰 블록을 읽어옵니다.
-        std::string getBlockContent(const std::string& buf, std::size_t& pos) {
+        static std::string getBlockContent(const std::string& buf, std::size_t& pos) {
             std::vector<std::pair<std::string, std::size_t> > blockSet;
             std::stack<int> st;
 
@@ -60,11 +60,5 @@ class NginxParser : public Parser {
             return buf.substr(blockBeg + 1, blockEnd - blockBeg - 1);
         }
 
-        void setTypeMap(std::map<std::string, std::string>& typeMap, std::string& type, std::string& value) {
-            std::vector<std::string> tmpVec = getSplitBySpace(value);
-            for (std::size_t i = 0; i < tmpVec.size(); ++i) {
-                typeMap[tmpVec[i]] = type;
-            }
-        }
 };
 #endif

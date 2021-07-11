@@ -1,6 +1,6 @@
 #include "ConnectionSocket.hpp"
 
-ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig& nginxConf) : Socket(-1, serverConf), _nginxConf(nginxConf) {
+ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::NginxConfig& nginxConf) : Socket(-1, serverConf), _nginxConf(nginxConf) {
     struct sockaddr_in myAddr;
     this->_socket = accept(listeningSocketFd, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
     if (this->_socket == -1) {

@@ -11,7 +11,7 @@
 
 class HTTPRequestHandler : public HTTPHandler {
     public:
-        HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig& nginxConf);
+        HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig::NginxConfig& nginxConf);
         virtual ~HTTPRequestHandler();
         typedef enum e_Phase {PARSE_STARTLINE, PARSE_HEADER, PARSE_BODY, FINISH} Phase;
         virtual HTTPRequestHandler::Phase process(HTTPData& data);

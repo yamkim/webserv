@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     // - 매개변수의 개수
     // - 뒤에서, 사용하지 않는 변수들을 어떻게 대체할 것인지
     try {
-        NginxConfig nginxConfig(confPath);
+        NginxConfig::NginxConfig nginxConfig(confPath);
         std::cout << "[DEBUG] nginxConfig types: " << nginxConfig._http.types.typeMap["html"] << std::endl;
         std::cout << "[DEBUG] nginxConfig charset: " << nginxConfig._http.dirMap["charset"] << std::endl;
         std::cout << "[DEBUG] nginxConfig server[listen]: " << nginxConfig._http.server[0].dirMap["listen"] << std::endl;

@@ -16,7 +16,7 @@ class HTTPResponseHandler : public HTTPHandler {
     private:
         HTTPResponseHandler();
     public:
-        HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig& nginxConf);
+        HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::NginxConfig& nginxConf);
         virtual ~HTTPResponseHandler();
 
         typedef enum e_Phase {

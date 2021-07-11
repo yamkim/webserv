@@ -13,10 +13,10 @@ class ConnectionSocket : public Socket {
         HTTPRequestHandler* _req;
         HTTPResponseHandler* _res;
         HTTPData _data;
-        NginxConfig _nginxConf;
+        NginxConfig::NginxConfig _nginxConf;
         long _dynamicBufferSize;
     public:
-        ConnectionSocket(int listeningSocket, const NginxConfig::ServerBlock& conf, const NginxConfig& nginxConfig);
+        ConnectionSocket(int listeningSocket, const NginxConfig::ServerBlock& conf, const NginxConfig::NginxConfig& nginxConfig);
         virtual ~ConnectionSocket();
         HTTPRequestHandler::Phase HTTPRequestProcess(void);
         HTTPResponseHandler::Phase HTTPResponseProcess(void);

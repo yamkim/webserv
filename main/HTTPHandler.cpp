@@ -15,7 +15,7 @@ char* HTTPHandler::Buffer::operator*(void) {
     return (_buffer);
 }
 
-HTTPHandler::HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig& nginxConf) : _serverConf(serverConf), _nginxConf(nginxConf) {
+HTTPHandler::HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig::NginxConfig& nginxConf) : _serverConf(serverConf), _nginxConf(nginxConf) {
 	_connectionFd = connectionFd;
 	_headerString = std::string("");
 }
