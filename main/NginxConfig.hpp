@@ -16,53 +16,87 @@
 // 4. 
 class NginxConfig : public NginxParser {
     public:
-        struct NginxBlock {
-            std::string rawData;
-            std::map<std::string, std::string> dirMap;
+        class NginxBlock {
+            public:
+                std::string rawData;
+                std::map<std::string, std::string> dirMap;
 
-            NginxBlock() {};
-            NginxBlock(std::string rawData) : rawData(rawData) {};
+                NginxBlock() {};
+                NginxBlock(std::string rawData) : rawData(rawData) {};
         };
-        struct NoneBlock : NginxBlock {
-            std::vector<std::string> dirCase;
-            std::string user;
-            std::string worker_processes;
+        class NoneBlock : public NginxBlock {
+            public:
+                std::vector<std::string> dirCase;
+                std::string user;
+                std::string worker_processes;
         };
-        struct TypesBlock : NginxBlock {
-            std::map<std::string, std::string> typeMap;
-            TypesBlock() {}
-            TypesBlock(std::string rawData) : NginxBlock(rawData) {}
-        };
-        struct LocationBlock : NginxBlock {
-            std::vector<std::string> dirCase;
-            // FIXME: yekim: cgi 파라미터 관련 요소 (cgi_pass) 추가
-            std::string locationPath;
-            std::vector<std::string> try_files;
-            std::vector<std::string> _return;
-            std::vector<std::string> deny;
-            std::vector<std::string> index;
-            std::vector<std::string> error_page;
-            LocationBlock() {}
-            LocationBlock(std::string rawData) : NginxBlock(rawData) {}
-        };
-        struct ServerBlock : NginxBlock{
-            std::vector<std::string> dirCase;
-            std::vector<std::string> index;
-            std::vector<std::string> error_page;
-            std::vector<struct LocationBlock> location;
 
-            ServerBlock() {}
-            ServerBlock(std::string rawData) : NginxBlock(rawData) {}
+        class TypesBlock : public NginxBlock {
+            public:
+                std::map<std::string, std::string> typeMap;
+                TypesBlock() {}
+                TypesBlock(std::string rawData) : NginxBlock(rawData) {
+                    setTypesBlock();
+                }
+
+            void setTypeMap(std::map<std::string, std::string>& typeMap, std::string& type, std::string& value) {
+                std::vector<std::string> tmpVec = getSplitBySpace(value);
+                for (std::size_t i = 0; i < tmpVec.size(); ++i) {
+                    typeMap[tmpVec[i]] = type;
+                }
+            }
+            void setTypesBlock() {
+                std::string buf = this->rawData;
+                std::size_t pos = 0;
+                // TODO: getIdentifier를 세분화해서 getLine하고 나누어야할듯.
+                while (pos < buf.size()) {
+                    std::string tmpLine = getIdentifier(buf, pos, "\n", false);
+                    if (Parser::sideSpaceTrim(tmpLine).empty()) {
+                        continue ;
+                    }
+                    std::size_t tmpPos = 0;
+                    std::string tmpDir = getIdentifier(tmpLine, tmpPos, " ", true);
+                    // ";" 이전까지 파싱하고, " "로 구분하므로, 마지막 요소는 그냥 사용
+                    std::string value = Parser::sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";", true));
+                    std::cout << "[DEBUG] value in tmpLine: [" << value << "]" << std::endl;
+                    setTypeMap(this->typeMap, tmpDir, value);
+                }
+            }
         };
-        struct HttpBlock : NginxBlock{
-            std::vector<std::string> dirCase;
-            std::vector<struct ServerBlock> server;
-            struct TypesBlock types;
+
+        class LocationBlock : public NginxBlock {
+            public:
+                std::vector<std::string> dirCase;
+                // FIXME: yekim: cgi 파라미터 관련 요소 (cgi_pass) 추가
+                std::string locationPath;
+                std::vector<std::string> try_files;
+                std::vector<std::string> _return;
+                std::vector<std::string> deny;
+                std::vector<std::string> index;
+                std::vector<std::string> error_page;
+                LocationBlock() {}
+                LocationBlock(std::string rawData) : NginxBlock(rawData) {}
+        };
+        class ServerBlock : public NginxBlock{
+            public:
+                std::vector<std::string> dirCase;
+                std::vector<std::string> index;
+                std::vector<std::string> error_page;
+                std::vector<class LocationBlock> location;
+
+                ServerBlock() {}
+                ServerBlock(std::string rawData) : NginxBlock(rawData) {}
+        };
+        class HttpBlock : public NginxBlock{
+            public:
+                std::vector<std::string> dirCase;
+                std::vector<class ServerBlock> server;
+                class TypesBlock types;
         };
 
     public:
-        struct NoneBlock _none;
-        struct HttpBlock _http;
+        class NoneBlock _none;
+        class HttpBlock _http;
 
         void checkValidErrorPage(const std::vector<std::string>& errorPage) {
             std::vector<std::string>::const_iterator iter;
@@ -146,26 +180,9 @@ class NginxConfig : public NginxParser {
 
     public:
 
-        struct TypesBlock setTypesBlock(struct TypesBlock& block) {
-            std::string buf = block.rawData;
-            std::size_t pos = 0;
-            // TODO: getIdentifier를 세분화해서 getLine하고 나누어야할듯.
-            while (pos < buf.size()) {
-                std::string tmpLine = getIdentifier(buf, pos, "\n", false);
-                if (sideSpaceTrim(tmpLine).empty()) {
-                    continue ;
-                }
-                std::size_t tmpPos = 0;
-                std::string tmpDir = getIdentifier(tmpLine, tmpPos, " ", true);
-                // ";" 이전까지 파싱하고, " "로 구분하므로, 마지막 요소는 그냥 사용
-                std::string value = sideSpaceTrim(getIdentifier(tmpLine, tmpPos, ";", true));
-                std::cout << "[DEBUG] value in tmpLine: [" << value << "]" << std::endl;
-                setTypeMap(block.typeMap, tmpDir, value);
-            }
-            return block;
-        }
+        
 
-        void setLocationBlock(struct LocationBlock& block) {
+        void setLocationBlock(class LocationBlock& block) {
             block.dirCase.push_back("return");
             block.dirCase.push_back("try_files");
             block.dirCase.push_back("deny");
@@ -212,7 +229,7 @@ class NginxConfig : public NginxParser {
             }
         }
 
-        void setServerBlock(struct ServerBlock& block) {
+        void setServerBlock(class ServerBlock& block) {
             block.dirCase.push_back("listen");
             block.dirCase.push_back("server_name");
             block.dirCase.push_back("root");
@@ -270,7 +287,7 @@ class NginxConfig : public NginxParser {
         // 5. tmpDir이 그냥 directive인 경우:
         //    - ";" 앞의 요소를 가지고 옵니다.
         //    - tmpDir을 구할 때 tmpPos가 이동해있으므로 directive 뒤의 " "와 ";" 사이의 값을 읽어오는 셈입니다.
-        void setHttpBlock(struct HttpBlock& block) {
+        void setHttpBlock(class HttpBlock& block) {
             block.dirCase.push_back("charset");
             block.dirCase.push_back("default_type");
             block.dirCase.push_back("keepalive_timeout");
@@ -292,7 +309,7 @@ class NginxConfig : public NginxParser {
                     throw std::string("Error: " + tmpDir + " is not in block[server] list.");
                 } else if (tmpDir == "types") {
                     TypesBlock tmpTypesBlock(getBlockContent(block.rawData, blockPos));
-                    block.types = setTypesBlock(tmpTypesBlock);
+                    block.types = tmpTypesBlock;
                     pos = blockPos;
                 } else if (tmpDir == "server") {
                     ServerBlock tmpServerBlock(getBlockContent(block.rawData, blockPos));
