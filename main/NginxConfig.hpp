@@ -10,6 +10,30 @@ class NginxBlock {
 
         NginxBlock() {};
         NginxBlock(std::string rawData) : rawData(rawData) {};
+
+        void checkValidNumberValue(NginxBlock& block, std::string directive) {
+            if (!block.dirMap[directive].empty() && !Parser::isNumber(block.dirMap[directive])) {
+                throw std::string("Error: invalid value in " + directive + " directive.");
+            }
+        }
+
+        void checkValidErrorPage(const std::vector<std::string>& errorPage) {
+            std::vector<std::string>::const_iterator iter;
+            if (!errorPage.empty()) {
+                for (iter = errorPage.begin(); iter != errorPage.end() - 1; ++iter) {
+                    if (!Parser::isNumber(*iter)) {
+                        throw std::string("Error: invalid value " + *iter + " in error_page directive.");
+                    }
+                }
+            }
+        }
+
+        void checkAutoindexValue(NginxBlock& block) {
+            if (!block.dirMap["autoindex"].empty() && !(block.dirMap["autoindex"] == "on"
+                  || this->dirMap["autoindex"] == "off")) {
+                throw std::string("Error: invalid argument for autoindex directive.");
+            }
+        }
 };
 
 class NoneBlock : public NginxBlock {
@@ -27,29 +51,28 @@ class TypesBlock : public NginxBlock {
             setTypesBlock();
         }
 
-    void setTypeMap(std::map<std::string, std::string>& typeMap, std::string& type, std::string& value) {
-        std::vector<std::string> tmpVec = Parser::getSplitBySpace(value);
-        for (std::size_t i = 0; i < tmpVec.size(); ++i) {
-            typeMap[tmpVec[i]] = type;
-        }
-    }
-    void setTypesBlock() {
-        std::string buf = this->rawData;
-        std::size_t pos = 0;
-        // TODO: getIdentifier를 세분화해서 getLine하고 나누어야할듯.
-        while (pos < buf.size()) {
-            std::string tmpLine = Parser::getIdentifier(buf, pos, "\n", false);
-            if (Parser::sideSpaceTrim(tmpLine).empty()) {
-                continue ;
+        void setTypeMap(std::map<std::string, std::string>& typeMap, std::string& type, std::string& value) {
+            std::vector<std::string> tmpVec = Parser::getSplitBySpace(value);
+            for (std::size_t i = 0; i < tmpVec.size(); ++i) {
+                typeMap[tmpVec[i]] = type;
             }
-            std::size_t tmpPos = 0;
-            std::string tmpDir = Parser::getIdentifier(tmpLine, tmpPos, " ", true);
-            // ";" 이전까지 파싱하고, " "로 구분하므로, 마지막 요소는 그냥 사용
-            std::string value = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, ";", true));
-            std::cout << "[DEBUG] value in tmpLine: [" << value << "]" << std::endl;
-            setTypeMap(this->typeMap, tmpDir, value);
         }
-    }
+
+        void setTypesBlock() {
+            std::string buf = this->rawData;
+            std::size_t pos = 0;
+            while (pos < buf.size()) {
+                std::string tmpLine = Parser::getIdentifier(buf, pos, "\n", false);
+                if (Parser::sideSpaceTrim(tmpLine).empty()) {
+                    continue ;
+                }
+                std::size_t tmpPos = 0;
+                std::string tmpDir = Parser::getIdentifier(tmpLine, tmpPos, " ", true);
+                std::string value = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, ";", true));
+                // std::cout << "[DEBUG] value in tmpLine: [" << value << "]" << std::endl;
+                setTypeMap(this->typeMap, tmpDir, value);
+            }
+        }
 };
 
 class LocationBlock : public NginxBlock {
@@ -69,13 +92,31 @@ class LocationBlock : public NginxBlock {
         }
 
         void setDirectiveTypes() {
+            this->dirCase.push_back("root");
+            this->dirCase.push_back("index");
+            this->dirCase.push_back("autoindex");
+            this->dirCase.push_back("error_page");
+
             this->dirCase.push_back("return");
             this->dirCase.push_back("try_files");
             this->dirCase.push_back("deny");
-            this->dirCase.push_back("autoindex");
-            this->dirCase.push_back("index");
             this->dirCase.push_back("error_page");
             this->dirCase.push_back("cgi_pass");
+        }
+
+        void checkLocationBlock() {
+            checkValidErrorPage(this->error_page);
+            checkAutoindexValue(*this);
+            if (this->locationPath.empty()) {
+                throw std::string("Error: location block doesn't have locationPath.");
+            }
+            if (!this->_return.empty()) {
+                if (this->_return.size() != 2) {
+                    throw std::string("Error: invalid number of arguments in location[return].");
+                } else if (!Parser::isNumber(this->_return[0])) {
+                    throw std::string("Error: invalid status code in location[return] directive.");
+                }
+            }
         }
 
         void setBlock() {
@@ -111,7 +152,6 @@ class LocationBlock : public NginxBlock {
                 }
             }
         }
-
 };
 class ServerBlock : public NginxBlock{
     public:
@@ -127,13 +167,14 @@ class ServerBlock : public NginxBlock{
         }
 
         void setDirectiveTypes() {
-            this->dirCase.push_back("listen");
-            this->dirCase.push_back("server_name");
             this->dirCase.push_back("root");
             this->dirCase.push_back("index");
-            this->dirCase.push_back("location");
             this->dirCase.push_back("autoindex");
             this->dirCase.push_back("error_page");
+
+            this->dirCase.push_back("listen");
+            this->dirCase.push_back("server_name");
+            this->dirCase.push_back("location");
             this->dirCase.push_back("client_max_body_size");
             this->dirCase.push_back("keepalive_timeout");
         }
@@ -142,10 +183,9 @@ class ServerBlock : public NginxBlock{
             std::string buf = this->rawData;
             std::size_t pos = 0;
             std::size_t blockPos = 0;
-            std::cout << "[DEBUG] rawData: " << this->rawData << std::endl;
+            // std::cout << "[DEBUG] rawData: " << this->rawData << std::endl;
             while (buf[pos]) {
                 std::string tmpLine = Parser::getIdentifier(buf, pos, "\n", false);
-                std::cout << "[DEBUG] tmpLine: [" << tmpLine << "]" << std::endl;
                 if (Parser::sideSpaceTrim(tmpLine).empty()) {
                     continue ;
                 }
@@ -175,6 +215,15 @@ class ServerBlock : public NginxBlock{
                 }
             }
         }
+
+        void checkServerBlock () {
+            checkValidNumberValue(*this, "listen");
+            checkValidNumberValue(*this, "client_max_body_size");
+            checkValidNumberValue(*this, "keepalive_timeout");
+            checkValidErrorPage(this->error_page);
+            checkAutoindexValue(*this);
+        }
+
 };
 class HttpBlock : public NginxBlock{
     public:
@@ -187,6 +236,7 @@ class HttpBlock : public NginxBlock{
             setDirectiveTypes();
             setBlock();
         }
+
         void setDirectiveTypes() {
             this->dirCase.push_back("charset");
             this->dirCase.push_back("default_type");
@@ -214,7 +264,7 @@ class HttpBlock : public NginxBlock{
                     continue ;
                 }
                 std::size_t tmpPos = 0;
-                std::cout << "[DEBUG] tmpLine: " << tmpLine << std::endl;
+                // std::cout << "[DEBUG] tmpLine: " << tmpLine << std::endl;
                 std::string tmpDir = Parser::getIdentifier(tmpLine, tmpPos, " ", true);
                 if (find(this->dirCase.begin(), this->dirCase.end(), tmpDir) == this->dirCase.end()) {
                     throw std::string("Error: " + tmpDir + " is not in block[server] list.");
@@ -256,53 +306,6 @@ class NginxConfig : public NginxParser {
         class NoneBlock _none;
         class HttpBlock _http;
 
-        void checkValidErrorPage(const std::vector<std::string>& errorPage) {
-            std::vector<std::string>::const_iterator iter;
-            if (!errorPage.empty()) {
-                for (iter = errorPage.begin(); iter != errorPage.end() - 1; ++iter) {
-                    if (!isNumber(*iter)) {
-                        throw std::string("Error: invalid value " + *iter + " in error_page directive.");
-                    }
-                }
-            }
-        }
-
-        void checkValidNumberValue(NginxBlock& block, std::string directive) {
-            if (!block.dirMap[directive].empty() && !isNumber(block.dirMap[directive])) {
-                throw std::string("Error: invalid value in " + directive + " directive.");
-            }
-        }
-
-        void checkLocationBlock(LocationBlock& block) {
-            if (block.locationPath.empty()) {
-                throw std::string("Error: location block doesn't have locationPath.");
-            }
-            if (!block.error_page.empty()) {
-                checkValidErrorPage(block.error_page);
-            }
-            if (!block._return.empty()) {
-                if (block._return.size() != 2) {
-                    throw std::string("Error: invalid number of arguments in location[return].");
-                } else if (!isNumber(block._return[0])) {
-                    throw std::string("Error: invalid status code in location[return] directive.");
-                }
-            }
-        }
-
-        void checkServerBlock (ServerBlock& block) {
-            checkValidNumberValue(block, "listen");
-            checkValidNumberValue(block, "client_max_body_size");
-            checkValidNumberValue(block, "keepalive_timeout");
-            checkValidErrorPage(block.error_page);
-            if (!block.dirMap["autoindex"].empty() && !(block.dirMap["autoindex"] == "on"
-                  || block.dirMap["autoindex"] == "off")) {
-                throw std::string("Error: invalid argument for autoindex directive.");
-            }
-            for (std::size_t i = 0; i < block.location.size(); ++i) {
-                checkLocationBlock(block.location[i]);
-            }
-        }
-
         NginxConfig(const std::string& fileName) : NginxParser(fileName) {
             std::size_t pos = 0;
             std::string identifier;
@@ -313,8 +316,6 @@ class NginxConfig : public NginxParser {
                     continue ;
                 }
 
-                // 일단 한 번 쪼개보고, identifer가 블록인지 블록이 아닌지 판단
-                // 블록이면, 블록 형태의 structure, 아니면 none 블록 형태의 structure로
                 std::size_t tmpPos = 0;
                 std::string tmpDir = getIdentifier(tmpLine, tmpPos, " ", true);
                 std::size_t blockPos = 0;
@@ -333,13 +334,7 @@ class NginxConfig : public NginxParser {
                     }
                 }
             }
-            checkValidNumberValue(_none, "keepalive_timeout");
-            for (std::size_t i = 0; i < _http.server.size(); ++i) {
-                checkServerBlock(_http.server[i]);
-            }
         }
-
-    public:
 };
 }
 #endif

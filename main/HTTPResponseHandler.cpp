@@ -184,6 +184,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::setError(HTTPData& data) {
 
 void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
     std::cout << "Response Information=============================" << std::endl;
+    std::cout << "# root + Request URL: " << data._root + data._reqURI << std::endl;
     std::cout << "# Request URL: " << data._reqURI << std::endl;
     std::cout << "# Status Code: " << data._statusCode << std::endl;
     std::cout << "# Absolute File Path: " << data._resAbsoluteFilePath << std::endl;
