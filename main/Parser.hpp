@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include "ErrorHandler.hpp"
 
 class Parser {
     protected:
@@ -19,8 +20,9 @@ class Parser {
             std::ifstream readFile;
 
             readFile.open(this->_fileName);
-            if (!readFile.is_open())
-                throw std::string("Error: File open error.");
+            if (!readFile.is_open()){
+                throw std::string("Error: Configuration open error.");
+            }
             while (!readFile.eof()) {
                 std::string tmp;
                 getline(readFile, tmp);
@@ -30,7 +32,7 @@ class Parser {
             readFile.close();
 
             if (!isValidBlockSet(this->_rawData)) {
-                throw std::string("Error: bracket pair is not valid.");
+                throw std::string("Error: bracket pair is not matched.");
             }
         }
         virtual ~Parser(){};
@@ -41,6 +43,7 @@ class Parser {
 
         bool isValidBlockSet (const std::string& buf) {
             std::size_t pos = 0;
+
             int leftBracketNum = 0;
             int rightBracketNum = 0;
 
@@ -57,7 +60,7 @@ class Parser {
 
         std::string leftSpaceTrim(std::string s) {
             const std::string drop = " ";
-        return s.erase(0, s.find_first_not_of(drop));
+            return s.erase(0, s.find_first_not_of(drop));
         }
 
         std::string rightSpaceTrim(std::string s) {
@@ -65,7 +68,7 @@ class Parser {
             return s.erase(s.find_last_not_of(drop)+1);
         }
 
-        std::string sideSpaceTrim(std::string s) {
+        static std::string sideSpaceTrim(std::string s) {
             const std::string drop = " ";
             std::string ret = s.erase(s.find_last_not_of(drop)+1);
             ret = ret.erase(0, ret.find_first_not_of(drop));
@@ -84,9 +87,17 @@ class Parser {
 
         // 매개변수 delimiter의 요소라면, 이를 기준으로 split 후에 첫 단어만 가지고 옵니다.
         // [          listen     5000;]이고, delimit이 " "라면, listen만 가지고 옵니다.
-        static std::string	getIdentifier(const std::string str, std::size_t& endPos, std::string delimiter)
+        // 찾으려는 delimiter가 없는 경우, error를 반환합니다.
+        // ex) text/css    css => ';'이 없는 경우로, str
+        // 문자열에 delimiter가 있어야하는 경우 checker를 true로 하여, 해당하지 않는 경우 거릅니다.
+        static std::string	getIdentifier(const std::string str, std::size_t& endPos, std::string delimiter, bool checker)
         {
             size_t wordSize = 0;
+
+            if (checker && str.find(delimiter) == std::string::npos) {
+                std::cout << "[DEBUG] String: " << str << std::endl;
+                throw std::string("Error: There is no delimiter[" + delimiter + "]. Parser::getIdentifier");
+            }
 
             while ((str[endPos] != '\0') && isCharInString(delimiter, str[endPos])) {
                 ++endPos;
@@ -96,6 +107,7 @@ class Parser {
                 ++wordSize;
                 ++endPos;
             }
+
             return (str.substr(begPos, wordSize));
         }
 
@@ -103,8 +115,10 @@ class Parser {
             std::vector<std::string> ret;
 
             std::size_t pos = 0;
-            while (str[pos]) {
-                std::string tmp = getIdentifier(str, pos, " \r\n");
+            // std::cout << "[DEBUG] tmpLine with space: " << str << std::endl; 
+            while (pos < str.size()) {
+                // std::string tmp = getIdentifier(str, pos, " \r\n");
+                std::string tmp = getIdentifier(str, pos, " ", false);
                 if (tmp.empty()) {
                     break ;
                 }

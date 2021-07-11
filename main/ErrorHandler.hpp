@@ -17,6 +17,7 @@ class ErrorHandler : public std::exception {
 		ErrorHandler();
 		ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode);
 		ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode, const char* at);
+		// ErrorHandler(const std::string& errmsg, ErrorHandler::ErrCode errcode, const char* at);
 		virtual ~ErrorHandler() throw();
 		ErrorHandler::ErrCode getErrorcode(void) const;
 		static char* getTime(void);

@@ -7,8 +7,6 @@ class NginxParser : public Parser {
     private:
 
     public:
-        // NginxParser(){
-        // }
         NginxParser(const std::string& fileName) : Parser(fileName) {
         }
 
@@ -28,7 +26,6 @@ class NginxParser : public Parser {
             while (!(buf[pos] == '\0' || buf[pos] == '{' || buf[pos] == '}')) {
                 ++pos;
             }
-            // std::cout << "buf[pos]: " << buf[pos] << std::endl;
             if (buf[pos] == '{') {
                 st.push(1);
                 vec.push_back(std::make_pair("{", pos));
@@ -54,7 +51,7 @@ class NginxParser : public Parser {
             // std::cout << "buf[getBlockContent]: " << buf << std::endl;
             findBlockSet(buf, st, blockSet, pos);
             if (blockSet.empty()) {
-                throw std::string("Error: blockSet is empty!");
+                throw std::string("Error: bracket is empty. NginxParser::getBlockContent");
             }
             std::size_t blockBeg = blockSet.begin()->second;
             std::size_t blockEnd = (blockSet.end() - 1)->second;
@@ -65,7 +62,7 @@ class NginxParser : public Parser {
 
         void setTypeMap(std::map<std::string, std::string>& typeMap, std::string& type, std::string& value) {
             std::vector<std::string> tmpVec = getSplitBySpace(value);
-            for (int i = 0; i < (int)tmpVec.size(); ++i) {
+            for (std::size_t i = 0; i < tmpVec.size(); ++i) {
                 typeMap[tmpVec[i]] = type;
             }
         }

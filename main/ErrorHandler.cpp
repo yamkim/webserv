@@ -6,6 +6,8 @@ ErrorHandler::ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode) : 
 
 ErrorHandler::ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode, const char* at) : _errmsg(errmsg), _at(at), _errcode(errcode) {}
 
+// ErrorHandler::ErrorHandler(const std::string& errmsg, ErrorHandler::ErrCode errcode, const char* at) : _errmsg(errmsg.c_str()), _at(at), _errcode(errcode) {};
+
 ErrorHandler::~ErrorHandler() throw() {}
 
 ErrorHandler::ErrCode ErrorHandler::getErrorcode(void) const {
