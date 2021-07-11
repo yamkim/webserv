@@ -44,15 +44,10 @@ void ListeningSocket::fcntlSocket() {
 }
 
 int ListeningSocket::runSocket() {
-    try {
-        this->setSocket();
-        this->setSocketAddress();
-        this->bindSocket();
-        this->listenSocket();
-        this->fcntlSocket();
-    } catch (const std::exception &error) {
-        std::cout << error.what() << std::endl;
-        return (1);
-    }
+    this->setSocket();
+    this->setSocketAddress();
+    this->bindSocket();
+    this->listenSocket();
+    this->fcntlSocket();
     return (0);
 }

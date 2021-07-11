@@ -34,7 +34,7 @@ void HTTPHandler::setGeneralHeader(std::string status) {
     _headerString += "\r\n";
 
     _headers["Date"] = std::string(timeBuffer);
-    _headers["Server"] = std::string("webserv/0.1");
+    _headers["Server"] = std::string("webserv/") + std::string(WEBSERV_VERSION);
     _headers["Connection"] = std::string("close");
 }
 
@@ -53,12 +53,12 @@ std::pair<std::string, std::string> HTTPHandler::getHTTPHeader(const std::string
     std::pair<std::string, std::string> pair;
     pair.first = Parser::getIdentifier(str, endPos, ": ", false);
     if (pair.first.empty()) {
-        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPHandler::getHTTPHeader");
+        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::NORMAL, "HTTPHandler::getHTTPHeader");
     }
     endPos += 2;
     pair.second = Parser::getIdentifier(str, endPos, "\r\n", false);
     if (pair.second.empty()) {
-        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::ALERT, "HTTPHandler::getHTTPHeader");
+        throw ErrorHandler("Error: HTTP Header error.", ErrorHandler::NORMAL, "HTTPHandler::getHTTPHeader");
     }
     endPos += 2;
     return (pair);

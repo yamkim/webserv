@@ -10,6 +10,10 @@
 #include "Utils.hpp"
 #include "NginxConfig.hpp"
 
+#ifndef WEBSERV_VERSION
+#define WEBSERV_VERSION "0.0.0"
+#endif
+
 #define REQUEST_BUFFER_SIZE 100
 
 class HTTPHandler {

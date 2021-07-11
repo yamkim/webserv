@@ -1,7 +1,7 @@
 #include "HTMLBody.hpp"
 
 std::string HTMLBody::getBasicHTMLBody(const std::string& statusMsg) {
-    std::string serverName = "webserv/0.0.1";
+    std::string serverName = std::string("webserv/") + std::string(WEBSERV_VERSION);
     std::stringstream ret;
     ret << "<html>";
     ret << "<head><title>" << statusMsg << "</title></head>";
@@ -68,10 +68,13 @@ std::string HTMLBody::getStaticHTML(const HTTPData& data) {
         statusMsg = "403 Forbidden";
         ret = getBasicHTMLBody(statusMsg);
     } else if (data._statusCode == 400) {
-        statusMsg = "400 Forbidden";
+        statusMsg = "400 Bad Request";
         ret = getBasicHTMLBody(statusMsg);
     } else if (data._statusCode == 413) {
         statusMsg = "413 Request Entity Too Large";
+        ret = getBasicHTMLBody(statusMsg);
+    } else if (data._statusCode == 500) {
+        statusMsg = "500 Internal Server Error";
         ret = getBasicHTMLBody(statusMsg);
     } else if (data._statusCode == 200) {
         ret = getAutoIndexBody(data._root, data._URIFilePath);
@@ -79,6 +82,8 @@ std::string HTMLBody::getStaticHTML(const HTTPData& data) {
         ret = getRedirectBody(data);
     } else if (data._statusCode == 302) {
         ret = getRedirectBody(data);
+    } else {
+        throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTMLBody::getStaticHTML");
     }
     return (ret);
 }

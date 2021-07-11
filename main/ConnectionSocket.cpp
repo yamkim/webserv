@@ -25,8 +25,18 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     try {
         phase = _req->process(_data);
     } catch (const std::exception& error) {
-        std::cerr << error.what() << "\n";
+        /** NOTE
+         * 파싱 에러 (데이터는 받았지만 클라이언트가 이상한 데이터를 줄 때) : 400 (error level : NORMAL)
+         * 내부 에러 (내부적인 변수 할당 실패 등) : 500 (error level : ALERT / CRITICAL)
+         */
+        ErrorHandler *err = dynamic_cast<ErrorHandler *>(const_cast<std::exception*>(&error));
+        std::cerr << error.what() << std::endl;
         phase = HTTPRequestHandler::FINISH;
+        if (err != NULL && err->getErrorcode() == ErrorHandler::NORMAL) {
+            _data._statusCode = 400;
+        } else {
+            _data._statusCode = 500;
+        }
     }
     if (phase == HTTPRequestHandler::FINISH) {
         _res = new HTTPResponseHandler(_socket, _serverConf, _nginxConf);
@@ -35,14 +45,14 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
 }
 
 void ConnectionSocket::setConnectionData(struct sockaddr_in _serverSocketAddr, struct sockaddr_in _clientSocketAddr) {
-    std::stringstream portString;
+    std::stringstream clientPortString;
+    std::stringstream hostPortString;
     _data._clientIP = std::string(inet_ntoa(_serverSocketAddr.sin_addr));
-    portString << ntohs(_serverSocketAddr.sin_port);
-    _data._clientPort = std::string(portString.str());
+    clientPortString << ntohs(_serverSocketAddr.sin_port);
+    _data._clientPort = std::string(clientPortString.str());
     _data._hostIP = std::string(inet_ntoa(_clientSocketAddr.sin_addr));
-    portString.clear();
-    portString << ntohs(_clientSocketAddr.sin_port);
-    _data._hostPort = std::string(portString.str());
+    hostPortString << ntohs(_clientSocketAddr.sin_port);
+    _data._hostPort = std::string(hostPortString.str());
 }
 
 HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {

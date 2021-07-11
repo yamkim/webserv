@@ -1,4 +1,5 @@
 TARGET = webserv
+WEBSERV_VERSION = 0.0.3
 FILES = $(shell ls main | grep .cpp)
 #FILES = main.cpp
 #FILES += CGISession.cpp
@@ -24,6 +25,7 @@ CPP_CODES = $(addprefix $(SOURCE_PATH), $(FILES))
 OBJS = $(subst $(SOURCE_PATH), $(OBJ_PATH), ${CPP_CODES:%.cpp=%.o})
 COMPILER = clang++
 CFLAGS = -Wall -Wextra -Werror -g3 -fsanitize=address
+CFLAGS += -DWEBSERV_VERSION=\"$(WEBSERV_VERSION)\"
 
 GREEN = \033[0;32m
 RED = \033[0;31m

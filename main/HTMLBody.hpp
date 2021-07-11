@@ -6,6 +6,11 @@
 #include <iomanip>
 #include "HTTPData.hpp"
 #include "FileController.hpp"
+#include "ErrorHandler.hpp"
+
+#ifndef WEBSERV_VERSION
+#define WEBSERV_VERSION "0.0.0"
+#endif
 
 class HTMLBody {
     public:
