@@ -71,12 +71,14 @@ bool HTTPRequestHandler::getStartLine(HTTPData& data) {
         throw ErrorHandler("Error: invalid HTTP Header.", ErrorHandler::NORMAL, "HTTPRequestHandler::getStartLine");
     }
     if (   tmp[0] == std::string("GET")
+        || tmp[0] == std::string("HEAD")
         || tmp[0] == std::string("POST")
         || tmp[0] == std::string("PUT")
         || tmp[0] == std::string("DELETE")
         || tmp[2] != std::string("HTTP/1.1")) {
         data._reqMethod = tmp[0];
         data._reqURI = tmp[1];
+        data._originURI = tmp[1];
         data.setURIelements();
     } else {
         throw ErrorHandler("Error: invalid HTTP Header.", ErrorHandler::NORMAL, "HTTPRequestHandler::process");

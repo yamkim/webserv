@@ -159,31 +159,22 @@ void HTTPResponseHandler::setCGIConfigMap() {
 
 NginxConfig::LocationBlock HTTPResponseHandler::getMatchingLocationConfiguration(const HTTPData& data) {
     NginxConfig::LocationBlock ret;
-    bool isLocFlag = false;
-    std::size_t matchLen = 0; 
+    std::string URI = data._URIFilePath;
+    int position = -1;
+    std::size_t maxLength = 0;
     for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
-        std::string tmpLocPath = _serverConf.location[i]._locationPath;
-        std::size_t j = 0; // 1인 경우는 / 일 때이므로
-        for (; j < data._URIFilePath.size(); ++j) {
-            if (tmpLocPath[j] != data._URIFilePath[j]) {
-                break ;
-            }
-        }
-        if (j == 1) { 
-            if (tmpLocPath == "/") { // 하나만 일치하는 경우, tmpLocPath가 "/"가 아니면 일치하는 location 블록이 없는 것.
-                isLocFlag = true;
-                matchLen = j;
-                ret = _serverConf.location[i];
-            }
-        } else {
-            if (matchLen < j && (data._URIFilePath.size() >= tmpLocPath.size())) { // 더 많은 글자가 일치하는 location 블록이 있는 경우
-                isLocFlag = true;
-                matchLen = j;
-                ret = _serverConf.location[i];
+        std::string target = _serverConf.location[i]._locationPath;
+        if (URI.compare(0, target.length(), target) == 0) {
+            if (maxLength <= target.length()) {
+                position = i;
             }
         }
     }
-    return ret;
+    if (position != -1) {
+        return (_serverConf.location[position]);
+    } else {
+        return (ret);
+    }
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::setInformation(HTTPData& data, int statusCode, const std::string& absPath) {
@@ -230,9 +221,18 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
 
         // 3
         _locConf = getMatchingLocationConfiguration(data);
+        std::cout << "data._originURI : " << data._originURI << std::endl;
+        std::cout << "data._reqURI : " << data._reqURI << std::endl;
+        std::cout << "_locConf._locationPath : " << _locConf._locationPath << std::endl;
+        
         // TODO: root에 따라서 변하는 경우, 처리할지 말지 고민: location block 내에도 root가 올 수 있음
         if (!_locConf._locationPath.empty()) { // 4
-            if (!_locConf.allowed_method.empty() 
+            if ((_locConf.inner_proxy.size() != 0) && (data._originURI == data._reqURI)) {
+                std::cout << _locConf.inner_proxy[0] << std::endl;
+                data._reqURI = _locConf.inner_proxy[0];
+                data.setURIelements();
+                _phase = PRE_STATUSCODE_CHECK;
+            } else if (!_locConf.allowed_method.empty() && (data._originURI == data._reqURI)
                 && find(_locConf.allowed_method.begin(), _locConf.allowed_method.end(), data._reqMethod) == _locConf.allowed_method.end()) {
                 _phase = setInformation(data, 405, "");
             } else {

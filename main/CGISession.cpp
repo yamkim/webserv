@@ -11,7 +11,7 @@ CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStre
     _envMap[std::string("CONTENT_TYPE")] = data._reqContentType;
     _envMap[std::string("CONTENT_LENGTH")] = data._reqContentLength;
     _envMap[std::string("SCRIPT_NAME")] = data._URIFileName;
-    _envMap[std::string("REQUEST_URI")] = data._reqURI;
+    _envMap[std::string("REQUEST_URI")] = data._originURI;
     _envMap[std::string("DOCUMENT_URI")] = data._reqURI;
     _envMap[std::string("DOCUMENT_ROOT")] = data._root;
     _envMap[std::string("SERVER_PROTOCOL")] = std::string("HTTP/1.1");
