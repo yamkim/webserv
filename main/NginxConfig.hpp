@@ -83,6 +83,8 @@ class LocationBlock : public NginxBlock {
         std::vector<std::string> _return;
         std::vector<std::string> index;
         std::vector<std::string> error_page;
+        std::vector<std::string> allowed_method;
+
         LocationBlock() {}
         LocationBlock(std::string rawData, std::string locationPath) : NginxBlock(rawData), _locationPath(locationPath) {
             setDirectiveTypes();
@@ -101,6 +103,7 @@ class LocationBlock : public NginxBlock {
             this->dirCase.push_back("deny");
             this->dirCase.push_back("error_page");
             this->dirCase.push_back("cgi_pass");
+            this->dirCase.push_back("allowed_method");
         }
 
         void checkLocationBlock() {
@@ -137,6 +140,8 @@ class LocationBlock : public NginxBlock {
                         this->index = Parser::getSplitBySpace(tmpVal);
                     } else if (tmpDir == "error_page") {
                         this->error_page = Parser::getSplitBySpace(tmpVal);
+                    } else if (tmpDir == "allowed_method") {
+                        this->allowed_method = Parser::getSplitBySpace(tmpVal);
                     } else if (tmpDir == "return") {
                         this->_return = Parser::getSplitBySpace(tmpVal);
                     } else {

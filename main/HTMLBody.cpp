@@ -70,6 +70,9 @@ std::string HTMLBody::getStaticHTML(const HTTPData& data) {
     } else if (data._statusCode == 400) {
         statusMsg = "400 Bad Request";
         ret = getBasicHTMLBody(statusMsg);
+    } else if (data._statusCode == 405) {
+        statusMsg = "405 ======================";
+        ret = getBasicHTMLBody(statusMsg);
     } else if (data._statusCode == 413) {
         statusMsg = "413 Request Entity Too Large";
         ret = getBasicHTMLBody(statusMsg);
