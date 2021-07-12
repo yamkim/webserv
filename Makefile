@@ -1,5 +1,6 @@
 TARGET = webserv
-WEBSERV_VERSION = 0.0.4
+WEBSERV_VERSION = 0.0.5
+
 FILES = $(shell ls main | grep .cpp)
 #FILES = main.cpp
 #FILES += CGISession.cpp

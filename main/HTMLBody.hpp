@@ -17,6 +17,6 @@ class HTMLBody {
         static std::string getBasicHTMLBody(const std::string& statusMsg);
         static std::string getAutoIndexBody(std::string root, std::string path);
         static std::string getRedirectBody(const HTTPData& data);
-        static std::string getStaticHTML(const HTTPData& data);
+        static std::string getStaticHTML(HTTPData& data);
 };
 #endif

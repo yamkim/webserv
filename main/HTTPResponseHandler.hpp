@@ -51,7 +51,7 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string getIndexPage(const std::string& absPath, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec);
         std::string getErrorPage(const std::string& absPath, const std::vector<std::string>& serverErrorPageVec, const std::vector<std::string>& locErrorPageVec);
         bool isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec);
-        void setGeneralHeader(int status);
+        void setGeneralHeader(HTTPData& data);
         void setHTMLHeader(const HTTPData& data);
         void showResponseInformation(HTTPData& data);
 
