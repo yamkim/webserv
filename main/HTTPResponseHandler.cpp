@@ -256,6 +256,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
 
         // 3
         _locConf = getMatchingLocationConfiguration(data);
+        std::cout << "data._originURI : " << data._originURI << std::endl;
+        std::cout << "data._reqURI : " << data._reqURI << std::endl;
+        std::cout << "_locConf._locationPath : " << _locConf._locationPath << std::endl;
+        
         // TODO: root에 따라서 변하는 경우, 처리할지 말지 고민: location block 내에도 root가 올 수 있음
         if (!_locConf._locationPath.empty()) { // 4
             // index page 세팅 및 error page 세팅
@@ -268,7 +272,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             //     && find(_locConf.allowed_method.begin(), _locConf.allowed_method.end(), data._reqMethod) == _locConf.allowed_method.end()) {
             //     std::cout << "[DEBUG] 405 ERROR PAGE========================";
             //     _phase = setInformation(data, 405, data._root + "/");
-            // } else {
+            if ((_locConf.inner_proxy.size() != 0) && (data._originURI == data._reqURI)) {
+                std::cout << _locConf.inner_proxy[0] << std::endl;
+                data._reqURI = _locConf.inner_proxy[0];
+                data.setURIelements();
+                _phase = PRE_STATUSCODE_CHECK;
+            } else {
                 _type = FileController::checkType(data._root + data._URIFilePath);
                 if (_type == FileController::DIRECTORY) {
                     if (data._URIFilePath[data._URIFilePath.size() - 1] != '/') {
@@ -310,7 +319,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                         _phase = setInformation(data, 404, data._root + "/");
                     }
                 }
-            // }
+            }
         } else { // TODO: locatioin에 대한 정보가 없는 경우 어떻게 처리할건지 고려 => root가 있으면 root에서 index 파일을 찾아야됨.
             _phase = setInformation(data, 404, data._root + _locConf._locationPath + "/");
         }

@@ -27,6 +27,7 @@ class HTTPData {
         std::string _reqMethod;
         std::string _reqContentType;
         std::string _reqContentLength;
+        std::string _originURI;
         
         // Response Data
         int _statusCode;
