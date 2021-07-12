@@ -42,22 +42,22 @@ class HTTPResponseHandler : public HTTPHandler {
         } Phase;
         virtual HTTPResponseHandler::Phase process(HTTPData& data, long bufferSize);
 
-        void responseNotFound(const HTTPData& data);
-        void responseAutoIndex(const HTTPData& data);
-        void responseTest(const HTTPData& data);
 
         int getCGIfd(void);
     private:
-        std::string getMIME(const std::string& extension) const;
+        std::string getMIME(const std::string& extension);
         bool isCGI(std::string& URI);
         // std::string getIndexPage(const std::string& absolutePath, std::vector<std::string>& indexVec);
-        std::string getIndexPage(const HTTPData& data, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec);
-        std::string getErrorPage(const HTTPData& data, const std::vector<std::string>& serverErrorPageVec, const std::vector<std::string>& locErrorPageVec);
+        std::string getIndexPage(const std::string& absPath, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec);
+        std::string getErrorPage(const std::string& absPath, const std::vector<std::string>& serverErrorPageVec, const std::vector<std::string>& locErrorPageVec);
         bool isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec);
         void setGeneralHeader(int status);
         void setHTMLHeader(const HTTPData& data);
         void showResponseInformation(HTTPData& data);
-        HTTPResponseHandler::Phase setError(HTTPData& data);
+
+        void setCGIConfigMap();
+        NginxConfig::LocationBlock getMatchingLocationConfiguration(const HTTPData& data);
+        HTTPResponseHandler::Phase setInformation(HTTPData& data, int statusCode, const std::string& absPath);
  
 
     private:

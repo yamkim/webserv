@@ -79,16 +79,15 @@ class LocationBlock : public NginxBlock {
     public:
         std::vector<std::string> dirCase;
         // FIXME: yekim: cgi 파라미터 관련 요소 (cgi_pass) 추가
-        std::string locationPath;
-        std::vector<std::string> try_files;
+        std::string _locationPath;
         std::vector<std::string> _return;
-        std::vector<std::string> deny;
         std::vector<std::string> index;
         std::vector<std::string> error_page;
         LocationBlock() {}
-        LocationBlock(std::string rawData) : NginxBlock(rawData) {
+        LocationBlock(std::string rawData, std::string locationPath) : NginxBlock(rawData), _locationPath(locationPath) {
             setDirectiveTypes();
             setBlock();
+            checkLocationBlock();
         }
 
         void setDirectiveTypes() {
@@ -107,7 +106,7 @@ class LocationBlock : public NginxBlock {
         void checkLocationBlock() {
             checkValidErrorPage(this->error_page);
             checkAutoindexValue(*this);
-            if (this->locationPath.empty()) {
+            if (this->_locationPath.empty()) {
                 throw std::string("Error: location block doesn't have locationPath.");
             }
             if (!this->_return.empty()) {
@@ -138,8 +137,6 @@ class LocationBlock : public NginxBlock {
                         this->index = Parser::getSplitBySpace(tmpVal);
                     } else if (tmpDir == "error_page") {
                         this->error_page = Parser::getSplitBySpace(tmpVal);
-                    } else if (tmpDir == "try_files") {
-                        this->try_files = Parser::getSplitBySpace(tmpVal);
                     } else if (tmpDir == "return") {
                         this->_return = Parser::getSplitBySpace(tmpVal);
                     } else {
@@ -164,6 +161,7 @@ class ServerBlock : public NginxBlock{
         ServerBlock(std::string rawData) : NginxBlock(rawData) {
             setDirectiveTypes();
             setBlock();
+            checkServerBlock();
         }
 
         void setDirectiveTypes() {
@@ -195,8 +193,7 @@ class ServerBlock : public NginxBlock{
                 if (find(this->dirCase.begin(), this->dirCase.end(), tmpDir) == this->dirCase.end()) {
                     throw std::string("Error: " + tmpDir + " is not in block[server] list.");
                 } else if (tmpDir == "location") {
-                    LocationBlock tmpLocationBlock(NginxParser::getBlockContent(buf, blockPos));
-                    tmpLocationBlock.locationPath = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, "{", true));
+                    LocationBlock tmpLocationBlock(NginxParser::getBlockContent(buf, blockPos), Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, "{", true)));
                     this->location.push_back(tmpLocationBlock);
                     pos = blockPos;
                 } else {
@@ -264,10 +261,9 @@ class HttpBlock : public NginxBlock{
                     continue ;
                 }
                 std::size_t tmpPos = 0;
-                // std::cout << "[DEBUG] tmpLine: " << tmpLine << std::endl;
                 std::string tmpDir = Parser::getIdentifier(tmpLine, tmpPos, " ", true);
                 if (find(this->dirCase.begin(), this->dirCase.end(), tmpDir) == this->dirCase.end()) {
-                    throw std::string("Error: " + tmpDir + " is not in block[server] list.");
+                    throw std::string("Error: " + tmpDir + " is not in block[http] list. HttpBlock::setHttpBlock");
                 } else if (tmpDir == "types") {
                     TypesBlock tmpTypesBlock(NginxParser::getBlockContent(this->rawData, blockPos));
                     this->types = tmpTypesBlock;
@@ -277,7 +273,7 @@ class HttpBlock : public NginxBlock{
                     this->server.push_back(tmpServerBlock);
                     pos = blockPos;
                 } else {
-                    std::string tmpVal = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, ";", false));
+                    std::string tmpVal = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, ";", true));
                     std::vector<std::string> tmpSplit = Parser::getSplitBySpace(tmpVal);
                     if (tmpSplit.size() != 1) {
                         throw std::string("Error: invalid number of arguments in http["+ tmpDir + " directive]. NginxConfig::setHttpBlock");
@@ -330,7 +326,7 @@ class NginxConfig : public NginxParser {
                     } else if (tmpDir == "worker_processes") {
                         _none.worker_processes = sideSpaceTrim(tmpVal);
                     } else {
-                        throw std::string("Error: " + tmpDir + " is not in block[none] list.");
+                        throw std::string("Error: " + tmpDir + " is not in block[none] list. NginxConfig::NginxConfig");
                     }
                 }
             }
