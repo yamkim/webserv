@@ -85,7 +85,6 @@ class LocationBlock : public NginxBlock {
         std::vector<std::string> error_page;
         LocationBlock() {}
         LocationBlock(std::string rawData, std::string locationPath) : NginxBlock(rawData), _locationPath(locationPath) {
-            std::cout << "[DEBUG] Location Block Setting=====================" << std::endl;
             setDirectiveTypes();
             setBlock();
             checkLocationBlock();
