@@ -58,33 +58,17 @@ std::string HTMLBody::getRedirectBody(const HTTPData& data) {
     return (ret.str());
 }
 
-std::string HTMLBody::getStaticHTML(const HTTPData& data) {
-    std::string statusMsg;
+std::string HTMLBody::getStaticHTML(HTTPData& data) {
     std::string ret;
-    if (data._statusCode == 404) {
-        statusMsg = "404 Not Found";
-        ret = getBasicHTMLBody(statusMsg);
-    } else if (data._statusCode == 403) {
-        statusMsg = "403 Forbidden";
-        ret = getBasicHTMLBody(statusMsg);
-    } else if (data._statusCode == 400) {
-        statusMsg = "400 Bad Request";
-        ret = getBasicHTMLBody(statusMsg);
-    } else if (data._statusCode == 405) {
-        statusMsg = "405 ======================";
-        ret = getBasicHTMLBody(statusMsg);
-    } else if (data._statusCode == 413) {
-        statusMsg = "413 Request Entity Too Large";
-        ret = getBasicHTMLBody(statusMsg);
-    } else if (data._statusCode == 500) {
-        statusMsg = "500 Internal Server Error";
-        ret = getBasicHTMLBody(statusMsg);
-    } else if (data._statusCode == 200) {
+
+    std::string statusMsg;
+    std::stringstream ssStatusCode;
+    ssStatusCode << data._statusCode;
+    if (data._statusCode == 200) {
         ret = getAutoIndexBody(data._root, data._URIFilePath);
-    } else if (data._statusCode == 301) {
-        ret = getRedirectBody(data);
-    } else if (data._statusCode == 302) {
-        ret = getRedirectBody(data);
+    } else if (data._resStartLineMap.find(data._statusCode) != data._resStartLineMap.end()) {
+        statusMsg = ssStatusCode.str() + " " + data._resStartLineMap[data._statusCode];
+        ret = getBasicHTMLBody(statusMsg);
     } else {
         throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTMLBody::getStaticHTML");
     }

@@ -75,7 +75,6 @@ class HTTPResponseHandler : public HTTPHandler {
         std::string _CGIReceive;
         std::vector<std::string> _errorPageList;
         std::map<std::string, std::string> _cgiConfMap;
-        std::map<int, std::string> _startLineMap;
 };
 
 #endif
