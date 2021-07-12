@@ -4,6 +4,7 @@
 #include <string>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <map>
 
 #include <iostream> //FIXME 디버깅용
 class HTTPData {
@@ -34,15 +35,19 @@ class HTTPData {
         std::string _CGIBinary;
         std::string _resAbsoluteFilePath;
         std::size_t _resContentLength;
+        std::map<int, std::string> _resStartLineMap;
 
         // Common Data
         std::string _postFilePath;
+
+        HTTPData();
 
         // Request Data Method
         std::string getMethod(void) const;
         std::string getURI(void) const;
         static std::string getExtension(std::string URI);
         void setURIelements(void);
+        void setResStartLineMap(void);
 };
 
 #endif

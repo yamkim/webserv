@@ -99,24 +99,13 @@ std::string HTTPResponseHandler::getMIME(const std::string& extension) {
     }
 }
 
-void HTTPResponseHandler::setGeneralHeader(int status) {
+void HTTPResponseHandler::setGeneralHeader(HTTPData& data) {
     std::string startLine;
-    if (status == 200) {
-        startLine = std::string("HTTP/1.1 200 OK");
-    } else if (status == 301) {
-        startLine = std::string("HTTP/1.1 302 Found");
-    } else if (status == 302) {
-        startLine = std::string("HTTP/1.1 301 Moved Permanently");
-    } else if (status == 400) {
-        startLine = std::string("HTTP/1.1 400 Bad Request");
-    } else if (status == 403) {
-        startLine = std::string("HTTP/1.1 403 Forbidden");
-    } else if (status == 404) {
-        startLine = std::string("HTTP/1.1 404 Not Found");
-    } else if (status == 413) {
-        startLine = std::string("HTTP/1.1 413 Payload Too Large");
-    } else if (status == 500) {
-        startLine = std::string("HTTP/1.1 500 Internal Server Error");
+    std::stringstream ssStatusCode;
+    ssStatusCode << data._statusCode;
+    if (data._resStartLineMap.find(data._statusCode) != _startLineMap.end()) {
+        startLine = "HTTP/1.1 " + ssStatusCode.str() + " " + _startLineMap[data._statusCode];
+        std::cout << "[DEBUG] startLine: " << startLine << std::endl;
     } else {
         throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTTPResponseHandler::setGeneralHeader");   
     }
@@ -200,7 +189,7 @@ NginxConfig::LocationBlock HTTPResponseHandler::getMatchingLocationConfiguration
 
 HTTPResponseHandler::Phase HTTPResponseHandler::setInformation(HTTPData& data, int statusCode, const std::string& absPath) {
     data._statusCode = statusCode;
-    setGeneralHeader(data._statusCode);
+    setGeneralHeader(data);
     data._resAbsoluteFilePath = absPath;
     data._URIExtension = "html";
     if (data._statusCode == 200) {
@@ -224,7 +213,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     // TODO: 해당하는 로케이션의 설정에서 status 코드 적용시키기
     if (_phase == PRE_STATUSCODE_CHECK) {
         if (data._statusCode != 200) {
-            setGeneralHeader(data._statusCode);
+            setGeneralHeader(data);
             data._URIExtension = "html";
             _phase = GET_STATIC_HTML;
         } else {
@@ -271,7 +260,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                                                         : _locConf.dirMap["autoindex"];
                             if (_locConf.dirMap["autoindex"] == "on") {
                                 data._statusCode = 200;
-                                setGeneralHeader(data._statusCode);
+                                setGeneralHeader(data);
                                 data._URIExtension = "html";
                                 _phase = GET_STATIC_HTML;
                             } else {
@@ -377,11 +366,11 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     }
                     if (_headers.find("Status") == _headers.end()) {
                         data._statusCode = 200;
-                        setGeneralHeader(data._statusCode);
+                        setGeneralHeader(data);
                     } else {
                         // TODO[joopark]: setGeneralHeader 중복 세팅에 대한 부분 고려한 후 처리
                         data._statusCode = std::atoi(_headers["Status"].c_str());
-                        setGeneralHeader(data._statusCode);
+                        setGeneralHeader(data);
                         _headers.erase("Status");
                     }
                     sendHeader = true;
@@ -390,7 +379,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         } catch (const std::exception& error) {
             std::cerr << error.what() << std::endl;
             data._statusCode = 500;
-            setGeneralHeader(data._statusCode);
+            setGeneralHeader(data);
             data._URIExtension = "html";
             _phase = GET_STATIC_HTML;
         }

@@ -72,6 +72,7 @@ bool HTTPRequestHandler::getStartLine(HTTPData& data) {
     }
     if (   tmp[0] == std::string("GET")
         || tmp[0] == std::string("POST")
+        || tmp[0] == std::string("PUT")
         || tmp[0] == std::string("DELETE")
         || tmp[2] != std::string("HTTP/1.1")) {
         data._reqMethod = tmp[0];
