@@ -232,7 +232,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         _locConf = getMatchingLocationConfiguration(data);
         // TODO: root에 따라서 변하는 경우, 처리할지 말지 고민: location block 내에도 root가 올 수 있음
         if (!_locConf._locationPath.empty()) { // 4
-            if (find(_locConf.allowed_method.begin(), _locConf.allowed_method.end(), data._reqMethod) != _locConf.allowed_method.end()) {
+            if (!_locConf.allowed_method.empty() 
+                && find(_locConf.allowed_method.begin(), _locConf.allowed_method.end(), data._reqMethod) == _locConf.allowed_method.end()) {
                 _phase = setInformation(data, 405, "");
             } else {
                 // index page 세팅 및 error page 세팅
