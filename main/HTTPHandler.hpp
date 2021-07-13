@@ -14,7 +14,7 @@
 #define WEBSERV_VERSION "0.0.0"
 #endif
 
-#define REQUEST_BUFFER_SIZE 100
+#define REQUEST_BUFFER_SIZE 1000
 
 class HTTPHandler {
     private:

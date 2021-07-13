@@ -159,31 +159,22 @@ void HTTPResponseHandler::setCGIConfigMap() {
 
 NginxConfig::LocationBlock HTTPResponseHandler::getMatchingLocationConfiguration(const HTTPData& data) {
     NginxConfig::LocationBlock ret;
-    bool isLocFlag = false;
-    std::size_t matchLen = 0; 
+    std::string URI = data._URIFilePath;
+    int position = -1;
+    std::size_t maxLength = 0;
     for (std::size_t i = 0; i < _serverConf.location.size(); ++i) {
-        std::string tmpLocPath = _serverConf.location[i]._locationPath;
-        std::size_t j = 0; // 1인 경우는 / 일 때이므로
-        for (; j < data._URIFilePath.size(); ++j) {
-            if (tmpLocPath[j] != data._URIFilePath[j]) {
-                break ;
-            }
-        }
-        if (j == 1) { 
-            if (tmpLocPath == "/") { // 하나만 일치하는 경우, tmpLocPath가 "/"가 아니면 일치하는 location 블록이 없는 것.
-                isLocFlag = true;
-                matchLen = j;
-                ret = _serverConf.location[i];
-            }
-        } else {
-            if (matchLen < j && (data._URIFilePath.size() >= tmpLocPath.size())) { // 더 많은 글자가 일치하는 location 블록이 있는 경우
-                isLocFlag = true;
-                matchLen = j;
-                ret = _serverConf.location[i];
+        std::string target = _serverConf.location[i]._locationPath;
+        if (URI.compare(0, target.length(), target) == 0) {
+            if (maxLength <= target.length()) {
+                position = i;
             }
         }
     }
-    return ret;
+    if (position != -1) {
+        return (_serverConf.location[position]);
+    } else {
+        return (ret);
+    }
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::setInformation(HTTPData& data, int statusCode, const std::string& absPath) {
@@ -205,6 +196,31 @@ HTTPResponseHandler::Phase HTTPResponseHandler::setInformation(HTTPData& data, i
         return setInformation(data, 200, data._resAbsoluteFilePath + _errorPage);
     }
     return GET_STATIC_HTML;
+}
+
+HTTPResponseHandler::Phase HTTPResponseHandler::setFileInDirectory(HTTPData& data, const std::string& absLocPath) {
+    if (!_indexPage.empty()) { // index file이 어떻게든 있는 경우
+        // index 파일이 서버 컴퓨터에 있는지 판별
+        FileController::Type indexType = FileController::checkType(absLocPath + _indexPage);
+        if (indexType == FileController::FILE) {
+            _phase = setInformation(data, 200, absLocPath + _indexPage);
+        } else {
+            _phase = setInformation(data, 403, absLocPath);
+        }
+    } else {                  // index file이 어디에도 설정되지 않은 경우
+        _locConf.dirMap["autoindex"] = _locConf.dirMap["autoindex"].empty()
+                                    ? _serverConf.dirMap["autoindex"]
+                                    : _locConf.dirMap["autoindex"];
+        if (_locConf.dirMap["autoindex"] == "on") {
+            data._statusCode = 200;
+            setGeneralHeader(data);
+            data._URIExtension = "html";
+            _phase = GET_STATIC_HTML;
+        } else {
+            _phase = setInformation(data, 403, absLocPath);
+        }
+    }
+    return _phase;
 }
 
 
@@ -240,6 +256,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 std::string tmpAbsPath = _locConf._locationPath == "/" ? "/" : _locConf._locationPath + "/";
                 _indexPage = getIndexPage(data._root + tmpAbsPath, _serverConf.index, _locConf.index);
                 _errorPage = getErrorPage(data._root + tmpAbsPath, _serverConf.error_page, _locConf.error_page);
+                // 만약 location context 내부에 root가 존재한다면, data._root + _locConf._locationPath가 됨.
                 data._root = _locConf.dirMap["root"].empty() ? data._root : _locConf.dirMap["root"];
                 _type = FileController::checkType(data._root + data._URIFilePath);
                 if (_type == FileController::DIRECTORY) {
@@ -248,38 +265,25 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     } else {
                         if (!_locConf._return.empty()) { // redirection 시키는 것이 가장 우선순위가 높음
                             _phase = setInformation(data, atoi(_locConf._return[0].c_str()), _locConf._return[1]);
-                        } else { 
-                            if (!_indexPage.empty()) { // index file이 어떻게든 있는 경우
-                                // index 파일이 서버 컴퓨터에 있는지 판별
-                                FileController::Type indexType = FileController::checkType(data._root + _locConf._locationPath + "/" + _indexPage);
-                                if (indexType == FileController::FILE) {
-                                    _phase = setInformation(data, 200, data._root + _locConf._locationPath + "/" + _indexPage);
-                                } else {
-                                    _phase = setInformation(data, 403, data._root + _locConf._locationPath + "/");
-                                }
-                            } else {                  // index file이 어디에도 설정되지 않은 경우
-                                _locConf.dirMap["autoindex"] = _locConf.dirMap["autoindex"].empty()
-                                                            ? _serverConf.dirMap["autoindex"]
-                                                            : _locConf.dirMap["autoindex"];
-                                if (_locConf.dirMap["autoindex"] == "on") {
-                                    data._statusCode = 200;
-                                    setGeneralHeader(data);
-                                    data._URIExtension = "html";
-                                    _phase = GET_STATIC_HTML;
-                                } else {
-                                    _phase = setInformation(data, 403, data._root + _locConf._locationPath + "/");
-                                }
-                            }
+                        } else {
+                            std::string absLocPath = data._root + tmpAbsPath;
+                            _phase = setFileInDirectory(data, absLocPath);
                         }
                     }
                 } else if (_type == FileController::FILE) {
                     _phase = setInformation(data, 200, data._root + data._URIFilePath);
                 } else {
-                    _phase = setInformation(data, 404, data._root + _locConf._locationPath + "/");
+                    _indexPage = getIndexPage(data._root + "/", _serverConf.index, _locConf.index);
+                    _errorPage = getErrorPage(data._root + "/", _serverConf.error_page, _locConf.error_page);
+                    if (!_indexPage.empty()) {
+                        _phase = setFileInDirectory(data, data._root + "/");
+                    } else {
+                        _phase = setInformation(data, 404, data._root + _locConf._locationPath + "/");
+                    }
                 }
 
             }
-        } else { // TODO: locatioin에 대한 정보가 없는 경우 어떻게 처리할건지 고려
+        } else { // TODO: locatioin에 대한 정보가 없는 경우 어떻게 처리할건지 고려 => root가 있으면 root에서 index 파일을 찾아야됨.
             _phase = setInformation(data, 404, data._root + _locConf._locationPath + "/");
         }
         showResponseInformation(data);

@@ -58,6 +58,7 @@ class HTTPResponseHandler : public HTTPHandler {
         void setCGIConfigMap();
         NginxConfig::LocationBlock getMatchingLocationConfiguration(const HTTPData& data);
         HTTPResponseHandler::Phase setInformation(HTTPData& data, int statusCode, const std::string& absPath);
+        HTTPResponseHandler::Phase setFileInDirectory(HTTPData& data, const std::string& absLocPath);
  
 
     private:

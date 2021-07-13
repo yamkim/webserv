@@ -13,7 +13,12 @@ class HTTPRequestHandler : public HTTPHandler {
     public:
         HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig::NginxConfig& nginxConf);
         virtual ~HTTPRequestHandler();
-        typedef enum e_Phase {PARSE_STARTLINE, PARSE_HEADER, PARSE_BODY, FINISH} Phase;
+        typedef enum e_Phase {
+            PARSE_STARTLINE, 
+            PARSE_HEADER, 
+            PARSE_BODY, 
+            FINISH
+        } Phase;
         virtual HTTPRequestHandler::Phase process(HTTPData& data);
     private:
         bool getStartLine(HTTPData& data);
@@ -24,6 +29,7 @@ class HTTPRequestHandler : public HTTPHandler {
         HTTPRequestHandler();
 
         bool getHeader(void);
+        void showHeader(void);
         int findNewLine(const char *buffer);
         bool setHeaderString(void);
         void setMethod(std::string method);
