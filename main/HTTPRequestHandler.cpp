@@ -14,7 +14,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data) {
     if (_phase == PARSE_STARTLINE) {
         data._statusCode = 200;
         if (getStartLine(data) == true) {
-            std::cout << "[DEBUG] STEP 0 =========================" << std::endl; 
+            // std::cout << "[DEBUG] STEP 0 =========================" << std::endl; 
             _phase = PARSE_HEADER;
         }
     } else if (_phase == PARSE_HEADER) {
@@ -105,16 +105,16 @@ bool HTTPRequestHandler::getHeader(void) {
     if (tmpFlag == false) {
         return (false);
     }
-    std::cout << "[DEBUG] _headerString before checking: [" << _headerString << "]" << std::endl;
+    // std::cout << "[DEBUG] _headerString before checking: [" << _headerString << "]" << std::endl;
     if (_headerString == std::string("\r\n")) {
-        std::cout << "[DEBUG] LINELINELINE================================ " << std::endl;
+        // std::cout << "[DEBUG] LINELINELINE================================ " << std::endl;
         _headerString.clear();
         return (true);
     }
     std::size_t pos = 0;
     _headers.insert(getHTTPHeader(_headerString, pos));
     
-    showHeader();
+    // showHeader();
     _headerString.clear();
     return (false);
 }
@@ -157,7 +157,7 @@ bool HTTPRequestHandler::setHeaderString(void) {
     int newLinePosition = findNewLine(buffer);
     if (newLinePosition == -1) {
         readLength = recv(_connectionFd, buffer, REQUEST_BUFFER_SIZE, 0);
-        std::cout << "[DEBUG] BUFFER after recv: [" << buffer << "]" << std::endl;
+        // std::cout << "[DEBUG] BUFFER after recv: [" << buffer << "]" << std::endl;
         if (readLength == TRANS_ERROR) {
             throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::setHeaderString");
         }
@@ -165,11 +165,11 @@ bool HTTPRequestHandler::setHeaderString(void) {
         return (false);
     } else {
         readLength = recv(_connectionFd, buffer, newLinePosition, 0);
-        std::cout << "[DEBUG] buffer with newLine: [" << buffer << "]" << std::endl;
+        // std::cout << "[DEBUG] buffer with newLine: [" << buffer << "]" << std::endl;
         if (readLength == TRANS_ERROR) {
             throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPRequestHandler::setHeaderString");
         }
-        std::cout << "[DEBUG] ================================" << std::endl;
+        // std::cout << "[DEBUG] ================================" << std::endl;
         _headerString += std::string(buffer, readLength);
         return (true);
     }

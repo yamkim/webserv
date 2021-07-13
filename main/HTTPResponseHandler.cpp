@@ -205,7 +205,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::setFileInDirectory(HTTPData& dat
         if (indexType == FileController::FILE) {
             _phase = setInformation(data, 200, absLocPath + _indexPage);
         } else {
-            _phase = setInformation(data, 403, absLocPath);
+            // _phase = setInformation(data, 403, absLocPath);
+            _phase = setInformation(data, 404, absLocPath);
         }
     } else {                  // index file이 어디에도 설정되지 않은 경우
         _locConf.dirMap["autoindex"] = _locConf.dirMap["autoindex"].empty()
@@ -273,15 +274,33 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 } else if (_type == FileController::FILE) {
                     _phase = setInformation(data, 200, data._root + data._URIFilePath);
                 } else {
+                    // 일단 여기 오는 경우는, location 경로를 넣어봤을 때 없는 애인 경우니깐
+                    // 무조건 /directory를 앞에서 떼고 그 뒤에꺼를 root에다가 붙여야할듯
+                    // 붙인 다음에 directory, file, none 부분으로 다시 나누고 각각에 대해 처리해야할듯
+                    std::string tmpFile = data._URIFilePath.substr(_locConf._locationPath.size());
+                    std::string tmpLocPath = data._root + tmpFile;
+
                     _indexPage = getIndexPage(data._root + "/", _serverConf.index, _locConf.index);
                     _errorPage = getErrorPage(data._root + "/", _serverConf.error_page, _locConf.error_page);
-                    if (!_indexPage.empty()) {
-                        _phase = setFileInDirectory(data, data._root + "/");
+                    
+                    _type = FileController::checkType(tmpLocPath);
+                    if (_type == FileController::DIRECTORY) {
+                        // 여긴 무조건 '/' 붙어 오겠지?!
+                        if (data._URIFilePath[data._URIFilePath.size() - 1] != '/') {
+                            _phase = setInformation(data, 301, data._URIFilePath + "/");
+                        } else {
+                            if (!_locConf._return.empty()) { // redirection 시키는 것이 가장 우선순위가 높음
+                                _phase = setInformation(data, atoi(_locConf._return[0].c_str()), _locConf._return[1]);
+                            } else {
+                                _phase = setFileInDirectory(data, tmpLocPath);
+                            }
+                        }
+                    } else if (_type == FileController::FILE) {
+                        _phase = setInformation(data, 200, tmpLocPath);
                     } else {
-                        _phase = setInformation(data, 404, data._root + _locConf._locationPath + "/");
+                        _phase = setInformation(data, 404, data._root + "/");
                     }
                 }
-
             }
         } else { // TODO: locatioin에 대한 정보가 없는 경우 어떻게 처리할건지 고려 => root가 있으면 root에서 index 파일을 찾아야됨.
             _phase = setInformation(data, 404, data._root + _locConf._locationPath + "/");
