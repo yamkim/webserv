@@ -38,3 +38,9 @@ int Utils::hextoint(std::string str) {
     }
     return (sum * p);
 }
+
+std::string Utils::ltos(long number) {
+    std::stringstream ss;
+    ss << number;
+    return (ss.str());
+}

@@ -16,11 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
     } else if (is_dir($upload_dir) == false && is_file($upload_dir) == false) {
         mkdir($upload_dir);
     }
+    http_response_code(201);
     $putdata = fopen("php://input", "r");
     $fp = fopen($upload_filepath, "w");
-    while ($data = fread($putdata, 1024))
+    while ($data = fread($putdata, 1024)) {
         fwrite($fp, $data);
-    echo $_FILES["fileToUpload"]["tmp_name"];
+    }
     fclose($fp);
     fclose($putdata);
 }

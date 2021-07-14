@@ -85,8 +85,8 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
         std::string* bufptr = getDataByCRNF();
         if (bufptr != NULL) {
             if (_chunkFinish) {
-                data._reqContentType = _headers["Content-Type"];
-                data._reqContentLength = _headers["Content-Length"];
+                data._reqContentType = std::string("application/octet-stream");
+                data._reqContentLength = Utils::ltos(_contentLengthSum);
                 _phase = FINISH;
             } else {
                 _phase = PARSE_BODY_CHUNK;
