@@ -23,7 +23,7 @@ ConnectionSocket::~ConnectionSocket(){
 HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
     HTTPRequestHandler::Phase phase;
     try {
-        phase = _req->process(_data);
+        phase = _req->process(_data, getDynamicBufferSize());
     } catch (const std::exception& error) {
         /** NOTE
          * 파싱 에러 (데이터는 받았지만 클라이언트가 이상한 데이터를 줄 때) : 400 (error level : NORMAL)
