@@ -6,7 +6,6 @@ ListeningSocket::ListeningSocket(const NginxConfig::ServerBlock& serverConf) : S
 }
 
 ListeningSocket::~ListeningSocket() {
-    close(_socket);
 }
 
 void ListeningSocket::setSocket() {
