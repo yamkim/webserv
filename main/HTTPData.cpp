@@ -37,6 +37,7 @@ void HTTPData::setURIelements(void) {
     std::size_t foundDot = _URIFilePath.rfind(".");
     std::size_t foundSlash = _URIFilePath.rfind("/");
     _URIFileName = _URIFilePath.substr(foundSlash + 1);
+    _URILocPath = _URIFilePath.substr(0, (_URIFileName.length() + 1));
     if (foundDot != std::string::npos && foundSlash <= foundDot) {
         _URIExtension = _URIFilePath.substr(foundDot + 1);
     }

@@ -369,6 +369,10 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     
     if (_phase == CGI_REQ) {
         if (data._postFilePath.empty()) {
+            // FIXME: TEST
+            std::cout << "_cgi->getInputStream() : " << _cgi->getInputStream() << std::endl;
+            close(_cgi->getInputStream());
+            _cgi->getInputStream() = 0;
             _phase = CGI_RECV_HEAD_LOOP;
         } else {
             _file = new FileController(data._postFilePath, FileController::READ);

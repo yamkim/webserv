@@ -48,7 +48,6 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
         std::string* bufptr = getDataByCRNF();
         if (bufptr != NULL) {
             _contentLength = Utils::hextoint(bufptr->c_str());
-            std::cout << "PARSE_BODY_CHUNK : " << *bufptr << ", atol : " << _contentLength << std::endl;
             if (_contentLength >= 0) {
                 if (_contentLength == 0) {
                     _chunkFinish = true;
@@ -63,7 +62,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
         Buffer buffer(_dynamicBufferSize);
         ssize_t readBufLength = (_contentLength >= _dynamicBufferSize) ? _dynamicBufferSize : _contentLength;
         int readLength = recv(_connectionFd, *buffer, readBufLength, 0);
-        std::cout << "readLength : " << readLength << std::endl;
+        std::cout << "readLength : " << readLength << " / " << _contentLengthSum << std::endl;
         if (readLength == -1) {
             throw ErrorHandler("Error: socket read (request body) error.", ErrorHandler::ALERT, "HTTPRequestHandler::process");
         }
