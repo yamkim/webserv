@@ -84,6 +84,7 @@ class LocationBlock : public NginxBlock {
         std::vector<std::string> index;
         std::vector<std::string> error_page;
         std::vector<std::string> allowed_method;
+        std::vector<std::string> inner_proxy;
 
         LocationBlock() {}
         LocationBlock(std::string rawData, std::string locationPath) : NginxBlock(rawData), _locationPath(locationPath) {
@@ -104,6 +105,7 @@ class LocationBlock : public NginxBlock {
             this->dirCase.push_back("error_page");
             this->dirCase.push_back("cgi_pass");
             this->dirCase.push_back("allowed_method");
+            this->dirCase.push_back("inner_proxy");
         }
 
         void checkLocationBlock() {
@@ -142,6 +144,8 @@ class LocationBlock : public NginxBlock {
                         this->error_page = Parser::getSplitBySpace(tmpVal);
                     } else if (tmpDir == "allowed_method") {
                         this->allowed_method = Parser::getSplitBySpace(tmpVal);
+                    } else if (tmpDir == "inner_proxy") {
+                        this->inner_proxy = Parser::getSplitBySpace(tmpVal);
                     } else if (tmpDir == "return") {
                         this->_return = Parser::getSplitBySpace(tmpVal);
                     } else {

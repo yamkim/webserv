@@ -42,6 +42,7 @@ const char* ErrorHandler::what() const throw() {
 		rtn.append(" (");
 		rtn.append(std::strerror(errno));
 		rtn.append(")");
+        errno = 0;
 	}
 	if (_at != NULL) {
 		rtn.append(" at ");

@@ -149,7 +149,7 @@ bool FileController::del(void) {
         if (unlink(_path.c_str()) != -1) {
             return (true);
         } else {
-            throw ErrorHandler("Error: File Delete Eror.", ErrorHandler::ALERT, "FileController::FileController");
+            throw ErrorHandler("Error: File Delete Eror.", ErrorHandler::ALERT, "FileController::del");
         }
     }
     return (false);
