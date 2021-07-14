@@ -14,8 +14,6 @@
 #define WEBSERV_VERSION "0.0.0"
 #endif
 
-#define REQUEST_BUFFER_SIZE 1000
-
 class HTTPHandler {
     private:
         HTTPHandler();
@@ -24,7 +22,7 @@ class HTTPHandler {
         static const ssize_t TRANS_ERROR = -1;
         std::map<std::string, std::string> _headers;
         int _connectionFd;
-        std::string _headerString;
+        std::string _headerString; // FIXME: deprecated in req handler
         NginxConfig::ServerBlock _serverConf;
         NginxConfig::NginxConfig _nginxConf;
         class Buffer {
