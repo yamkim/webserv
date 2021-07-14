@@ -33,9 +33,7 @@ class HTTPResponseHandler : public HTTPHandler {
             GET_FILE, 
             REDIRECT, 
             CGI_RUN, 
-            CGI_REQ, 
             DATA_SEND_LOOP, 
-            CGI_SEND_LOOP, 
             CGI_RECV_HEAD_LOOP, 
             CGI_RECV_BODY_LOOP, 
             FINISH

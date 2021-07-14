@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
                             if (phase == HTTPResponseHandler::FINISH) {
                                 kq.deletePairEvent(i);
                                 timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
-                            } else if (phase == HTTPResponseHandler::CGI_REQ) {
+                            } else if (phase == HTTPResponseHandler::CGI_RECV_HEAD_LOOP) {
                                 kq.setPairEvent(i, cSocket->getCGIfd());
                             }
                         }

@@ -30,7 +30,7 @@ class CGISession {
 		~CGISession();
 		int& getInputStream(void);
 		int& getOutputStream(void);
-		void makeCGIProcess(void);
+		void makeCGIProcess(int inputfd);
 };
 
 #endif
