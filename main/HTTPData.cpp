@@ -4,6 +4,13 @@ HTTPData::HTTPData() {
     setResStartLineMap();
 }
 
+HTTPData::~HTTPData() {
+    if (_postFilePath.empty() == false) {
+        FileController fc(_postFilePath, FileController::READ);
+        fc.del();
+    }
+}
+
 std::string HTTPData::getMethod(void) const {
     return (_reqMethod);
 }
