@@ -296,9 +296,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 } else if (_type == FileController::FILE) {
                     _phase = setInformation(data, 200, data._root + absFilePath);
                 } else {
-                    // 일단 여기 오는 경우는, location 경로를 넣어봤을 때 없는 애인 경우니깐
-                    // 무조건 /directory를 앞에서 떼고 그 뒤에꺼를 root에다가 붙여야할듯
-                    // 붙인 다음에 directory, file, none 부분으로 다시 나누고 각각에 대해 처리해야할듯
                     tmpFilePath = tmpFilePath.substr(_locConf._locationPath.size());
                     absFilePath = data._root + tmpFilePath;
 

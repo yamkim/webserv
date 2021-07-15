@@ -98,6 +98,7 @@ class LocationBlock : public NginxBlock {
             this->dirCase.push_back("index");
             this->dirCase.push_back("autoindex");
             this->dirCase.push_back("error_page");
+            this->dirCase.push_back("client_max_body_size");
 
             this->dirCase.push_back("return");
             this->dirCase.push_back("try_files");
@@ -111,6 +112,7 @@ class LocationBlock : public NginxBlock {
         void checkLocationBlock() {
             checkValidErrorPage(this->error_page);
             checkAutoindexValue(*this);
+            checkValidNumberValue(*this, "client_max_body_size");
             if (this->_locationPath.empty()) {
                 throw std::string("Error: location block doesn't have locationPath.");
             }
