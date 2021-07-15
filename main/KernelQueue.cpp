@@ -68,9 +68,6 @@ void* KernelQueue::getInstance(int index) {
 }
 
 long KernelQueue::getData(int index) {
-    if (_pair.find(int(_getEvent[index].ident)) != _pair.end()) {
-        _pair[int(_getEvent[index].ident)]->stopMaster();
-    }
     return (_getEvent[index].data);
 }
 

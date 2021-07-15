@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <map>
+#include "FileController.hpp"
 
 #include <iostream> //FIXME 디버깅용
 class HTTPData {
@@ -42,6 +43,7 @@ class HTTPData {
         std::string _postFilePath;
 
         HTTPData();
+        ~HTTPData();
 
         // Request Data Method
         std::string getMethod(void) const;

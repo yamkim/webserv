@@ -359,39 +359,14 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     } 
 
     if (_phase == CGI_RUN) {
-        // FIXME[yekim]: _cgi를 처음에 절대 경로와 함께 생성하는데, 이를 그대로 사용하면 cgi가 동작하지 않습니다 ㅠㅠ
-        delete _cgi;
         _cgi = new CGISession(data);
-        _cgi->makeCGIProcess();
-        //fcntl(_cgi->getOutputStream(), F_SETFL, O_NONBLOCK);
-        _phase = CGI_REQ;
-    }
-    
-    if (_phase == CGI_REQ) {
         if (data._postFilePath.empty()) {
-            // FIXME: TEST
-            std::cout << "_cgi->getInputStream() : " << _cgi->getInputStream() << std::endl;
-            close(_cgi->getInputStream());
-            _cgi->getInputStream() = 0;
-            _phase = CGI_RECV_HEAD_LOOP;
-        } else {
+            _cgi->makeCGIProcess(0);
+         }else {
             _file = new FileController(data._postFilePath, FileController::READ);
-            _phase = CGI_SEND_LOOP;
+            _cgi->makeCGIProcess(_file->getFd());
         }
-    }
-    
-    if (_phase == CGI_SEND_LOOP) {
-        Buffer buf(bufferSize);
-        int length = read(_file->getFd(), *buf, bufferSize);
-        if (length != 0) {
-            int writeLength = write(_cgi->getInputStream(), *buf, length);
-            if (writeLength != length) {
-                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
-            }
-        } else {
-            _file->del();
-            _phase = CGI_RECV_HEAD_LOOP;
-        }
+        _phase = CGI_RECV_HEAD_LOOP;
     }
     
     if (_phase == CGI_RECV_HEAD_LOOP) {
