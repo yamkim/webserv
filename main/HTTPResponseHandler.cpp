@@ -386,8 +386,13 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     header = _CGIReceive.substr(0, spliter);
                     _CGIReceive = _CGIReceive.substr(spliter + 4);
                     std::size_t pos = 0;
+                    long multipleHeaderCount = 0;
                     while (header.length() > pos) {
-                        _headers.insert(getHTTPHeader(header, pos));
+                        std::pair<std::string, std::string> tmp = getHTTPHeader(header, pos);
+                        if (tmp.first == std::string("Set-Cookie")) {
+                            tmp.first = Utils::ltos(multipleHeaderCount++) + std::string("@") + tmp.first;
+                        }
+                        _headers.insert(tmp);
                     }
                     if (_headers.find("Status") == _headers.end()) {
                         data._statusCode = 200;
