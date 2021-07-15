@@ -12,74 +12,43 @@ HTTPResponseHandler::~HTTPResponseHandler() {
     delete _file;
 }
 
-std::string HTTPResponseHandler::getIndexPage(const std::string& absPath, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec) {
+
+std::string HTTPResponseHandler::getIndexPage(const std::string& absPath) {
     std::vector<std::string>::const_iterator iter;
-    std::string serverIndex;
-    for (iter = serverIndexVec.begin(); iter != serverIndexVec.end(); ++iter) {
-        // std::cout << "[DEBUG] INDEX Page Search[ser]: " << absPath + *iter << std::endl;
-        if (FileController::checkType(absPath + *iter) == FileController::FILE) {
-            serverIndex = *iter;
-            break ;
-        }
-    }
-    std::string locIndex;
-    if (!locIndexVec.empty()) {
-        for (iter = locIndexVec.begin(); iter != locIndexVec.end(); ++iter) {
+    std::string ret;
+
+
+    if (!_locConf.index.empty()) {
+        for (iter = _locConf.index.begin(); iter != _locConf.index.end(); ++iter) {
             if (FileController::checkType(absPath + *iter) == FileController::FILE) {
-                // std::cout << "[DEBUG] INDEX Page Search[loc]: " << absPath + *iter << std::endl;
-                locIndex = *iter;
+                ret = *iter;
                 break ;
             }
         }
-        if (iter == locIndexVec.end()) {
-            locIndex.clear();
+        if (iter == _locConf.index.end()) {
+            ret = "";
         }
-    } else {
-        locIndex = serverIndex;
-    }
-    return locIndex;
+    } 
+    return ret;
 }
 
-std::string HTTPResponseHandler::getErrorPage(const std::string& absPath, const std::vector<std::string>& serverErrorPageVec, const std::vector<std::string>& locErrorPageVec) {
-    std::string serverErrorPage;
+std::string HTTPResponseHandler::getErrorPage(const std::string& absPath) {
     std::vector<std::string>::const_iterator iter;
-    if (!serverErrorPageVec.empty()) {
-        iter = serverErrorPageVec.end() - 1;
-        std::cout << "[DEBUG] ERROR Page Search[ser]: " << absPath + *iter << std::endl;
-        if (FileController::checkType(absPath + *iter) == FileController::FILE) {
-           _errorPageList  = serverErrorPageVec;
-            serverErrorPage = *iter;
-        } else {
-            _errorPageList.clear(); 
-            serverErrorPage = "";
-        }
-    } else {
-        _errorPageList.clear(); 
-        serverErrorPage = "";
-    }
 
-    std::string locErrorPage;
-    if (!locErrorPageVec.empty()) {     // loc error page가 있는 경우
-        iter = locErrorPageVec.end() - 1;
-        std::cout << "[DEBUG] ERROR Page Search[loc]: " << absPath + *iter << std::endl;
+    std::string ret;
+    if (!_locConf.error_page.empty()) {     // loc error page가 있는 경우
+        iter = _locConf.error_page.end() - 1;
         if (FileController::checkType(absPath + *iter) == FileController::FILE) {
-            _errorPageList = locErrorPageVec;
-            locErrorPage = *iter;
+            _errorPageList = _locConf.error_page;
+            ret = *iter;
         } else {
             _errorPageList.clear();
-            locErrorPage = "";
+            ret = "";
         }
-    } else {                            // loc error page가 없는 경우
-        if (!serverErrorPage.empty()) { // server error page가 있는 경우
-            _errorPageList = serverErrorPageVec;
-            locErrorPage = serverErrorPage;
-        } else {
-            _errorPageList.clear();
-            locErrorPage = "";
-        }
-    }
-    return locErrorPage;
+    } 
+    return ret;
 }
+
 
 bool HTTPResponseHandler::isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec) {
     std::stringstream ssStatusCode;
@@ -195,7 +164,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::setInformation(HTTPData& data, i
         }
     }
     if (!_errorPage.empty() && isErrorPageList(data._statusCode, _errorPageList)) {
-        // 경로상의 error_page를 띄우면 200 아니였는가..?
         return setInformation(data, 200, data._resAbsoluteFilePath + _errorPage);
     }
     return GET_STATIC_HTML;
@@ -238,7 +206,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     // TODO: 해당하는 로케이션의 설정에서 status 코드 적용시키기
     if (_phase == PRE_STATUSCODE_CHECK) {
         if (data._statusCode != 200) {
-            std::cout << "===========================================================413413413" << std::endl;
             setGeneralHeader(data);
             data._URIExtension = "html";
             _phase = GET_STATIC_HTML;
@@ -250,16 +217,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     if (_phase == FIND_RESOURCE) {
         // 1
         data._serverName = _serverConf.dirMap["server_name"];
-        data._root = _serverConf.dirMap["root"].empty() ? DEFAULT_ROOT : _serverConf.dirMap["root"];
 
         // 2
         setCGIConfigMap();
 
         // 3
         _locConf = getMatchingLocationConfiguration(data);
-        std::cout << "data._originURI : " << data._originURI << std::endl;
-        std::cout << "data._reqURI : " << data._reqURI << std::endl;
-        std::cout << "_locConf._locationPath : " << _locConf._locationPath << std::endl;
         
         // TODO: root에 따라서 변하는 경우, 처리할지 말지 고민: location block 내에도 root가 올 수 있음
         if (!_locConf._locationPath.empty()) { // 4
@@ -271,13 +234,13 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             // tmpLocPath: /static_html/ (location path가 정의되었다면)
             // absLocPath: root/static_html/
             // absFilePath: root/static_html/index.html
+            data._root = _locConf.dirMap["root"];
             std::string tmpFilePath = data._URIFilePath;
             std::string tmpLocPath = _locConf._locationPath == "/" ? "/" : _locConf._locationPath + "/";
             std::string absFilePath = data._root + tmpFilePath;
 
-            _indexPage = getIndexPage(data._root + tmpLocPath, _serverConf.index, _locConf.index);
-            _errorPage = getErrorPage(data._root + tmpLocPath, _serverConf.error_page, _locConf.error_page);
-            data._root = _locConf.dirMap["root"].empty() ? data._root : _locConf.dirMap["root"];
+            _indexPage = getIndexPage(data._root + tmpLocPath);
+            _errorPage = getErrorPage(data._root + tmpLocPath);
             if ((_locConf.inner_proxy.size() != 0) && (data._originURI == data._reqURI)) {
                 data._reqURI = _locConf.inner_proxy[0];
                 data.setURIelements();
@@ -307,9 +270,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                     tmpFilePath = tmpFilePath.substr(_locConf._locationPath.size());
                     absFilePath = data._root + tmpFilePath;
 
-                    _indexPage = getIndexPage(data._root + "/", _serverConf.index, _locConf.index);
-                    _errorPage = getErrorPage(data._root + "/", _serverConf.error_page, _locConf.error_page);
-                    
+                    _indexPage = getIndexPage(data._root + "/");
+                    _errorPage = getErrorPage(data._root + "/");
                     _type = FileController::checkType(absFilePath);
                     if (_type == FileController::DIRECTORY) {
                         if (data._URIFilePath[data._URIFilePath.size() - 1] != '/') {
