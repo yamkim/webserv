@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 } else {
     $putdata = fopen("php://input", "r");
-    $length = 100;
+    $length =  1000000;
     while ($data = fread($putdata, 1) && ($length >= 0)) {
         $length--;
     }

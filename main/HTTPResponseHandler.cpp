@@ -238,6 +238,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
     // TODO: 해당하는 로케이션의 설정에서 status 코드 적용시키기
     if (_phase == PRE_STATUSCODE_CHECK) {
         if (data._statusCode != 200) {
+            std::cout << "===========================================================413413413" << std::endl;
             setGeneralHeader(data);
             data._URIExtension = "html";
             _phase = GET_STATIC_HTML;
@@ -273,13 +274,20 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             std::string tmpFilePath = data._URIFilePath;
             std::string tmpLocPath = _locConf._locationPath == "/" ? "/" : _locConf._locationPath + "/";
             std::string absFilePath = data._root + tmpFilePath;
+
             _indexPage = getIndexPage(data._root + tmpLocPath, _serverConf.index, _locConf.index);
             _errorPage = getErrorPage(data._root + tmpLocPath, _serverConf.error_page, _locConf.error_page);
             data._root = _locConf.dirMap["root"].empty() ? data._root : _locConf.dirMap["root"];
             if ((_locConf.inner_proxy.size() != 0) && (data._originURI == data._reqURI)) {
-                std::cout << _locConf.inner_proxy[0] << std::endl;
                 data._reqURI = _locConf.inner_proxy[0];
                 data.setURIelements();
+                data._URIFilePath = data._reqURI;
+                int clientMaxBodySize = _locConf.dirMap["client_max_body_size"].empty() ? -1 : std::atoi(_locConf.dirMap["client_max_body_size"].c_str());
+                if (clientMaxBodySize != -1) {
+                    if (clientMaxBodySize < std::atoi(data._reqContentLength.c_str())) {
+                        data._statusCode = 413;
+                    }
+                }
                 _phase = PRE_STATUSCODE_CHECK;
             } else {
                 _type = FileController::checkType(absFilePath);
@@ -294,7 +302,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                         }
                     }
                 } else if (_type == FileController::FILE) {
-                    _phase = setInformation(data, 200, data._root + absFilePath);
+                    _phase = setInformation(data, 200, absFilePath);
                 } else {
                     tmpFilePath = tmpFilePath.substr(_locConf._locationPath.size());
                     absFilePath = data._root + tmpFilePath;
