@@ -22,6 +22,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
         }
     } else if (_phase == PARSE_HEADER) {
         if (getHeader() == true) {
+            data.setHTTPCGIENV(_headers);
             if (_headers.find("Transfer-Encoding") != _headers.end()) {
                 if (_headers["Transfer-Encoding"].find("chunked") == std::string::npos) {
                     throw ErrorHandler("Error: Transfer-Encoding header error.", ErrorHandler::NORMAL, "HTTPRequestHandler::process");

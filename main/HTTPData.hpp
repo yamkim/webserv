@@ -29,6 +29,7 @@ class HTTPData {
         std::string _reqContentType;
         std::string _reqContentLength;
         std::string _originURI;
+        std::map<std::string, std::string> _HTTPCGIENV;
         
         // Response Data
         int _statusCode;
@@ -51,6 +52,7 @@ class HTTPData {
         static std::string getExtension(std::string URI);
         void setURIelements(void);
         void setResStartLineMap(void);
+        void setHTTPCGIENV(std::map<std::string, std::string> headers);
 };
 
 #endif

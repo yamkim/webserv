@@ -103,3 +103,19 @@ void HTTPData::setResStartLineMap(void) {
 	_resStartLineMap[511] = "Network Authentication Required";
 	_resStartLineMap[599] = "Network Connect Timeout Error";
 }
+
+void HTTPData::setHTTPCGIENV(std::map<std::string, std::string> headers) {
+    std::map<std::string, std::string>::iterator iter;
+
+    for (iter = headers.begin(); iter != headers.end(); iter++) {
+        std::string key = std::string("HTTP_") + iter->first;
+        for (size_t i = 0; i < key.length(); i++) {
+            if (key[i] >= 'a' && key[i] <= 'z') {
+                key[i] = key[i] - ('a' - 'A');
+            } else if (key[i] == '-') {
+                key[i] = '_';
+            }
+        }
+        _HTTPCGIENV[key] = iter->second;
+    }
+}

@@ -6,6 +6,7 @@ CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStre
     _envMap[std::string("USER")] = std::string(std::getenv("USER"));
     _envMap[std::string("PATH")] = std::string(std::getenv("PATH"));
     _envMap[std::string("LANG")] = std::string(std::getenv("LANG"));
+    _envMap[std::string("PWD")] = std::string(std::getenv("PWD"));
     _envMap[std::string("QUERY_STRING")] = data._URIQueryString;
     _envMap[std::string("REQUEST_METHOD")] = data._reqMethod;
     _envMap[std::string("CONTENT_TYPE")] = data._reqContentType;
@@ -25,8 +26,9 @@ CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStre
     _envMap[std::string("SERVER_PORT")] = data._hostPort;
     _envMap[std::string("SERVER_NAME")] = data._serverName;
     _envMap[std::string("SCRIPT_FILENAME")] = data._resAbsoluteFilePath;
-    // FIXME joopark 수정예정
-    _envMap[std::string("HTTP_X_SECRET_HEADER_FOR_TEST")] = std::string("1");
+    for (std::map<std::string, std::string>::iterator iter = data._HTTPCGIENV.begin(); iter != data._HTTPCGIENV.end(); iter++) {
+        _envMap[iter->first] = iter->second;
+    }
 
     _arg[0] = const_cast<char*>(data._CGIBinary.c_str());
 	_arg[1] = const_cast<char*>(data._resAbsoluteFilePath.c_str());

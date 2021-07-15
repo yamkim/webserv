@@ -41,7 +41,12 @@ void HTTPHandler::setGeneralHeader(std::string status) {
 void HTTPHandler::convertHeaderMapToString(void) {
     std::map<std::string, std::string>::iterator iter;
     for (iter = _headers.begin(); iter != _headers.end(); ++iter) {
-        _headerString += iter->first;
+        size_t duplicateIdentifier = (iter->first).find("@");
+        if (duplicateIdentifier != std::string::npos) {
+            _headerString += (iter->first).substr(duplicateIdentifier + 1);
+        } else {
+            _headerString += iter->first;
+        }
         _headerString += ": ";
         _headerString += iter->second;
         _headerString += "\r\n";
