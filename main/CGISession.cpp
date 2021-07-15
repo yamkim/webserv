@@ -25,6 +25,8 @@ CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStre
     _envMap[std::string("SERVER_PORT")] = data._hostPort;
     _envMap[std::string("SERVER_NAME")] = data._serverName;
     _envMap[std::string("SCRIPT_FILENAME")] = data._resAbsoluteFilePath;
+    // FIXME joopark 수정예정
+    _envMap[std::string("HTTP_X_SECRET_HEADER_FOR_TEST")] = std::string("1");
 
     _arg[0] = const_cast<char*>(data._CGIBinary.c_str());
 	_arg[1] = const_cast<char*>(data._resAbsoluteFilePath.c_str());
