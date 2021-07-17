@@ -12,10 +12,11 @@ class ConnectionSocket : public Socket {
         ConnectionSocket();
         HTTPRequestHandler* _req;
         HTTPResponseHandler* _res;
-        HTTPData _data;
+        HTTPData* _data;
         NginxConfig::NginxConfig _nginxConf;
         long _dynamicBufferSize;
         bool _connectionCloseByServer;
+        struct sockaddr_in myAddr;
     public:
         ConnectionSocket(int listeningSocket, const NginxConfig::ServerBlock& conf, const NginxConfig::NginxConfig& nginxConfig);
         virtual ~ConnectionSocket();
