@@ -18,7 +18,8 @@ class HTTPRequestHandler : public HTTPHandler {
         virtual HTTPRequestHandler::Phase process(HTTPData& data, long bufferSize);
     private:
         bool getStartLine(HTTPData& data);
-        std::string _requestLine;
+        std::string _stringBuffer;
+        bool _stringBufferClear;
         Phase _phase;
         long _contentLength;
         long _contentLengthSum;

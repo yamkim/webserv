@@ -7,6 +7,8 @@ HTTPRequestHandler::HTTPRequestHandler(int connectionFd, const NginxConfig::Serv
     _chunkFinish = false;
     _dynamicBufferSize = 0;
     _fileController = NULL;
+    _stringBuffer = std::string("");
+    _stringBufferClear = false;
 }
 
 HTTPRequestHandler::~HTTPRequestHandler() {
@@ -138,19 +140,17 @@ bool HTTPRequestHandler::getHeader(void) {
 
 std::string* HTTPRequestHandler::getDataByCRNF(void) {
     Buffer buffer(_dynamicBufferSize);
-    static std::string rtn = std::string("");
-    static bool bufferClear = false;
-    if (bufferClear == true) {
-        rtn.clear();
-        bufferClear = false;
+    if (_stringBufferClear == true) {
+        _stringBuffer.clear();
+        _stringBufferClear = false;
     }
     ssize_t peekLength = recv(_connectionFd, *buffer, _dynamicBufferSize, MSG_PEEK);
     if (peekLength == TRANS_ERROR) {
         throw ErrorHandler("Error: recv error.", ErrorHandler::ALERT, "HTTPRequestHandler::getDataByCRNF");
     }
-    size_t bufferLength = rtn.length();
-    rtn += std::string(*buffer, peekLength);
-    size_t CRNFPosition = rtn.find("\r\n");
+    size_t bufferLength = _stringBuffer.length();
+    _stringBuffer += std::string(*buffer, peekLength);
+    size_t CRNFPosition = _stringBuffer.find("\r\n");
     if (CRNFPosition == std::string::npos) {
         ssize_t readLength = recv(_connectionFd, *buffer, peekLength, 0);
         if (readLength == TRANS_ERROR) {
@@ -163,8 +163,8 @@ std::string* HTTPRequestHandler::getDataByCRNF(void) {
         if (readLength == TRANS_ERROR) {
             throw ErrorHandler("Error: recv error.", ErrorHandler::ALERT, "HTTPRequestHandler::getDataByCRNF");
         }
-        rtn = rtn.substr(0, CRNFPosition);
-        bufferClear = true;
-        return (&rtn);
+        _stringBuffer = _stringBuffer.substr(0, CRNFPosition);
+        _stringBufferClear = true;
+        return (&_stringBuffer);
     }
 }

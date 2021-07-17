@@ -2,11 +2,9 @@
 
 ErrorHandler::ErrorHandler() : _errmsg(NULL), _at(NULL), _errcode(NORMAL) {}
 
-ErrorHandler::ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode) : _errmsg(errmsg), _at(NULL), _errcode(errcode) {}
+ErrorHandler::ErrorHandler(std::string errmsg, ErrorHandler::ErrCode errcode) : _errmsg(errmsg), _at(NULL), _errcode(errcode) {}
 
-ErrorHandler::ErrorHandler(const char* errmsg, ErrorHandler::ErrCode errcode, const char* at) : _errmsg(errmsg), _at(at), _errcode(errcode) {}
-
-// ErrorHandler::ErrorHandler(const std::string& errmsg, ErrorHandler::ErrCode errcode, const char* at) : _errmsg(errmsg.c_str()), _at(at), _errcode(errcode) {};
+ErrorHandler::ErrorHandler(std::string errmsg, ErrorHandler::ErrCode errcode, std::string at) : _errmsg(errmsg), _at(at), _errcode(errcode) {};
 
 ErrorHandler::~ErrorHandler() throw() {}
 
@@ -44,7 +42,7 @@ const char* ErrorHandler::what() const throw() {
 		rtn.append(")");
         errno = 0;
 	}
-	if (_at != NULL) {
+	if (_at.empty() == false) {
 		rtn.append(" at ");
 		rtn.append(_at);
 	}
