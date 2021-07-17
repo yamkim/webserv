@@ -13,6 +13,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::Ser
     _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
     _res = NULL;
     _dynamicBufferSize = 0;
+    _connectionCloseByServer = false;
 }
 
 ConnectionSocket::~ConnectionSocket(){
@@ -39,6 +40,11 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
         }
     }
     if (phase == HTTPRequestHandler::FINISH) {
+        if (_data._HTTPCGIENV.find("HTTP_CONNECTION") != _data._HTTPCGIENV.end()) {
+            if (_data._HTTPCGIENV["HTTP_CONNECTION"] == std::string("close")) {
+                _connectionCloseByServer = true;
+            }
+        }
         _res = new HTTPResponseHandler(_socket, _serverConf, _nginxConf);
     }
     return (phase);
@@ -58,6 +64,17 @@ void ConnectionSocket::setConnectionData(struct sockaddr_in _serverSocketAddr, s
 HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
     HTTPResponseHandler::Phase phase;
     phase = _res->process(_data, getDynamicBufferSize());
+    if (phase == HTTPResponseHandler::CGI_RUN) {
+        _connectionCloseByServer = true;
+    } else if (phase == HTTPResponseHandler::FINISH) {
+        if (_connectionCloseByServer == false) {
+            delete _req;
+            delete _res;
+            _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
+            _res = NULL;
+            phase = HTTPResponseHandler::FINISH_RE;
+        }
+    }
     return (phase);
 }
 

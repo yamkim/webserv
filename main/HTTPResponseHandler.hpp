@@ -3,7 +3,6 @@
 
 #include <ctime>
 #include <iostream>
-#include <fcntl.h>
 
 #include "FileController.hpp"
 #include "HTTPHandler.hpp"
@@ -36,7 +35,8 @@ class HTTPResponseHandler : public HTTPHandler {
             DATA_SEND_LOOP, 
             CGI_RECV_HEAD_LOOP, 
             CGI_RECV_BODY_LOOP, 
-            FINISH
+            FINISH,
+            FINISH_RE
         } Phase;
         virtual HTTPResponseHandler::Phase process(HTTPData& data, long bufferSize);
 

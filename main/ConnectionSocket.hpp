@@ -15,6 +15,7 @@ class ConnectionSocket : public Socket {
         HTTPData _data;
         NginxConfig::NginxConfig _nginxConf;
         long _dynamicBufferSize;
+        bool _connectionCloseByServer;
     public:
         ConnectionSocket(int listeningSocket, const NginxConfig::ServerBlock& conf, const NginxConfig::NginxConfig& nginxConfig);
         virtual ~ConnectionSocket();

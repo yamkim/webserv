@@ -68,13 +68,19 @@ int main(int argc, char *argv[])
                             }
                         } else if (kq.isWriteEvent(i)) {
                             HTTPResponseHandler::Phase phase = cSocket->HTTPResponseProcess();
-                            if (phase == HTTPResponseHandler::FINISH) {
+                            if (phase == HTTPResponseHandler::CGI_RECV_HEAD_LOOP) {
+                                kq.setPairEvent(i, cSocket->getCGIfd());
+                            } else if (phase == HTTPResponseHandler::FINISH) {
                                 kq.deletePairEvent(i);
                                 timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
-                            } else if (phase == HTTPResponseHandler::CGI_RECV_HEAD_LOOP) {
-                                kq.setPairEvent(i, cSocket->getCGIfd());
+                            } else if (phase == HTTPResponseHandler::FINISH_RE) {
+                                kq.deletePairEvent(i);
+                                kq.modEventToReadEvent(i);
+                                timer.resetObj(cSocket, std::atoi(instance->getConfig().dirMap["keepalive_timeout"].c_str()));
                             }
                         }
+                    } else {
+                        throw ErrorHandler("Error: Event Handling Failure", ErrorHandler::CRITICAL, "main");
                     }
                 }
             }
