@@ -56,6 +56,8 @@ class HTTPResponseHandler : public HTTPHandler {
         NginxConfig::LocationBlock getMatchingLocationConfiguration(const HTTPData& data);
         HTTPResponseHandler::Phase setInformation(HTTPData& data, int statusCode, const std::string& absPath);
         HTTPResponseHandler::Phase setFileInDirectory(HTTPData& data, const std::string& absLocPath);
+        HTTPResponseHandler::Phase handleProcess(std::string tmpFilePath, std::string tmpLocPath, std::string absFilePath, HTTPData& data);
+
  
 
     private:
