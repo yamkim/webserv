@@ -29,7 +29,7 @@ class HTTPRequestHandler : public HTTPHandler {
         HTTPRequestHandler();
 
         bool getHeader(void);
-        std::string* getDataByCRNF(void);
+        std::string* getDataByCRNF(int searchLength);
         void setMethod(std::string method);
         void setURI(std::string URI);
         void setProtocol(std::string protocol);

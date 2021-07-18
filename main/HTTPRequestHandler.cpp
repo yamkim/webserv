@@ -48,7 +48,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
             }
         }
     } else if (_phase == PARSE_BODY_CHUNK) {
-        std::string* bufptr = getDataByCRNF();
+        std::string* bufptr = getDataByCRNF(10);
         if (bufptr != NULL) {
             _contentLength = Utils::hextoint(bufptr->c_str());
             if (_contentLength >= 0) {
@@ -83,7 +83,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
             }
         }
     } else if (_phase == REMOVE_CRNF) {
-        std::string* bufptr = getDataByCRNF();
+        std::string* bufptr = getDataByCRNF(10);
         if (bufptr != NULL) {
             if (_chunkFinish) {
                 data._reqContentType = std::string("application/octet-stream");
@@ -98,7 +98,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
 }
 
 bool HTTPRequestHandler::getStartLine(HTTPData& data) {
-    std::string* bufptr = getDataByCRNF();
+    std::string* bufptr = getDataByCRNF(1000);
     if (bufptr == NULL) {
         return (false);
     }
@@ -123,7 +123,7 @@ bool HTTPRequestHandler::getStartLine(HTTPData& data) {
 }
 
 bool HTTPRequestHandler::getHeader(void) {
-    std::string* bufptr = getDataByCRNF();
+    std::string* bufptr = getDataByCRNF(1000);
     if (bufptr == NULL) {
         return (false);
     }
@@ -137,13 +137,19 @@ bool HTTPRequestHandler::getHeader(void) {
     return (false);
 }
 
-std::string* HTTPRequestHandler::getDataByCRNF(void) {
-    Buffer buffer(_dynamicBufferSize);
+std::string* HTTPRequestHandler::getDataByCRNF(int searchLength) {
+    long dynamicBufferSize;
+    if (searchLength > 0) {
+        dynamicBufferSize = (_dynamicBufferSize > searchLength) ? searchLength : _dynamicBufferSize;
+    } else {
+        dynamicBufferSize = _dynamicBufferSize;
+    }
+    Buffer buffer(dynamicBufferSize);
     if (_stringBufferClear == true) {
         _stringBuffer.clear();
         _stringBufferClear = false;
     }
-    ssize_t peekLength = recv(_connectionFd, *buffer, _dynamicBufferSize, MSG_PEEK);
+    ssize_t peekLength = recv(_connectionFd, *buffer, dynamicBufferSize, MSG_PEEK);
     if (peekLength == TRANS_ERROR) {
         throw ErrorHandler("Error: recv error.", ErrorHandler::ALERT, "HTTPRequestHandler::getDataByCRNF");
     }
