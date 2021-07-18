@@ -136,9 +136,7 @@ class LocationBlock : public NginxBlock {
         }
 
         void inheritDirectives() {
-            std::cout << "location root: " << this->dirMap["root"] << std::endl;
             if (this->dirMap["root"].empty()) {
-                std::cout << "inherit root: " << this->dirMap["root"] << std::endl;
                 this->dirMap["root"] = _inheritData.root;
             }
             if (this->index.empty()) {

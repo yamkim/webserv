@@ -244,9 +244,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             if ((_locConf.inner_proxy.size() != 0) && (data._originURI == data._reqURI)) {
                 data._reqURI = _locConf.inner_proxy[0];
                 data.setURIelements();
-                data._URIFilePath = data._reqURI;
                 int clientMaxBodySize = _locConf.dirMap["client_max_body_size"].empty() ? -1 : std::atoi(_locConf.dirMap["client_max_body_size"].c_str());
-                if (clientMaxBodySize != -1) {
+                if (clientMaxBodySize >= 0) {
                     if (clientMaxBodySize < std::atoi(data._reqContentLength.c_str())) {
                         data._statusCode = 413;
                     }
