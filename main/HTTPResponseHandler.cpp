@@ -117,8 +117,12 @@ void HTTPResponseHandler::setGeneralHeader(HTTPData& data) {
 
     _headerString = startLine;
     _headerString += "\r\n";
-    _headers["Connection"] = std::string("close");
-    _headers["Date"] = std::string(timeBuffer);
+    if ( (data._HTTPCGIENV.find("HTTP_CONNECTION") != data._HTTPCGIENV.end())
+        && (data._HTTPCGIENV["HTTP_CONNECTION"] == std::string("close"))) {
+        _headers["Connection"] = std::string("close");
+    } else {
+        _headers["Connection"] = std::string("keep-alive");
+    }
 }
 
 void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
@@ -244,9 +248,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         } else {
             _phase = FIND_RESOURCE; 
         }
-    }
-    
-    if (_phase == FIND_RESOURCE) {
+    } else if (_phase == FIND_RESOURCE) {
         // 1
         data._serverName = _serverConf.dirMap["server_name"];
         data._root = _serverConf.dirMap["root"].empty() ? DEFAULT_ROOT : _serverConf.dirMap["root"];
@@ -256,9 +258,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
 
         // 3
         _locConf = getMatchingLocationConfiguration(data);
+        //std::cout << "data._reqURI : " << data._reqURI << std::endl;
+        /*
         std::cout << "data._originURI : " << data._originURI << std::endl;
         std::cout << "data._reqURI : " << data._reqURI << std::endl;
         std::cout << "_locConf._locationPath : " << _locConf._locationPath << std::endl;
+        */
         
         // TODO: root에 따라서 변하는 경우, 처리할지 말지 고민: location block 내에도 root가 올 수 있음
         if (!_locConf._locationPath.empty()) { // 4
@@ -273,7 +278,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             //     std::cout << "[DEBUG] 405 ERROR PAGE========================";
             //     _phase = setInformation(data, 405, data._root + "/");
             if ((_locConf.inner_proxy.size() != 0) && (data._originURI == data._reqURI)) {
-                std::cout << _locConf.inner_proxy[0] << std::endl;
+                std::cout << "_locConf.inner_proxy[0]" << _locConf.inner_proxy[0] << std::endl;
                 data._reqURI = _locConf.inner_proxy[0];
                 data.setURIelements();
                 _phase = PRE_STATUSCODE_CHECK;
@@ -323,10 +328,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         } else { // TODO: locatioin에 대한 정보가 없는 경우 어떻게 처리할건지 고려 => root가 있으면 root에서 index 파일을 찾아야됨.
             _phase = setInformation(data, 404, data._root + _locConf._locationPath + "/");
         }
-        showResponseInformation(data);
-    }
-
-    if (_phase == GET_STATIC_HTML) {
+        //showResponseInformation(data);
+    } else if (_phase == GET_STATIC_HTML) {
         _staticHtml = HTMLBody::getStaticHTML(data);
         data._resContentLength = _staticHtml.length();
         setHTMLHeader(data);
@@ -338,9 +341,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         setHTMLHeader(data);
         send(_connectionFd, _headerString.data(), _headerString.length(), 0);
         _phase = DATA_SEND_LOOP;
-    }
-
-    if (_phase == DATA_SEND_LOOP) {
+    } else if (_phase == DATA_SEND_LOOP) {
         size_t writtenLengthOnBuf;
         size_t buflen = _staticHtml.empty() ? bufferSize : data._resContentLength + 1;
         Buffer buf(buflen);
@@ -356,9 +357,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         if (writtenLengthOnSocket != writtenLengthOnBuf) {
             throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
         }
-    } 
-
-    if (_phase == CGI_RUN) {
+    } else if (_phase == CGI_RUN) {
         _cgi = new CGISession(data);
         if (data._postFilePath.empty()) {
             _cgi->makeCGIProcess(0);
@@ -367,9 +366,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             _cgi->makeCGIProcess(_file->getFd());
         }
         _phase = CGI_RECV_HEAD_LOOP;
-    }
-    
-    if (_phase == CGI_RECV_HEAD_LOOP) {
+    } else if (_phase == CGI_RECV_HEAD_LOOP) {
         bool sendHeader = false;
         Buffer buf(bufferSize);
         int length = read(_cgi->getOutputStream(), *buf, bufferSize);
@@ -394,6 +391,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                         }
                         _headers.insert(tmp);
                     }
+                    _headers["Connection"] = std::string("close");
                     if (_headers.find("Status") == _headers.end()) {
                         data._statusCode = 200;
                         setGeneralHeader(data);
@@ -407,7 +405,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 }
             }
         } catch (const std::exception& error) {
-            std::cerr << error.what() << std::endl;
+            std::cerr << "[HTTPResponseHandler::process] " << error.what() << std::endl;
             data._statusCode = 500;
             setGeneralHeader(data);
             data._URIExtension = "html";
@@ -421,9 +419,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             }
             _phase = CGI_RECV_BODY_LOOP;
         }
-    }
-    
-    if (_phase == CGI_RECV_BODY_LOOP) {
+    } else if (_phase == CGI_RECV_BODY_LOOP) {
         Buffer buf(bufferSize);
         if (_CGIReceive.empty()) {
             ssize_t length = read(_cgi->getOutputStream(), *buf, bufferSize);

@@ -16,6 +16,7 @@ class Timer {
         Timer();
         ~Timer();
         void addObj(void* obj, int lifetime);
+        void resetObj(void* obj, int lifetime);
         void delObj(void* obj, void (*del)(void*));
         void CheckTimer(void (*del)(void*));
 };

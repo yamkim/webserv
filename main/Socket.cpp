@@ -9,7 +9,7 @@ Socket::Socket(int socket_, const NginxConfig::ServerBlock& serverConf) : _socke
 }
 
 Socket::~Socket() {
-    if (_socket != -1) {
+    if (_socket > 0) {
         if (close(_socket) == -1) {
         	throw ErrorHandler("Error: Can't close socket", ErrorHandler::ALERT, "Socket::~Socket");
         }

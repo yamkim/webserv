@@ -9,7 +9,7 @@
 #include "ErrorHandler.hpp"
 #include "Socket.hpp"
 
-#define KERNELQUEUE_EVENTS_SIZE 10
+#define KERNELQUEUE_EVENTS_SIZE 300
 
 class KernelQueue {
     private:
@@ -26,6 +26,7 @@ class KernelQueue {
         int getEventsIndex(void);
         void addReadEvent(int fd, void* instancePointer);
         void modEventToWriteEvent(int index);
+        void modEventToReadEvent(int index);
         bool isClose(int index) const;
         bool isReadEvent(int index) const;
         bool isWriteEvent(int index) const;

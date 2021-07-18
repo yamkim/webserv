@@ -1,8 +1,8 @@
 #include "ListeningSocket.hpp"
 
-ListeningSocket::ListeningSocket(const NginxConfig::ServerBlock& serverConf) : Socket(-1, serverConf) {
+ListeningSocket::ListeningSocket(const NginxConfig::ServerBlock& serverConf, int backlog) : Socket(-1, serverConf) {
     _portNum = atoi(Utils::getMapValue(_serverConf.dirMap, "listen").c_str());
-    _backlog = 42;
+    _backlog = backlog;
 }
 
 ListeningSocket::~ListeningSocket() {
@@ -47,6 +47,6 @@ int ListeningSocket::runSocket() {
     this->setSocketAddress();
     this->bindSocket();
     this->listenSocket();
-    this->fcntlSocket();
+    //this->fcntlSocket();
     return (0);
 }

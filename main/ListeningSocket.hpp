@@ -3,6 +3,7 @@
 
 #include "Socket.hpp"
 #include "Utils.hpp"
+#include <fcntl.h>
 
 class ListeningSocket : public Socket {
     private:
@@ -14,13 +15,13 @@ class ListeningSocket : public Socket {
     public:
         ListeningSocket(int portNum, int backlog);
         ListeningSocket(int portNum, int backlog, const char* ip);
-        ListeningSocket(const NginxConfig::ServerBlock& serverConfig);
+        ListeningSocket(const NginxConfig::ServerBlock& serverConfig, int backlog);
         virtual ~ListeningSocket();
         void setSocket();
         void setSocketAddress();
         void bindSocket();
         void listenSocket();
-        void fcntlSocket();
+        void fcntlSocket(); 
         int runSocket();
 };
 #endif

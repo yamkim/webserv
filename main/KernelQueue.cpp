@@ -44,6 +44,11 @@ void KernelQueue::modEventToWriteEvent(int index) {
     addEvent(_getEvent[index].ident, EVFILT_WRITE, _getEvent[index].udata);
 }
 
+void KernelQueue::modEventToReadEvent(int index) {
+    removeEvent(_getEvent[index].ident, EVFILT_WRITE, _getEvent[index].udata);
+    addEvent(_getEvent[index].ident, EVFILT_READ, _getEvent[index].udata);
+}
+
 bool KernelQueue::isClose(int index) const {
     return (_getEvent[index].flags & EV_EOF);
 }

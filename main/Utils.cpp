@@ -6,7 +6,11 @@ std::string Utils::getMapValue(std::map<std::string, std::string> map_, const st
 
 std::string Utils::randomStringGenerator(int length) {
     std::string rtn;
-    srand(time(NULL));
+    static bool called = false;
+    if (called == false) {
+        called = true;
+        srand(time(NULL));
+    }
     for (int i = 0; i < length; i++) {
         rtn.push_back((std::rand() % ('Z' - 'A') + 'A'));
     }
