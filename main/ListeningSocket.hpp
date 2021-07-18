@@ -3,6 +3,7 @@
 
 #include "Socket.hpp"
 #include "Utils.hpp"
+#include <fcntl.h>
 
 class ListeningSocket : public Socket {
     private:
@@ -20,7 +21,7 @@ class ListeningSocket : public Socket {
         void setSocketAddress();
         void bindSocket();
         void listenSocket();
-        void fcntlSocket();
+        void fcntlSocket(); 
         int runSocket();
 };
 #endif

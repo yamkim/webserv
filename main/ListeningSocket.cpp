@@ -47,6 +47,6 @@ int ListeningSocket::runSocket() {
     this->setSocketAddress();
     this->bindSocket();
     this->listenSocket();
-    this->fcntlSocket();
+    //this->fcntlSocket();
     return (0);
 }
