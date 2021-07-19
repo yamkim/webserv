@@ -13,7 +13,7 @@ class NginxBlock {
 
         void checkValidNumberValue(NginxBlock& block, std::string directive) {
             if (!block.dirMap[directive].empty() && !Parser::isNumber(block.dirMap[directive])) {
-                throw std::string("Error: invalid value in " + directive + " directive.");
+                throw ErrorHandler("Error: invalid value in " + directive + " directive.", ErrorHandler::CRITICAL, "NginxBlock::checkValidNumberValue");
             }
         }
 
@@ -22,7 +22,7 @@ class NginxBlock {
             if (!errorPage.empty()) {
                 for (iter = errorPage.begin(); iter != errorPage.end() - 1; ++iter) {
                     if (!Parser::isNumber(*iter)) {
-                        throw std::string("Error: invalid value " + *iter + " in error_page directive.");
+                        throw ErrorHandler("Error: invalid value " + *iter + " in error_page directive.", ErrorHandler::CRITICAL, "NginxBlock::checkValidErrorPage");
                     }
                 }
             }
@@ -32,6 +32,7 @@ class NginxBlock {
             if (!block.dirMap["autoindex"].empty() && !(block.dirMap["autoindex"] == "on"
                   || this->dirMap["autoindex"] == "off")) {
                 throw std::string("Error: invalid argument for autoindex directive.");
+                throw ErrorHandler("Error: invalid argument for autoindex directive.", ErrorHandler::CRITICAL, "NginxBlock::checkAutoindexValue");
             }
         }
 };
@@ -69,7 +70,6 @@ class TypesBlock : public NginxBlock {
                 std::size_t tmpPos = 0;
                 std::string tmpDir = Parser::getIdentifier(tmpLine, tmpPos, " ", true);
                 std::string value = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, ";", true));
-                // std::cout << "[DEBUG] value in tmpLine: [" << value << "]" << std::endl;
                 setTypeMap(this->typeMap, tmpDir, value);
             }
         }
@@ -123,13 +123,13 @@ class LocationBlock : public NginxBlock {
             checkAutoindexValue(*this);
             checkValidNumberValue(*this, "client_max_body_size");
             if (this->_locationPath.empty()) {
-                throw std::string("Error: location block doesn't have locationPath.");
+                throw ErrorHandler("Error: location block doesn't have locationPath.", ErrorHandler::CRITICAL, "LocationBlock::checkLocationBlock");
             }
             if (!this->_return.empty()) {
                 if (this->_return.size() != 2) {
-                    throw std::string("Error: invalid number of arguments in location[return].");
+                throw ErrorHandler("Error: invalid number of arguments in location[return].", ErrorHandler::CRITICAL, "LocationBlock::checkLocationBlock");
                 } else if (!Parser::isNumber(this->_return[0])) {
-                    throw std::string("Error: invalid status code in location[return] directive.");
+                    throw ErrorHandler("Error: invalid status code in location[return] directive.", ErrorHandler::CRITICAL, "LocationBlock::checkLocationBlock");
                 }
             }
         }
@@ -164,7 +164,9 @@ class LocationBlock : public NginxBlock {
                 std::string tmpDir = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, " ", true));
                 // std::cout << "identifier[location]: [" << tmpDir << "]" << std::endl;
                 if (find(this->dirCase.begin(), this->dirCase.end(), tmpDir) == this->dirCase.end()) {
-                    throw std::string("Error: " + tmpDir + " is not in block[location] list.");
+                    throw ErrorHandler("Error: " + tmpDir + " is not in block[location] list.", ErrorHandler::CRITICAL, "LocationBlock::setBlock");
+                } else if (!dirMap[tmpDir].empty()) {
+                    throw ErrorHandler("Error: There is repeated [" + tmpDir + "] directive. in location context", ErrorHandler::CRITICAL, "LocationBlock::setBlock");
                 } else {
                     std::string tmpVal = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, ";", true));
                     if (tmpDir == "index") {
@@ -180,7 +182,7 @@ class LocationBlock : public NginxBlock {
                     } else {
                         std::vector<std::string> tmpSplit = Parser::getSplitBySpace(tmpVal);
                         if (tmpSplit.size() != 1) {
-                            throw std::string("Error: invalid number of arguments in location["+ tmpDir + " directive].");
+                            throw ErrorHandler("Error: invalid number of arguments in location["+ tmpDir + " directive].", ErrorHandler::CRITICAL, "LocationBlock::setBlock");
                         }
                         this->dirMap[tmpDir] = tmpSplit[0];
                     }
@@ -240,7 +242,6 @@ class ServerBlock : public NginxBlock{
             std::string buf = this->rawData;
             std::size_t pos = 0;
             std::size_t blockPos = 0;
-            // std::cout << "[DEBUG] rawData: " << this->rawData << std::endl;
             while (buf[pos]) {
                 std::string tmpLine = Parser::getIdentifier(buf, pos, "\n", false);
                 if (Parser::sideSpaceTrim(tmpLine).empty()) {
@@ -248,14 +249,15 @@ class ServerBlock : public NginxBlock{
                 }
                 std::size_t tmpPos = 0;
                 std::string tmpDir = Parser::getIdentifier(tmpLine, tmpPos, " ", true);
-                // std::cout << "identifier[server]: [" << tmpDir << "]" << std::endl;
                 if (find(this->dirCase.begin(), this->dirCase.end(), tmpDir) == this->dirCase.end()) {
-                    throw std::string("Error: " + tmpDir + " is not in block[server] list.");
+                    throw ErrorHandler("Error: " + tmpDir + " is not in context[server] list.", ErrorHandler::CRITICAL, "ServerBlock::setBlock");
                 } else if (tmpDir == "location") {
                     InheritData inheritData = getInheritData();
                     LocationBlock tmpLocationBlock(NginxParser::getBlockContent(buf, blockPos), Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, "{", true)), inheritData);
                     this->location.push_back(tmpLocationBlock);
                     pos = blockPos;
+                } else if (!dirMap[tmpDir].empty()) {
+                    throw ErrorHandler("Error: There is repeated [" + tmpDir + "] directive in server context", ErrorHandler::CRITICAL, "ServerBlock::setBlock");
                 } else {
                     std::string tmpVal = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, ";", true));
                     if (tmpDir == "index") {
@@ -265,7 +267,7 @@ class ServerBlock : public NginxBlock{
                     } else {
                         std::vector<std::string> tmpSplit = Parser::getSplitBySpace(tmpVal);
                         if (tmpSplit.size() != 1) {
-                            throw std::string("Error: invalid number of arguments in server["+ tmpDir + " directive].");
+                            throw ErrorHandler("Error: invalid number of arguments in server["+ tmpDir + " directive].", ErrorHandler::CRITICAL, "ServerBlock::setBlock");
                         }
                         this->dirMap[tmpDir] = tmpSplit[0];
                     }
@@ -292,6 +294,7 @@ class HttpBlock : public NginxBlock{
         HttpBlock(std::string rawData) : NginxBlock(rawData) {
             setDirectiveTypes();
             setBlock();
+            checkHttpBlock();
         }
 
         void setDirectiveTypes() {
@@ -314,23 +317,36 @@ class HttpBlock : public NginxBlock{
                 std::size_t tmpPos = 0;
                 std::string tmpDir = Parser::getIdentifier(tmpLine, tmpPos, " ", true);
                 if (find(this->dirCase.begin(), this->dirCase.end(), tmpDir) == this->dirCase.end()) {
-                    throw std::string("Error: " + tmpDir + " is not in block[http] list. HttpBlock::setHttpBlock");
-                } else if (tmpDir == "types") {
-                    TypesBlock tmpTypesBlock(NginxParser::getBlockContent(this->rawData, blockPos));
-                    this->types = tmpTypesBlock;
-                    pos = blockPos;
+                    throw ErrorHandler("Error: " + tmpDir + " is not in context[http] list.", ErrorHandler::CRITICAL, "HttpBlock::setBlock");
                 } else if (tmpDir == "server") {
                     ServerBlock tmpServerBlock(NginxParser::getBlockContent(this->rawData, blockPos));
                     this->server.push_back(tmpServerBlock);
+                    pos = blockPos;
+                } else if (!dirMap[tmpDir].empty()) {
+                    throw ErrorHandler("Error: There is repeated [" + tmpDir + "] directive. in http context", ErrorHandler::CRITICAL, "HttpBlock::setBlock");
+                } else if (tmpDir == "types") {
+                    TypesBlock tmpTypesBlock(NginxParser::getBlockContent(this->rawData, blockPos));
+                    this->types = tmpTypesBlock;
                     pos = blockPos;
                 } else {
                     std::string tmpVal = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, ";", true));
                     std::vector<std::string> tmpSplit = Parser::getSplitBySpace(tmpVal);
                     if (tmpSplit.size() != 1) {
-                        throw std::string("Error: invalid number of arguments in http["+ tmpDir + " directive]. NginxConfig::setHttpBlock");
+                        throw ErrorHandler("Error: invalid number of arguments in http["+ tmpDir + " directive].", ErrorHandler::CRITICAL, "HttpBlock::setBlock");
                     }
                     this->dirMap[tmpDir] = tmpSplit[0];
                 }
+            }
+        }
+
+        void checkHttpBlock() {
+            std::vector<ServerBlock>::iterator iter;
+            std::vector<std::string> listens;
+            for (iter = server.begin(); iter != server.end(); ++iter) {
+                listens.push_back(iter->dirMap["listen"]);
+            }
+            if (!(std::unique(listens.begin(), listens.end()) == listens.end())) {
+                throw ErrorHandler("Error: There is repeated listening port in different server context", ErrorHandler::CRITICAL, "HttpBlock::checkHttpBlock");
             }
         }
 };
@@ -365,10 +381,11 @@ class NginxConfig : public NginxParser {
                     } else if (tmpDir == "worker_processes") {
                         _none.worker_processes = sideSpaceTrim(tmpVal);
                     } else {
-                        throw std::string("Error: " + tmpDir + " is not in block[none] list. NginxConfig::NginxConfig");
+                        throw ErrorHandler("Error: " + tmpDir + " is not in block[none] list.", ErrorHandler::CRITICAL, "NginxConfig::NginxConfig");
                     }
                 }
             }
+
         }
 };
 }

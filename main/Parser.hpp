@@ -21,7 +21,7 @@ class Parser {
 
             readFile.open(this->_fileName);
             if (!readFile.is_open()){
-                throw std::string("Error: Configuration open error.");
+                throw ErrorHandler("Error: Configuration open error.", ErrorHandler::CRITICAL, "Parser::Parser");
             }
             while (!readFile.eof()) {
                 std::string tmp;
@@ -32,7 +32,7 @@ class Parser {
             readFile.close();
 
             if (!isValidBlockSet(this->_rawData)) {
-                throw std::string("Error: bracket pair is not matched.");
+                throw ErrorHandler("Error: bracket pair is not matched.", ErrorHandler::CRITICAL, "Parser::Parser");
             }
         }
         virtual ~Parser(){};
@@ -96,8 +96,7 @@ class Parser {
 
             if (checker && str.find(delimiter) == std::string::npos) {
                 std::cout << "[DEBUG] String: " << str << std::endl;
-                throw std::string("Error: There is no delimiter[" + delimiter + "]. Parser::getIdentifier");
-                // throw ErrorHandler(std::string("Error: There is no delimiter["+ delimiter + "].").c_str(), ErrorHandler::CRITICAL, "Parser::getIdentifier");
+                throw ErrorHandler("Error: There is no delimiter[" + delimiter + "].", ErrorHandler::CRITICAL, "Parser::getIdentifier");
             }
 
             while ((str[endPos] != '\0') && isCharInString(delimiter, str[endPos])) {

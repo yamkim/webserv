@@ -52,6 +52,7 @@ class NginxParser : public Parser {
             findBlockSet(buf, st, blockSet, pos);
             if (blockSet.empty()) {
                 throw std::string("Error: bracket is empty. NginxParser::getBlockContent");
+                throw ErrorHandler("Error: bracket is empty. NginxParser::getBlockContent", ErrorHandler::CRITICAL, "NginxParser::getBlockContent");
             }
             std::size_t blockBeg = blockSet.begin()->second;
             std::size_t blockEnd = (blockSet.end() - 1)->second;
