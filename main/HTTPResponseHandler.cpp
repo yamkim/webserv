@@ -1,6 +1,6 @@
 #include "HTTPResponseHandler.hpp"
 
-HTTPResponseHandler::HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::NginxConfig& nginxConf) : HTTPHandler(connectionFd, serverConf, nginxConf) {
+HTTPResponseHandler::HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::GlobalConfig& nginxConf) : HTTPHandler(connectionFd, serverConf, nginxConf) {
     _phase = PRE_STATUSCODE_CHECK;
     _file = NULL;
     _cgi = NULL;

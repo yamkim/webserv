@@ -1,7 +1,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-//#include "NginxConfig.hpp"
+//#include "GlobalConfig.hpp"
 #include <string>
 #include <map>
 #include <sstream>

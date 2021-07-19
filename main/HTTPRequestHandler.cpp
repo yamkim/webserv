@@ -1,6 +1,6 @@
 #include "HTTPRequestHandler.hpp"
 
-HTTPRequestHandler::HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig::NginxConfig& nginxConf) : HTTPHandler(connectionFd, serverConf, nginxConf) {
+HTTPRequestHandler::HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig::GlobalConfig& nginxConf) : HTTPHandler(connectionFd, serverConf, nginxConf) {
     _phase = PARSE_STARTLINE;
     _contentLength = -1;
     _contentLengthSum = 0;
