@@ -45,9 +45,8 @@ class HTTPResponseHandler : public HTTPHandler {
     private:
         std::string getMIME(const std::string& extension);
         bool isCGI(std::string& URI);
-        // std::string getIndexPage(const std::string& absolutePath, std::vector<std::string>& indexVec);
-        std::string getIndexPage(const std::string& absPath, const std::vector<std::string>& serverIndexVec, const std::vector<std::string>& locIndexVec);
-        std::string getErrorPage(const std::string& absPath, const std::vector<std::string>& serverErrorPageVec, const std::vector<std::string>& locErrorPageVec);
+        std::string getIndexPage(const std::string& absPath);
+        std::string getErrorPage(const std::string& absPath);
         bool isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec);
         void setGeneralHeader(HTTPData& data);
         void setHTMLHeader(const HTTPData& data);
@@ -57,6 +56,8 @@ class HTTPResponseHandler : public HTTPHandler {
         NginxConfig::LocationBlock getMatchingLocationConfiguration(const HTTPData& data);
         HTTPResponseHandler::Phase setInformation(HTTPData& data, int statusCode, const std::string& absPath);
         HTTPResponseHandler::Phase setFileInDirectory(HTTPData& data, const std::string& absLocPath);
+        HTTPResponseHandler::Phase handleProcess(std::string tmpFilePath, std::string tmpLocPath, std::string absFilePath, HTTPData& data);
+
  
 
     private:

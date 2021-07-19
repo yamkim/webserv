@@ -34,6 +34,9 @@ class HTTPHandler {
                 Buffer(size_t bufferSize);
                 ~Buffer();
                 char* operator*(void);
+                char* getBuffer() const {
+                    return _buffer;
+                }
         };
 
     public:

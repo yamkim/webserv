@@ -75,6 +75,14 @@ class TypesBlock : public NginxBlock {
         }
 };
 
+typedef struct s_InheritData {
+    std::string root;
+    std::string autoindex;
+    std::string clientMaxBodySize;
+    std::vector<std::string> error_page;
+    std::vector<std::string> index;
+} InheritData;
+
 class LocationBlock : public NginxBlock {
     public:
         std::vector<std::string> dirCase;
@@ -85,12 +93,14 @@ class LocationBlock : public NginxBlock {
         std::vector<std::string> error_page;
         std::vector<std::string> allowed_method;
         std::vector<std::string> inner_proxy;
+        InheritData _inheritData;
 
         LocationBlock() {}
-        LocationBlock(std::string rawData, std::string locationPath) : NginxBlock(rawData), _locationPath(locationPath) {
+        LocationBlock(std::string rawData, std::string locationPath, InheritData inheritData) : NginxBlock(rawData), _locationPath(locationPath), _inheritData(inheritData) {
             setDirectiveTypes();
             setBlock();
             checkLocationBlock();
+            inheritDirectives();
         }
 
         void setDirectiveTypes() {
@@ -98,6 +108,7 @@ class LocationBlock : public NginxBlock {
             this->dirCase.push_back("index");
             this->dirCase.push_back("autoindex");
             this->dirCase.push_back("error_page");
+            this->dirCase.push_back("client_max_body_size");
 
             this->dirCase.push_back("return");
             this->dirCase.push_back("try_files");
@@ -111,6 +122,7 @@ class LocationBlock : public NginxBlock {
         void checkLocationBlock() {
             checkValidErrorPage(this->error_page);
             checkAutoindexValue(*this);
+            checkValidNumberValue(*this, "client_max_body_size");
             if (this->_locationPath.empty()) {
                 throw std::string("Error: location block doesn't have locationPath.");
             }
@@ -120,6 +132,24 @@ class LocationBlock : public NginxBlock {
                 } else if (!Parser::isNumber(this->_return[0])) {
                     throw std::string("Error: invalid status code in location[return] directive.");
                 }
+            }
+        }
+
+        void inheritDirectives() {
+            if (this->dirMap["root"].empty()) {
+                this->dirMap["root"] = _inheritData.root;
+            }
+            if (this->index.empty()) {
+                this->index = _inheritData.index;
+            }
+            if (this->dirMap["autoindex"].empty()) {
+                this->dirMap["autoindex"] = _inheritData.autoindex;
+            }
+            if (this->error_page.empty()) {
+                this->error_page = _inheritData.error_page;
+            }
+            if (this->dirMap["client_max_body_size"].empty()) {
+                this->dirMap["client_max_body_size"] = _inheritData.clientMaxBodySize;
             }
         }
 
@@ -159,6 +189,7 @@ class LocationBlock : public NginxBlock {
             }
         }
 };
+
 class ServerBlock : public NginxBlock{
     public:
         std::vector<std::string> dirCase;
@@ -186,6 +217,26 @@ class ServerBlock : public NginxBlock{
             this->dirCase.push_back("keepalive_timeout");
         }
 
+        InheritData getInheritData() {
+            InheritData inheritData;
+            if (!this->dirMap["root"].empty()) {
+                inheritData.root = this->dirMap["root"];
+            }
+            if (!this->dirMap["autoindex"].empty()) {
+                inheritData.autoindex = this->dirMap["autoindex"];
+            }
+            if (!this->index.empty()) {
+                inheritData.index = this->index;
+            }
+            if (!this->error_page.empty()) {
+                inheritData.error_page = this->error_page;
+            }
+            if (!this->dirMap["client_max_body_size"].empty()) {
+                inheritData.clientMaxBodySize = this->dirMap["client_max_body_size"];
+            }
+            return inheritData;
+        }
+
         void setBlock() {
             std::string buf = this->rawData;
             std::size_t pos = 0;
@@ -202,7 +253,8 @@ class ServerBlock : public NginxBlock{
                 if (find(this->dirCase.begin(), this->dirCase.end(), tmpDir) == this->dirCase.end()) {
                     throw std::string("Error: " + tmpDir + " is not in block[server] list.");
                 } else if (tmpDir == "location") {
-                    LocationBlock tmpLocationBlock(NginxParser::getBlockContent(buf, blockPos), Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, "{", true)));
+                    InheritData inheritData = getInheritData();
+                    LocationBlock tmpLocationBlock(NginxParser::getBlockContent(buf, blockPos), Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, "{", true)), inheritData);
                     this->location.push_back(tmpLocationBlock);
                     pos = blockPos;
                 } else {

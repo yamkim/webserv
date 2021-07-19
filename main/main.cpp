@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
 
     try {
         NginxConfig::NginxConfig nginxConfig(confPath);
+
         for (std::size_t i = 0; i < nginxConfig._http.server.size(); i++) {
             ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i], 32768);
             if (lSocket->runSocket())
