@@ -12,7 +12,7 @@ HTTPRequestHandler::HTTPRequestHandler(int connectionFd, const NginxConfig::Serv
 }
 
 HTTPRequestHandler::~HTTPRequestHandler() {
-    delete _fileController;
+    closeFilefd();
 }
 
 HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long bufferSize) {
@@ -26,27 +26,32 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
     } else if (_phase == PARSE_HEADER) {
         if (getHeader() == true) {
             data.setHTTPCGIENV(_headers);
-            if (_headers.find("Transfer-Encoding") != _headers.end()) {
-                if (_headers["Transfer-Encoding"].find("chunked") == std::string::npos) {
-                    throw ErrorHandler("Error: Transfer-Encoding header error.", ErrorHandler::NORMAL, "HTTPRequestHandler::process");
-                } else {
-                    data._postFilePath = Utils::randomStringGenerator(20);
-                    _fileController = new FileController(data._postFilePath, FileController::WRITE);
-                    _phase = PARSE_BODY_CHUNK;
-                }
-            } else if (_headers.find("Content-Length") != _headers.end()) {
-                _contentLength = std::atoi(_headers["Content-Length"].c_str());
-                if (_contentLength > std::atoi(_serverConf.dirMap["client_max_body_size"].c_str())) {
-                    data._statusCode = 413;
-                    _phase = FINISH;
-                } else {
-                    data._postFilePath = Utils::randomStringGenerator(20);
-                    _fileController = new FileController(data._postFilePath, FileController::WRITE);
-                    _phase = PARSE_BODY_NBYTES;
-                }
+            if ((_headers.find("Transfer-Encoding") != _headers.end())
+                || (_headers.find("Content-Length") != _headers.end())) {
+                data._postFilePath = Utils::randomStringGenerator(20);
+                _fileController = new FileController(data._postFilePath, FileController::WRITE);
+                _phase = BODY_TYPE_CHECK;
             } else {
                 _phase = FINISH;
             }
+        }
+    } else if (_phase == BODY_TYPE_CHECK) {
+        if (_headers.find("Transfer-Encoding") != _headers.end()) {
+            if (_headers["Transfer-Encoding"].find("chunked") == std::string::npos) {
+                _phase = FINISH;
+            } else {
+                _phase = PARSE_BODY_CHUNK;
+            }
+        } else if (_headers.find("Content-Length") != _headers.end()) {
+            _contentLength = std::atoi(_headers["Content-Length"].c_str());
+            if (_contentLength > std::atoi(_serverConf.dirMap["client_max_body_size"].c_str())) {
+                data._statusCode = 413;
+                _phase = FINISH;
+            } else {
+                _phase = PARSE_BODY_NBYTES;
+            }
+        } else {
+            _phase = FINISH;
         }
     } else if (_phase == PARSE_BODY_CHUNK) {
         std::string* bufptr = getDataByCRNF(10);
@@ -96,6 +101,17 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
         }
     }
     return (_phase);
+}
+
+int HTTPRequestHandler::getFilefd(void) {
+    return (_fileController->getFd());
+}
+
+void HTTPRequestHandler::closeFilefd(void) {
+    if (_fileController != NULL) {
+        delete _fileController;
+        _fileController = NULL;
+    }
 }
 
 bool HTTPRequestHandler::getStartLine(HTTPData& data) {

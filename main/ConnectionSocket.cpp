@@ -46,6 +46,7 @@ HTTPRequestHandler::Phase ConnectionSocket::HTTPRequestProcess(void) {
                 _connectionCloseByServer = true;
             }
         }
+        _req->closeFilefd();
         _res = new HTTPResponseHandler(_socket, _serverConf, _nginxConf);
     }
     return (phase);
@@ -89,6 +90,10 @@ int ConnectionSocket::runSocket() {
 
 int ConnectionSocket::getCGIfd(void) {
     return (_res->getCGIfd());
+}
+
+int ConnectionSocket::getFilefd(void) {
+    return (_req->getFilefd());
 }
 
 void ConnectionSocket::ConnectionSocketKiller(void* connectionsocket) {

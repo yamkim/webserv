@@ -24,6 +24,7 @@ class ConnectionSocket : public Socket {
         HTTPResponseHandler::Phase HTTPResponseProcess(void);
         int runSocket(void);
         int getCGIfd(void);
+        int getFilefd(void);
         void setConnectionData(struct sockaddr_in _serverSocketAddr, struct sockaddr_in _clientSocektAddr);
         static void ConnectionSocketKiller(void* connectionsocket);
         long getDynamicBufferSize(void);

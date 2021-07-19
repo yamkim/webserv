@@ -64,13 +64,17 @@ int main(int argc, char *argv[])
                         if (kq.isClose(i)) {
                             timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
                         } else if (kq.isReadEvent(i)) {
-                            if (cSocket->HTTPRequestProcess() == HTTPRequestHandler::FINISH) {
+                            HTTPRequestHandler::Phase phase = cSocket->HTTPRequestProcess();
+                            if (phase == HTTPRequestHandler::FINISH) {
+                                kq.deletePairEvent(i);
                                 kq.modEventToWriteEvent(i);
+                            } else if (phase == HTTPRequestHandler::BODY_TYPE_CHECK) {
+                                kq.setPairEvent(i, cSocket->getFilefd(), false);
                             }
                         } else if (kq.isWriteEvent(i)) {
                             HTTPResponseHandler::Phase phase = cSocket->HTTPResponseProcess();
                             if (phase == HTTPResponseHandler::CGI_RECV_HEAD_LOOP) {
-                                kq.setPairEvent(i, cSocket->getCGIfd());
+                                kq.setPairEvent(i, cSocket->getCGIfd(), true);
                             } else if (phase == HTTPResponseHandler::FINISH) {
                                 kq.deletePairEvent(i);
                                 timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
