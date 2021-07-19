@@ -68,3 +68,17 @@ std::pair<std::string, std::string> HTTPHandler::getHTTPHeader(const std::string
     endPos += 2;
     return (pair);
 }
+
+void HTTPHandler::requestAlert(std::string ip, std::string port, std::string serverPort, std::string path, std::string method) {
+	static char timeStringBuffer[20];
+	time_t rawtime;
+	struct tm *timeinfo;
+	std::time(&rawtime);
+	timeinfo = std::localtime(&rawtime);
+	std::strftime(timeStringBuffer, 20, "%Y/%m/%d %H:%M:%S", timeinfo);
+	std::cout << "\x0d\033[0;32m[";
+	std::cout << timeStringBuffer;
+	std::cout << "]\033[0m ";
+    std::cout << "\033[0;33m[" << method << " @ " << serverPort << "]\033[0m ";
+    std::cout << ip << ":" << port << path << std::endl;
+}

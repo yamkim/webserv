@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
         while (true) {
             int result = kq.getEventsIndex();
             if (result == 0) {
-                std::cout << "waiting..." << std::endl;
+                std::cout << "\x0dwaiting..." << std::flush;
             } else {
                 for (int i = 0; i < result; ++i) {
                     Socket* instance = reinterpret_cast<Socket*>(kq.getInstance(i));
