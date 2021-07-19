@@ -98,6 +98,7 @@ void ConnectionSocket::ConnectionSocketKiller(void* connectionsocket) {
 long ConnectionSocket::getDynamicBufferSize(void) {
     return (_dynamicBufferSize);
 }
+
 void ConnectionSocket::setDynamicBufferSize(long dynamicBufferSize) {
     _dynamicBufferSize = dynamicBufferSize;
 }
