@@ -43,5 +43,6 @@ class HTTPHandler {
         void setGeneralHeader(std::string status);
         void convertHeaderMapToString(void);
         std::pair<std::string, std::string> getHTTPHeader(const std::string& str, std::size_t& endPos);
+        void requestAlert(std::string ip, std::string port, std::string path, std::string method);
 };
 #endif
