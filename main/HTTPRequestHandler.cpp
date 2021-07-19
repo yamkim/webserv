@@ -20,7 +20,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
     if (_phase == PARSE_STARTLINE) {
         data._statusCode = 200;
         if (getStartLine(data) == true) {
-            requestAlert(data._clientIP, data._clientPort, data._originURI, data._reqMethod);
+            requestAlert(data._clientIP, data._clientPort, data._hostPort, data._originURI, data._reqMethod);
             _phase = PARSE_HEADER;
         }
     } else if (_phase == PARSE_HEADER) {

@@ -96,7 +96,6 @@ void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd) {
     struct kevent master;
     struct kevent slave;
 
-    std::cout << "[EVENT - errcheck]" << std::endl;
     _pair[_getEvent[masterIndex].ident] = new KernelQueue::PairQueue(this->_kernelQueuefd);
     EV_SET( &master,
             _getEvent[masterIndex].ident,

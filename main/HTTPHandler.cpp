@@ -69,7 +69,7 @@ std::pair<std::string, std::string> HTTPHandler::getHTTPHeader(const std::string
     return (pair);
 }
 
-void HTTPHandler::requestAlert(std::string ip, std::string port, std::string path, std::string method) {
+void HTTPHandler::requestAlert(std::string ip, std::string port, std::string serverPort, std::string path, std::string method) {
 	static char timeStringBuffer[20];
 	time_t rawtime;
 	struct tm *timeinfo;
@@ -79,5 +79,6 @@ void HTTPHandler::requestAlert(std::string ip, std::string port, std::string pat
 	std::cout << "\x0d\033[0;32m[";
 	std::cout << timeStringBuffer;
 	std::cout << "]\033[0m ";
-    std::cout << "[" << method << "] " << ip << ":" << port << path << std::endl;
+    std::cout << "\033[0;33m[" << method << " @ " << serverPort << "]\033[0m ";
+    std::cout << ip << ":" << port << path << std::endl;
 }

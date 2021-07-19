@@ -51,6 +51,7 @@ void HTTPData::setURIelements(void) {
 }
 
 void HTTPData::setResStartLineMap(void) {
+    // TODO: 이 함수의 기능을 _resStartLineMap로 하고 if - elseif 문 + static 함수로 변형하는게 더 좋을거 같습니다.
 	_resStartLineMap[101] = "Switching Protocols";
 	_resStartLineMap[102] = "Processing";
 	_resStartLineMap[200] = "OK";
