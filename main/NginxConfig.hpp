@@ -86,7 +86,6 @@ typedef struct s_InheritData {
 class LocationBlock : public NginxBlock {
     public:
         std::vector<std::string> dirCase;
-        // FIXME: yekim: cgi 파라미터 관련 요소 (cgi_pass) 추가
         std::string _locationPath;
         std::vector<std::string> _return;
         std::vector<std::string> index;
@@ -304,15 +303,6 @@ class HttpBlock : public NginxBlock{
             this->dirCase.push_back("server");
         }
 
-        // 1. 한 줄을 읽어옵니다.
-        // 2. 한 줄에서 " " 기준으로 directive를 임시(tmpDir)로 읽어옵니다.
-        // 3. 만약, tmpDir이 block 구조체에 포함된 멤버 변수라면 할당하고 그렇지 않으면 오류를 반환합니다.
-        // 4. tmpDir이 block directive인 경우:
-        //    - blockPos 다음 인덱스부터 가장 가까운 블록을 찾습니다.(blockPos는 getBlockContent에서 자동갱신)
-        //    - block을 찾은 후에는 pos를 blockPos로 갱신합니다.
-        // 5. tmpDir이 그냥 directive인 경우:
-        //    - ";" 앞의 요소를 가지고 옵니다.
-        //    - tmpDir을 구할 때 tmpPos가 이동해있으므로 directive 뒤의 " "와 ";" 사이의 값을 읽어오는 셈입니다.
         void setBlock() {
             std::size_t pos = 0;
             std::size_t blockPos = 0;
@@ -345,18 +335,6 @@ class HttpBlock : public NginxBlock{
         }
 };
 
-
-// TODO: conf 파싱부분 수정
-// - error_page 부분 제일 마지막에 파일명이 와야함
-
-
-// NOTE: parsing 순서
-// 1. directive 임시적으로 파싱 후, 해당하는 구조체에 포함되어 있는지 확인
-// 2. 포함 된다면, 블록인지 아닌지 확인
-//    -- 블록아님: ";" 이전 부분을 해당하는 directive의 값으로 설정
-//    -- 블록: 3. 해당 블록을 위한 함수호출 전, rawData 세팅 (가장 큰 괄호 내부 데이터)
-// 3. 해당 블록을 위한 함수를 호출
-// 4. 
 class NginxConfig : public NginxParser {
     public:
     public:
