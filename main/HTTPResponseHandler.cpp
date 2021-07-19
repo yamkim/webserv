@@ -323,11 +323,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                 std::string absFilePath = data._root + tmpFilePath;
                 _phase = handleProcess(tmpFilePath, tmpLocPath, absFilePath, data);
             } else {
-                // data.URIFilePath: /static_html/index.html
-                // tmpFile: /static_html/index.html
-                // tmpLocPath: /static_html/ (location path가 정의되었다면)
-                // absLocPath: root/static_html/
-                // absFilePath: root/static_html/index.html
                 std::string tmpFilePath = data._URIFilePath;
                 std::string tmpLocPath = _locConf._locationPath == "/" ? "/" : _locConf._locationPath + "/";
                 std::string absFilePath = data._root + tmpFilePath;
