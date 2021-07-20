@@ -10,8 +10,8 @@ class ListeningSocket : public Socket {
         int _backlog;
         int _portNum;
         const char* _ip;
+        struct sockaddr_in _socketAddr;
         ListeningSocket();
-
     public:
         ListeningSocket(int portNum, int backlog);
         ListeningSocket(int portNum, int backlog, const char* ip);

@@ -1,11 +1,12 @@
 #include "ConnectionSocket.hpp"
 
 ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::GlobalConfig& nginxConf) : Socket(-1, serverConf), _nginxConf(nginxConf) {
-    this->_socket = accept(listeningSocketFd, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
+    socklen_t socketLen;
+    this->_socket = accept(listeningSocketFd, (struct sockaddr *) &_clientAddr, &socketLen);
     if (this->_socket == -1) {
         throw ErrorHandler("Error: connection socket error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
-    if (getsockname(this->_socket, (struct sockaddr *) &myAddr, &this->_socketLen) == -1) {
+    if (getsockname(this->_socket, (struct sockaddr *) &_serverAddr, &socketLen) == -1) {
         throw ErrorHandler("Error: getsockname error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
     _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
@@ -13,7 +14,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::Ser
     _dynamicBufferSize = 0;
     _connectionCloseByServer = false;
     _data = new HTTPData();
-    setConnectionData(_socketAddr, myAddr);
+    setConnectionData(_clientAddr, _serverAddr);
 }
 
 ConnectionSocket::~ConnectionSocket(){
@@ -77,7 +78,7 @@ HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
             _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
             _res = NULL;
             _data = new HTTPData();
-            setConnectionData(_socketAddr, myAddr);
+            setConnectionData(_clientAddr, _serverAddr);
             phase = HTTPResponseHandler::FINISH_RE;
         }
     }
