@@ -36,8 +36,8 @@ class HTTPData {
         std::string _serverName;
         std::string _root;
         std::string _CGIBinary;
-        std::string _resAbsoluteFilePath;
-        std::size_t _resContentLength;
+        std::string _resAbsoluteFilePath;=
+        long _resContentLength;
 
         // Common Data
         std::string _postFilePath;

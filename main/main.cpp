@@ -29,10 +29,9 @@ int main(int argc, char *argv[])
     }
 
     try {
-        NginxConfig::NginxConfig nginxConfig(confPath);
-
+        NginxConfig::GlobalConfig nginxConfig(confPath);
         for (std::size_t i = 0; i < nginxConfig._http.server.size(); i++) {
-            ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i], 32768);
+            ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i], 60000);
             if (lSocket->runSocket())
                 return (1);
             kq.addReadEvent(lSocket->getSocket(), reinterpret_cast<void*>(lSocket));

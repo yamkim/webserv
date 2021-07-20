@@ -12,7 +12,7 @@
 
 class HTTPRequestHandler : public HTTPHandler {
     public:
-        HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig::NginxConfig& nginxConf);
+        HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig::GlobalConfig& nginxConf);
         virtual ~HTTPRequestHandler();
         typedef enum e_Phase {
             PARSE_STARTLINE,

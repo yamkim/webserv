@@ -24,7 +24,7 @@ class HTTPHandler {
         int _connectionFd;
         std::string _headerString; // FIXME: deprecated in req handler
         NginxConfig::ServerBlock _serverConf;
-        NginxConfig::NginxConfig _nginxConf;
+        NginxConfig::GlobalConfig _nginxConf;
         class Buffer {
             private:
                 int _bufferSize;
@@ -40,7 +40,7 @@ class HTTPHandler {
         };
 
     public:
-        HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig::NginxConfig& nginxConf);
+        HTTPHandler(int connectionFd, NginxConfig::ServerBlock serverConf, const NginxConfig::GlobalConfig& nginxConf);
         virtual ~HTTPHandler();
 
         void setGeneralHeader(std::string status);
