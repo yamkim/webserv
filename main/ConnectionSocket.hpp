@@ -16,7 +16,8 @@ class ConnectionSocket : public Socket {
         NginxConfig::GlobalConfig _nginxConf;
         long _dynamicBufferSize;
         bool _connectionCloseByServer;
-        struct sockaddr_in myAddr;
+        struct sockaddr_in _serverAddr;
+        struct sockaddr_in _clientAddr;
     public:
         ConnectionSocket(int listeningSocket, const NginxConfig::ServerBlock& conf, const NginxConfig::GlobalConfig& nginxConfig);
         virtual ~ConnectionSocket();

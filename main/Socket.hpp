@@ -13,9 +13,7 @@
 
 class Socket {
     protected:
-        struct sockaddr_in _socketAddr;
         int _socket;
-        socklen_t _socketLen;
         NginxConfig::ServerBlock _serverConf;
 
     public:
