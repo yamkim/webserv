@@ -25,7 +25,7 @@ HEADER = $(SOURCE_PATH)
 CPP_CODES = $(addprefix $(SOURCE_PATH), $(FILES))
 OBJS = $(subst $(SOURCE_PATH), $(OBJ_PATH), ${CPP_CODES:%.cpp=%.o})
 COMPILER = clang++
-CFLAGS = -Wall -Wextra -Werror -g3 -fsanitize=address
+CFLAGS = -Wall -Wextra -Werror
 CFLAGS += -DWEBSERV_VERSION=\"$(WEBSERV_VERSION)\"
 
 GREEN = \033[0;32m

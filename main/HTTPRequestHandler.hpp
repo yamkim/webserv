@@ -14,8 +14,18 @@ class HTTPRequestHandler : public HTTPHandler {
     public:
         HTTPRequestHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, NginxConfig::GlobalConfig& nginxConf);
         virtual ~HTTPRequestHandler();
-        typedef enum e_Phase {PARSE_STARTLINE, PARSE_HEADER, PARSE_BODY_NBYTES, PARSE_BODY_CHUNK, REMOVE_CRNF, FINISH} Phase;
+        typedef enum e_Phase {
+            PARSE_STARTLINE,
+            PARSE_HEADER,
+            BODY_TYPE_CHECK,
+            PARSE_BODY_NBYTES,
+            PARSE_BODY_CHUNK,
+            REMOVE_CRNF,
+            FINISH
+        } Phase;
         virtual HTTPRequestHandler::Phase process(HTTPData& data, long bufferSize);
+        int getFilefd(void);
+        void closeFilefd(void);
     private:
         bool getStartLine(HTTPData& data);
         std::string _stringBuffer;

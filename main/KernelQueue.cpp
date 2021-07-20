@@ -92,7 +92,7 @@ void KernelQueue::PairQueue::setPairQueue(struct kevent master, struct kevent sl
     _slave = new struct kevent(slave);
 }
 
-void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd) {
+void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd, bool isRead) {
     struct kevent master;
     struct kevent slave;
 
@@ -106,7 +106,7 @@ void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd) {
             _getEvent[masterIndex].udata);
     EV_SET( &slave,
             slaveReadFd,
-            EVFILT_READ,
+            isRead ? EVFILT_READ : EVFILT_WRITE,
             EV_ADD | EV_EOF,
             0,
             0,

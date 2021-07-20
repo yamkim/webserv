@@ -9,7 +9,7 @@
 #include "ErrorHandler.hpp"
 #include "Socket.hpp"
 
-#define KERNELQUEUE_EVENTS_SIZE 60000
+#define KERNELQUEUE_EVENTS_SIZE 80000
 
 class KernelQueue {
     private:
@@ -33,7 +33,7 @@ class KernelQueue {
         int getFd(int index) const;
         void* getInstance(int index);
         long getData(int index);
-        void setPairEvent(int masterIndex, int slaveReadFd);
+        void setPairEvent(int masterIndex, int slaveReadFd, bool isRead);
         void deletePairEvent(int masterIndex);
         class PairQueue : public Socket {
             private:
