@@ -1,6 +1,6 @@
 #include "ConnectionSocket.hpp"
 
-ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::NginxConfig& nginxConf) : Socket(-1, serverConf), _nginxConf(nginxConf) {
+ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::GlobalConfig& nginxConf) : Socket(-1, serverConf), _nginxConf(nginxConf) {
     this->_socket = accept(listeningSocketFd, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
     if (this->_socket == -1) {
         throw ErrorHandler("Error: connection socket error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
