@@ -61,6 +61,13 @@ class LocationBlock : public NginxBlock {
         void setBlock();
 };
 
+#ifndef DEFAULT_ROOT
+#define DEFAULT_ROOT std::string("/usr/share/nginx/html")
+#endif
+#ifndef DEFAULT_CLIENT_MAX_BODY_SIZE
+#define DEFAULT_CLIENT_MAX_BODY_SIZE std::string("100000000")
+#endif
+
 class ServerBlock : public NginxBlock{
     public:
         std::vector<std::string> dirCase;
@@ -97,6 +104,7 @@ class GlobalConfig : public NginxParser {
         class HttpBlock _http;
 
         GlobalConfig(const std::string& fileName);
+        void checkGlobalConfigBlock();
 
 };
 }

@@ -218,6 +218,18 @@ void NginxConfig::ServerBlock::setBlock() {
 }
 
 void NginxConfig::ServerBlock::checkServerBlock() {
+    if (location.empty()) {
+        throw ErrorHandler("Error: There is no location context in server context.", ErrorHandler::CRITICAL, "ServerBlock::checkServerBlock");
+    }
+    if (dirMap["listen"].empty()) {
+        throw ErrorHandler("Error: There is no port number for listening.", ErrorHandler::CRITICAL, "ServerBlock::checkServerBlock");
+    }
+    if (dirMap["root"].empty()) {
+        dirMap["root"] = DEFAULT_ROOT;
+    }
+    if (dirMap["client_max_body_size"].empty()) {
+        dirMap["root"] = DEFAULT_CLIENT_MAX_BODY_SIZE;
+    }
     checkValidNumberValue(*this, "listen");
     checkValidNumberValue(*this, "client_max_body_size");
     checkValidNumberValue(*this, "keepalive_timeout");
@@ -243,6 +255,7 @@ void NginxConfig::HttpBlock::setDirectiveTypes() {
 void NginxConfig::HttpBlock::setBlock() {
     std::size_t pos = 0;
     std::size_t blockPos = 0;
+    bool typesOnlyOneFlag = true;
     while (rawData[pos]) {
         std::string tmpLine = Parser::getIdentifier(rawData, pos, "\n", false);
         if (Parser::sideSpaceTrim(tmpLine).empty()) {
@@ -259,6 +272,10 @@ void NginxConfig::HttpBlock::setBlock() {
         } else if (!dirMap[tmpDir].empty()) {
             throw ErrorHandler("Error: There is repeated [" + tmpDir + "] directive. in http context", ErrorHandler::CRITICAL, "HttpBlock::setBlock");
         } else if (tmpDir == "types") {
+            if (!typesOnlyOneFlag) {
+                throw ErrorHandler("Error: types context must exist only one!", ErrorHandler::CRITICAL, "HttpBlock::setBlock");
+            }
+            typesOnlyOneFlag = false;
             TypesBlock tmpTypesBlock(NginxParser::getBlockContent(rawData, blockPos));
             types = tmpTypesBlock;
             pos = blockPos;
@@ -288,6 +305,7 @@ NginxConfig::GlobalConfig::GlobalConfig(const std::string& fileName) : NginxPars
     std::size_t pos = 0;
     std::string identifier;
 
+    bool httpOnlyOneFlag = true;
     while (_rawData[pos]) {
         std::string tmpLine = getIdentifier(_rawData, pos, "\n", false);
         if (sideSpaceTrim(tmpLine).empty()) {
@@ -298,6 +316,10 @@ NginxConfig::GlobalConfig::GlobalConfig(const std::string& fileName) : NginxPars
         std::string tmpDir = getIdentifier(tmpLine, tmpPos, " ", true);
         std::size_t blockPos = 0;
         if (tmpDir == "http") {
+            if (!httpOnlyOneFlag) {
+                throw ErrorHandler("Error: http context must exist only one!", ErrorHandler::CRITICAL, "NginxConfig::GlobalConfig");
+            }
+            httpOnlyOneFlag = false;
             HttpBlock tmpHttpBlock(NginxParser::getBlockContent(_rawData, blockPos));
             _http = tmpHttpBlock;
             pos = blockPos;
@@ -308,9 +330,18 @@ NginxConfig::GlobalConfig::GlobalConfig(const std::string& fileName) : NginxPars
             } else if (tmpDir == "worker_processes") {
                 _none.worker_processes = sideSpaceTrim(tmpVal);
             } else {
-                throw ErrorHandler("Error: " + tmpDir + " is not in block[none] list.", ErrorHandler::CRITICAL, "NginxConfig::NginxConfig");
+                throw ErrorHandler("Error: " + tmpDir + " is not in block[none] list.", ErrorHandler::CRITICAL, "NginxConfig::GlobalConfig");
             }
         }
+    }
+    checkGlobalConfigBlock();
+}
+
+void NginxConfig::GlobalConfig::checkGlobalConfigBlock() {
+    if (_http.server.empty()) {
+        throw ErrorHandler("Error: There is no server block in http block.", ErrorHandler::CRITICAL, "NginxConfig::GlobalConfig");
+    } else if (_http.dirMap["default_type"].empty()) {
+        throw ErrorHandler("Error: There is no default_type[directive] in configuration file.", ErrorHandler::CRITICAL, "NginxConfig::GlobalConfig");
     }
 
 }
