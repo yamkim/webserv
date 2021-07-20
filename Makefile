@@ -1,5 +1,5 @@
 TARGET = webserv
-WEBSERV_VERSION = 0.1.0
+WEBSERV_VERSION = 0.1.1
 
 FILES = $(shell ls main | grep .cpp)
 #FILES = main.cpp
@@ -32,10 +32,6 @@ GREEN = \033[0;32m
 RED = \033[0;31m
 YELLOW = \033[0;33m
 END = \033[0m
-
-debug:
-	echo $(CPP_CODES)
-	echo $(OBJS)
 
 all: $(TARGET)
 
