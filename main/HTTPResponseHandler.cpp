@@ -153,14 +153,14 @@ NginxConfig::LocationBlock HTTPResponseHandler::getMatchingLocationConfiguration
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::setInformation(HTTPData& data, int statusCode, const std::string& absPath) {
-    int clientMaxBodySize = _locConf.dirMap["client_max_body_size"].empty() ? -1 : std::atoi(_locConf.dirMap["client_max_body_size"].c_str());
+    int clientMaxBodySize = _locConf.dirMap["client_max_body_size"].empty() ? -1 : std::atol(_locConf.dirMap["client_max_body_size"].c_str());
     if (!_locConf.allowed_method.empty() 
         && find(_locConf.allowed_method.begin(), _locConf.allowed_method.end(), data._reqMethod) == _locConf.allowed_method.end()) {
         data._statusCode = 405;
         setGeneralHeader(data);
         data._resAbsoluteFilePath = absPath;
         data._URIExtension = "html";
-    } else if (clientMaxBodySize >= 0 && clientMaxBodySize < std::atoi(data._reqContentLength.c_str())) {
+    } else if (clientMaxBodySize >= 0 && clientMaxBodySize < std::atol(data._reqContentLength.c_str())) {
         data._statusCode = 413;
         return (PRE_STATUSCODE_CHECK);
     } else {
@@ -185,12 +185,12 @@ HTTPResponseHandler::Phase HTTPResponseHandler::setInformation(HTTPData& data, i
 }
 
 HTTPResponseHandler::Phase HTTPResponseHandler::setFileInDirectory(HTTPData& data, const std::string& absLocPath) {
-    int clientMaxBodySize = _locConf.dirMap["client_max_body_size"].empty() ? -1 : std::atoi(_locConf.dirMap["client_max_body_size"].c_str());
+    int clientMaxBodySize = _locConf.dirMap["client_max_body_size"].empty() ? -1 : std::atol(_locConf.dirMap["client_max_body_size"].c_str());
 
     if (!_locConf.allowed_method.empty() 
         && find(_locConf.allowed_method.begin(), _locConf.allowed_method.end(), data._reqMethod) == _locConf.allowed_method.end()) {
         return setInformation(data, 405, data._root + "/");
-    } else if (clientMaxBodySize >= 0 && clientMaxBodySize < std::atoi(data._reqContentLength.c_str())) {
+    } else if (clientMaxBodySize >= 0 && clientMaxBodySize < std::atol(data._reqContentLength.c_str())) {
         data._statusCode = 413;
         return (PRE_STATUSCODE_CHECK);
     } else {
@@ -229,7 +229,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::handleProcess(std::string tmpFil
             _phase = setInformation(data, 301, data._URIFilePath + "/");
         } else {
             if (!_locConf._return.empty()) {
-                _phase = setInformation(data, atoi(_locConf._return[0].c_str()), _locConf._return[1]);
+                _phase = setInformation(data, atol(_locConf._return[0].c_str()), _locConf._return[1]);
             } else {
                 _phase = setFileInDirectory(data, data._root + tmpLocPath);
             }

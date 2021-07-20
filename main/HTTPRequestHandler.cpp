@@ -34,8 +34,8 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
                     _phase = PARSE_BODY_CHUNK;
                 }
             } else if (_headers.find("Content-Length") != _headers.end()) {
-                _contentLength = std::atoi(_headers["Content-Length"].c_str());
-                if (_contentLength > std::atoi(_serverConf.dirMap["client_max_body_size"].c_str())) {
+                _contentLength = std::atol(_headers["Content-Length"].c_str());
+                if (_contentLength > std::atol(_serverConf.dirMap["client_max_body_size"].c_str())) {
                     data._statusCode = 413;
                     _phase = FINISH;
                 } else {

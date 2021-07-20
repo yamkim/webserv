@@ -37,7 +37,7 @@ class HTTPData {
         std::string _root;
         std::string _CGIBinary;
         std::string _resAbsoluteFilePath;
-        std::size_t _resContentLength;
+        long _resContentLength;
         std::map<int, std::string> _resStartLineMap;
 
         // Common Data

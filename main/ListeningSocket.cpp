@@ -1,7 +1,7 @@
 #include "ListeningSocket.hpp"
 
 ListeningSocket::ListeningSocket(const NginxConfig::ServerBlock& serverConf, int backlog) : Socket(-1, serverConf) {
-    _portNum = atoi(Utils::getMapValue(_serverConf.dirMap, "listen").c_str());
+    _portNum = std::atoi(Utils::getMapValue(_serverConf.dirMap, "listen").c_str());
     _backlog = backlog;
 }
 
