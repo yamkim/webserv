@@ -1,0 +1,43 @@
+<html>
+<head>
+    <title>GfG Test Example Form</title>
+</head>
+<body>
+    <h1>CGI-Example Form</h1>
+    <h3><p>Information Required.</p></h3>
+    <form action="script.pl" method="Post">
+    <table>
+        <tr>
+        <td>Name:</td>
+        <td><input type="text" name="name"><td>
+        </tr>
+        <tr>
+        <td>Gender:</td>
+        <td><select name="gender" size="1">
+            <option>Female</option>
+            <option>Male</option>
+            <option>Transgender</option>
+        </select></td>
+        </tr>
+        <tr>
+            <td>Profession:</td>
+            <td><input type="text" name="profession"><td>
+        </tr>
+        <tr>
+        <td>Sports:</td>
+            <td><input type="checkbox" name="sport"
+                    value="Cricket">Cricket
+                <input type="checkbox" name="sport"
+                    value="Hockey">Hockey
+                <input type="checkbox" name="sport"
+                    value="TableTennis">TableTennis
+                <input type="checkbox" name="sport"
+                    value="Football">Football</td>
+        </tr>
+        <tr>
+        <td colspan="2"><input type="submit"></td>
+        </tr>
+    </table>
+    </form>
+</body>
+</html>    

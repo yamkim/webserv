@@ -28,7 +28,7 @@ HTTPRequestHandler::Phase HTTPRequestHandler::process(HTTPData& data, long buffe
             data.setHTTPCGIENV(_headers);
             if ((_headers.find("Transfer-Encoding") != _headers.end())
                 || (_headers.find("Content-Length") != _headers.end())) {
-                data._postFilePath = Utils::randomStringGenerator(20);
+                data._postFilePath = std::string("./tmp/") + Utils::randomStringGenerator(20);
                 _fileController = new FileController(data._postFilePath, FileController::WRITE);
                 _phase = BODY_TYPE_CHECK;
             } else {
