@@ -70,8 +70,8 @@ void HTTPResponseHandler::setGeneralHeader(HTTPData& data) {
     std::string startLine;
     std::stringstream ssStatusCode;
     ssStatusCode << data._statusCode;
-    if (data._resStartLineMap.find(data._statusCode) != data._resStartLineMap.end()) {
-        startLine = "HTTP/1.1 " + ssStatusCode.str() + " " + data._resStartLineMap[data._statusCode];
+    if (data.getResStartLineMap(data._statusCode).empty() == false) {
+        startLine = "HTTP/1.1 " + ssStatusCode.str() + " " + data.getResStartLineMap(data._statusCode);
     } else {
         throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTTPResponseHandler::setGeneralHeader");   
     }

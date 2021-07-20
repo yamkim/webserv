@@ -66,8 +66,8 @@ std::string HTMLBody::getStaticHTML(HTTPData& data) {
     ssStatusCode << data._statusCode;
     if (data._statusCode == 200) {
         ret = getAutoIndexBody(data._root, data._URIFilePath);
-    } else if (data._resStartLineMap.find(data._statusCode) != data._resStartLineMap.end()) {
-        statusMsg = ssStatusCode.str() + " " + data._resStartLineMap[data._statusCode];
+    } else if (data.getResStartLineMap(data._statusCode).empty() == false) {
+        statusMsg = ssStatusCode.str() + " " + data.getResStartLineMap(data._statusCode);
         ret = getBasicHTMLBody(statusMsg);
     } else {
         throw ErrorHandler("Error: invalid HTTP Status Code", ErrorHandler::ALERT, "HTMLBody::getStaticHTML");

@@ -9,7 +9,7 @@
 #include "ErrorHandler.hpp"
 #include "Socket.hpp"
 
-#define KERNELQUEUE_EVENTS_SIZE 300
+#define KERNELQUEUE_EVENTS_SIZE 80000
 
 class KernelQueue {
     private:

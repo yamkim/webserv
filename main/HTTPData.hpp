@@ -38,7 +38,6 @@ class HTTPData {
         std::string _CGIBinary;
         std::string _resAbsoluteFilePath;
         std::size_t _resContentLength;
-        std::map<int, std::string> _resStartLineMap;
 
         // Common Data
         std::string _postFilePath;
@@ -51,7 +50,7 @@ class HTTPData {
         std::string getURI(void) const;
         static std::string getExtension(std::string URI);
         void setURIelements(void);
-        void setResStartLineMap(void);
+        static std::string& getResStartLineMap(int code);
         void setHTTPCGIENV(std::map<std::string, std::string> headers);
 };
 
