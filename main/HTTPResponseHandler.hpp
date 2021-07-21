@@ -11,9 +11,6 @@
 #include "NginxConfig.hpp"
 #include "HTMLBody.hpp"
 
-#ifndef DEFAULT_ROOT
-#define DEFAULT_ROOT std::string("/usr/share/nginx/html")
-#endif
 #ifndef WEBSERV_VERSION
 #define WEBSERV_VERSION "0.0.0"
 #endif
