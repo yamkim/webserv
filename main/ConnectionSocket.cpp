@@ -1,11 +1,12 @@
 #include "ConnectionSocket.hpp"
 
 ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::GlobalConfig& nginxConf) : Socket(-1, serverConf), _nginxConf(nginxConf) {
-    this->_socket = accept(listeningSocketFd, (struct sockaddr *) &this->_socketAddr, &this->_socketLen);
+    socklen_t socketLen;
+    this->_socket = accept(listeningSocketFd, (struct sockaddr *) &_clientAddr, &socketLen);
     if (this->_socket == -1) {
         throw ErrorHandler("Error: connection socket error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
-    if (getsockname(this->_socket, (struct sockaddr *) &myAddr, &this->_socketLen) == -1) {
+    if (getsockname(this->_socket, (struct sockaddr *) &_serverAddr, &socketLen) == -1) {
         throw ErrorHandler("Error: getsockname error.", ErrorHandler::ALERT, "ConnectionSocket::ConnectionSocket");
     }
     _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
@@ -13,7 +14,7 @@ ConnectionSocket::ConnectionSocket(int listeningSocketFd, const NginxConfig::Ser
     _dynamicBufferSize = 0;
     _connectionCloseByServer = false;
     _data = new HTTPData();
-    setConnectionData(_socketAddr, myAddr);
+    setConnectionData(_clientAddr, _serverAddr);
 }
 
 ConnectionSocket::~ConnectionSocket(){
@@ -65,22 +66,28 @@ void ConnectionSocket::setConnectionData(struct sockaddr_in _serverSocketAddr, s
 
 HTTPResponseHandler::Phase ConnectionSocket::HTTPResponseProcess(void) {
     HTTPResponseHandler::Phase phase;
-    phase = _res->process(*_data, getDynamicBufferSize());
-    if (phase == HTTPResponseHandler::CGI_RUN) {
-        // NOTE: CGI일 때 길이가 리턴되면 연결을 끊으면 안될거 같은데...
+    try {
+        phase = _res->process(*_data, getDynamicBufferSize());
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << std::endl;
         _connectionCloseByServer = true;
-    } else if (phase == HTTPResponseHandler::FINISH) {
-        if (_connectionCloseByServer == false) {
-            delete _req;
-            delete _res;
-            delete _data;
-            _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
-            _res = NULL;
-            _data = new HTTPData();
-            setConnectionData(_socketAddr, myAddr);
-            phase = HTTPResponseHandler::FINISH_RE;
-        }
+        phase = HTTPResponseHandler::FINISH;
     }
+        if (phase == HTTPResponseHandler::CGI_RUN) {
+            // NOTE: CGI일 때 길이가 리턴되면 연결을 끊으면 안될거 같은데...
+            _connectionCloseByServer = true;
+        } else if (phase == HTTPResponseHandler::FINISH) {
+            if (_connectionCloseByServer == false) {
+                delete _req;
+                delete _res;
+                delete _data;
+                _req = new HTTPRequestHandler(_socket, _serverConf, _nginxConf);
+                _res = NULL;
+                _data = new HTTPData();
+                setConnectionData(_clientAddr, _serverAddr);
+                phase = HTTPResponseHandler::FINISH_RE;
+            }
+        }
     return (phase);
 }
 

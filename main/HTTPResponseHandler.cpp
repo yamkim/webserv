@@ -336,7 +336,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         }
         size_t writtenLengthOnSocket = send(_connectionFd, *buf, writtenLengthOnBuf, 0);
         if (writtenLengthOnSocket != writtenLengthOnBuf) {
-            throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+            throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process @ GET_STATIC_HTML");
         }
     } else if (_phase == CGI_RUN) {
         _cgi = new CGISession(data);
@@ -354,7 +354,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         try { // 500 internal error 감지
             // NOTE: stdio는 라인바이라인으로 버퍼가 넘어가는데 여기서 eof(len = 0)가 오면 500 error임.
             if (length <= 0) {
-                throw ErrorHandler("Error: CGI HTTP Header Error", ErrorHandler::NORMAL, "HTTPResponseHandler::process");
+                throw ErrorHandler("Error: CGI HTTP Header Error", ErrorHandler::NORMAL, "HTTPResponseHandler::process @ CGI_RECV_HEAD_LOOP");
             } else {
                 _CGIReceive += std::string(*buf, length);
                 size_t spliter = _CGIReceive.find("\r\n\r\n");
@@ -395,7 +395,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             convertHeaderMapToString();
             size_t writeLength = send(_connectionFd, _headerString.data(), _headerString.length(), 0);
             if (writeLength != _headerString.length()) {
-                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process @ CGI_RECV_HEAD_LOOP");
             }
             _phase = CGI_RECV_BODY_LOOP;
         }
@@ -406,17 +406,17 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
             if (length == 0) {
                 _phase = FINISH;
             } else if (length < 0) {
-                throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                throw ErrorHandler("Error: read error.", ErrorHandler::ALERT, "HTTPResponseHandler::process @ CGI_RECV_BODY_LOOP");
             } else {
                 ssize_t writeLength = send(_connectionFd, *buf, length, 0);
                 if (writeLength != length) {
-                    throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                    throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process @ CGI_RECV_BODY_LOOP");
                 }
             }
         } else {
             size_t writeLength = send(_connectionFd, _CGIReceive.c_str(), _CGIReceive.length(), 0);
             if (writeLength != _CGIReceive.length()) {
-                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process");
+                throw ErrorHandler("Error: send error.", ErrorHandler::ALERT, "HTTPResponseHandler::process @ CGI_RECV_BODY_LOOP");
             } else {
                 _CGIReceive.clear();
             }
