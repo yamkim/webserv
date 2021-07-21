@@ -30,7 +30,6 @@ int main(int argc, char *argv[])
 
     try {
         NginxConfig::GlobalConfig nginxConfig(confPath);
-        #if 1
         for (std::size_t i = 0; i < nginxConfig._http.server.size(); i++) {
             ListeningSocket* lSocket = new ListeningSocket(nginxConfig._http.server[i], 60000);
             if (lSocket->runSocket())
@@ -91,7 +90,6 @@ int main(int argc, char *argv[])
             }
             timer.CheckTimer(ConnectionSocket::ConnectionSocketKiller);
         }
-        #endif
     } catch (const std::exception& error) {
         std::cerr << error.what() << std::endl;
         return (1);
