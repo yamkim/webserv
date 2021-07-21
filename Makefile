@@ -1,9 +1,5 @@
 TARGET = webserv
-<<<<<<< HEAD
 WEBSERV_VERSION = 0.1.3
-=======
-WEBSERV_VERSION = 0.1.2
->>>>>>> 6eb0d1b02655dd8d19fc355906d55bc5e39f0449
 
 FILES = $(shell ls main | grep .cpp)
 #FILES = main.cpp
