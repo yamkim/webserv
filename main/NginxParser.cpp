@@ -4,6 +4,12 @@ NginxParser::NginxParser(const std::string& fileName) : Parser(fileName) {
 }
 
 void NginxParser::skipComment(const std::string& str, std::size_t &commentPos) {
+    while (str[commentPos] == ' ') {
+        ++commentPos;
+    }
+    if (!(str[commentPos] == '#')) {
+        return ;
+    }
     while (str[commentPos]) {
         if (str[commentPos] != '\n') {
             ++commentPos;
