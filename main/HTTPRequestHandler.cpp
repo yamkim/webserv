@@ -147,7 +147,6 @@ bool HTTPRequestHandler::getHeader(void) {
         return (true);
     }
     std::size_t pos = 0;
-    // FIXME: 수정 검토
     *bufptr = *bufptr + std::string("\r\n");
     _headers.insert(getHTTPHeader(*bufptr, pos));
     return (false);

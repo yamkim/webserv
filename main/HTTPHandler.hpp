@@ -22,7 +22,7 @@ class HTTPHandler {
         static const ssize_t TRANS_ERROR = -1;
         std::map<std::string, std::string> _headers;
         int _connectionFd;
-        std::string _headerString; // FIXME: deprecated in req handler
+        std::string _headerString;
         NginxConfig::ServerBlock _serverConf;
         NginxConfig::GlobalConfig _nginxConf;
         class Buffer {

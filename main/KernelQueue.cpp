@@ -1,5 +1,4 @@
 #include "KernelQueue.hpp"
-#include <iostream>
 
 KernelQueue::KernelQueue(float pollingTime) {
     _kernelQueuefd = kqueue();
@@ -24,30 +23,10 @@ void KernelQueue::removeEvent(int fd, int16_t event, void* instancePointer) {
 }
 
 int KernelQueue::getEventsIndex(void) {
-    #if (0)
-    std::cout << "\033[0;33m";
-    for (int i = 0; i < _setEventIndex; i++) {
-        std::cout << "\t_setEventIndex : " << _setEventIndex << std::endl;
-        std::cout << "\t\t_setEvent.ident : " << _setEvent[i].ident << std::endl;
-        std::cout << "\t\t_setEvent.filter : " << _setEvent[i].filter << std::endl;
-        std::cout << "\t\t_setEvent.flags : " << _setEvent[i].flags << std::endl;
-    }
-    std::cout << "\033[0m";
-    #endif
     int eventCount = kevent(_kernelQueuefd, _setEvent, _setEventIndex, _getEvent, KERNELQUEUE_EVENTS_SIZE, &_pollingTime);
     if (eventCount == -1) {
         throw ErrorHandler("Error: Kernel Queue getEvents Error.", ErrorHandler::CRITICAL, "KernelQueue::getEvents");
     }
-    #if (0)
-    std::cout << "\033[0;31m";
-    for (int i = 0; i < eventCount; i++) {
-        std::cout << "\t_getEventIndex : " << eventCount << std::endl;
-        std::cout << "\t\t_getEvent.ident : " << _getEvent[i].ident << std::endl;
-        std::cout << "\t\t_getEvent.filter : " << _getEvent[i].filter << std::endl;
-        std::cout << "\t\t_getEvent.flags : " << _getEvent[i].flags << std::endl;
-    }
-    std::cout << "\033[0m";
-    #endif
     _setEventIndex = 0;
     return (eventCount);
 }
@@ -134,7 +113,6 @@ void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd, bool isRead) {
     _pair[_getEvent[masterIndex].ident]->setPairQueue(master, slave);
     _setEvent[_setEventIndex++] = master;
     _setEvent[_setEventIndex++] = slave;
-    //_pair[_getEvent[masterIndex].ident]->stopMaster();
 }
 
 void KernelQueue::deletePairEvent(int masterIndex) {
