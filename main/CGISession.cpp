@@ -2,7 +2,6 @@
 
 CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStream(-1) {
     std::map<std::string, std::string> _envMap;
-
     _envMap[std::string("USER")] = std::string(std::getenv("USER"));
     _envMap[std::string("PATH")] = std::string(std::getenv("PATH"));
     _envMap[std::string("LANG")] = std::string(std::getenv("LANG"));
@@ -42,8 +41,7 @@ CGISession::CGISession(HTTPData& data) : _pid(-2), _inputStream(-1), _outputStre
 }
 
 CGISession::~CGISession() {
-    int			status;
-
+    int status;
     if (_pid > 0) {
         waitpid(_pid, &status, WNOHANG);
         if (status & 0177) {

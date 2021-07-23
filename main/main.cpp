@@ -46,18 +46,15 @@ int main(int argc, char *argv[])
                     Socket* instance = reinterpret_cast<Socket*>(kq.getInstance(i));
                     long data = kq.getData(i);
                     if (dynamic_cast<KernelQueue::PairQueue*>(instance) != NULL) {
-                        // NOTE: PairQueue 이벤트 처리
                         KernelQueue::PairQueue* pairQueue = reinterpret_cast<KernelQueue::PairQueue*>(instance);
                         pairQueue->stopSlave();
                     } else if (dynamic_cast<ListeningSocket*>(instance) != NULL) {
-                        // NOTE: Listening Socket 이벤트 처리
                         for (long i = 0; i < data; i++) {
                             ConnectionSocket* cSocket = new ConnectionSocket(instance->getSocket(), instance->getConfig(), nginxConfig);
                             timer.addObj(cSocket, std::atoi(instance->getConfig().dirMap["keepalive_timeout"].c_str()));
                             kq.addReadEvent(cSocket->getSocket(), reinterpret_cast<void*>(cSocket));
                         }
                     } else if (dynamic_cast<ConnectionSocket*>(instance) != NULL) {
-                        // NOTE: Connection Socket 이벤트 처리
                         ConnectionSocket* cSocket = dynamic_cast<ConnectionSocket*>(instance);
                         cSocket->setDynamicBufferSize(data);
                         if (kq.isClose(i)) {

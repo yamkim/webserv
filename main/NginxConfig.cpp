@@ -113,7 +113,6 @@ void NginxConfig::LocationBlock::setBlock() {
         }
         std::size_t tmpPos = 0;
         std::string tmpDir = Parser::sideSpaceTrim(Parser::getIdentifier(tmpLine, tmpPos, " ", true));
-        // std::cout << "identifier[location]: [" << tmpDir << "]" << std::endl;
         if (find(dirCase.begin(), dirCase.end(), tmpDir) == dirCase.end()) {
             throw ErrorHandler("Error: " + tmpDir + " is not in block[location] list.", ErrorHandler::CRITICAL, "LocationBlock::setBlock");
         } else if (!dirMap[tmpDir].empty()) {

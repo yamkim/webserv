@@ -21,7 +21,6 @@ class HTTPResponseHandler : public HTTPHandler {
     public:
         HTTPResponseHandler(int connectionFd, const NginxConfig::ServerBlock& serverConf, const NginxConfig::GlobalConfig& nginxConf);
         virtual ~HTTPResponseHandler();
-
         typedef enum e_Phase {
             FIND_RESOURCE, 
             PRE_STATUSCODE_CHECK, 
@@ -36,8 +35,6 @@ class HTTPResponseHandler : public HTTPHandler {
             FINISH_RE
         } Phase;
         virtual HTTPResponseHandler::Phase process(HTTPData& data, long bufferSize);
-
-
         int getCGIfd(void);
     private:
         std::string getMIME(const std::string& extension);
@@ -47,25 +44,18 @@ class HTTPResponseHandler : public HTTPHandler {
         bool isErrorPageList(int statusCode, std::vector<std::string>& errorPageVec);
         void setGeneralHeader(HTTPData& data);
         void setHTMLHeader(const HTTPData& data);
-        void showResponseInformation(HTTPData& data);
-
         void setCGIConfigMap();
         NginxConfig::LocationBlock getMatchingLocationConfiguration(const HTTPData& data);
         HTTPResponseHandler::Phase setInformation(HTTPData& data, int statusCode, const std::string& absPath);
         HTTPResponseHandler::Phase setFileInDirectory(HTTPData& data, const std::string& absLocPath);
         HTTPResponseHandler::Phase handleProcess(std::string tmpFilePath, std::string tmpLocPath, std::string absFilePath, HTTPData& data);
 
- 
-
     private:
         Phase _phase;
         FileController::Type _type;
-
-        // root/data/index.html
         std::string _staticHtml;
         FileController* _file;
         CGISession* _cgi;
-
         NginxConfig::LocationBlock _locConf;
         std::string _indexPage;
         std::string _errorPage;

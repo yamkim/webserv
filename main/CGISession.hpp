@@ -24,7 +24,6 @@ class CGISession {
         char* _arg[4];
         char** generateEnvp(std::map<std::string, std::string>& arg);
         CGISession();
-
     public:
         CGISession(HTTPData& data);
         ~CGISession();

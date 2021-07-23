@@ -103,22 +103,6 @@ void HTTPResponseHandler::setHTMLHeader(const HTTPData& data) {
         _headers["Location"] = data._resAbsoluteFilePath;
     }
     convertHeaderMapToString();
-    // std::cout << _headerString << std::endl;
-}
-
-void HTTPResponseHandler::showResponseInformation(HTTPData &data) {
-    std::cout << "Response Information=============================" << std::endl;
-    std::cout << "# Typed Request URL by client: https://127.0.0.1:4242" << data._reqURI << std::endl;
-    std::cout << "# root + Request URL: " << data._root + data._reqURI << std::endl;
-    std::cout << "# Request Method: " << data._reqMethod << std::endl;
-    std::cout << "# Request URL: " << data._reqURI << std::endl;
-    std::cout << "# Status Code: " << data._statusCode << std::endl;
-    std::cout << "# Absolute File Path: " << data._resAbsoluteFilePath << std::endl;
-    std::cout << "# URL Extension: " << data._URIExtension << std::endl;
-    std::cout << "# Location Index Page File: " << _indexPage << std::endl;
-    std::cout << "# Location Error Page File: " << _errorPage << std::endl;
-    std::cout << "# Location Path: " << _locConf._locationPath << std::endl;
-
 }
 
 void HTTPResponseHandler::setCGIConfigMap() {
@@ -199,7 +183,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::setFileInDirectory(HTTPData& dat
             if (indexType == FileController::FILE) {
                 _phase = setInformation(data, 200, absLocPath + _indexPage);
             } else {
-                // _phase = setInformation(data, 403, absLocPath);
                 _phase = setInformation(data, 404, absLocPath);
             }
         } else {
@@ -246,7 +229,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::handleProcess(std::string tmpFil
         _type = FileController::checkType(absFilePath);
         if (_type == FileController::DIRECTORY) {
             if (data._URIFilePath[data._URIFilePath.size() - 1] != '/') {
-                // NOTE: 이 경우에 대한 처리는 아직 없음
                 if (data.getMethod() == std::string("POST")) {
                     _phase = setInformation(data, 308, data._URIFilePath + "/");
                 } else {
@@ -280,12 +262,8 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         }
     } else if (_phase == FIND_RESOURCE) {
         data._serverName = _serverConf.dirMap["server_name"];
-
         setCGIConfigMap();
-
         _locConf = getMatchingLocationConfiguration(data);
-        
-        // TODO: root에 따라서 변하는 경우, 처리할지 말지 고민: location block 내에도 root가 올 수 있음
         if (!_locConf._locationPath.empty()) {
             data._root = _locConf.dirMap["root"];
 
@@ -307,7 +285,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         } else { 
             _phase = setInformation(data, 404, data._root + _locConf._locationPath + "/");
         }
-        // showResponseInformation(data);
     }
     
     else if (_phase == GET_STATIC_HTML) {
@@ -351,8 +328,7 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
         bool sendHeader = false;
         Buffer buf(bufferSize);
         int length = read(_cgi->getOutputStream(), *buf, bufferSize);
-        try { // 500 internal error 감지
-            // NOTE: stdio는 라인바이라인으로 버퍼가 넘어가는데 여기서 eof(len = 0)가 오면 500 error임.
+        try {
             if (length <= 0) {
                 throw ErrorHandler("Error: CGI HTTP Header Error", ErrorHandler::NORMAL, "HTTPResponseHandler::process @ CGI_RECV_HEAD_LOOP");
             } else {
@@ -376,7 +352,6 @@ HTTPResponseHandler::Phase HTTPResponseHandler::process(HTTPData& data, long buf
                         data._statusCode = 200;
                         setGeneralHeader(data);
                     } else {
-                        // TODO[joopark]: setGeneralHeader 중복 세팅에 대한 부분 고려한 후 처리
                         data._statusCode = std::atoi(_headers["Status"].c_str());
                         setGeneralHeader(data);
                         _headers.erase("Status");

@@ -93,9 +93,7 @@ std::vector<std::string> Parser::getSplitBySpace(std::string str) {
     std::vector<std::string> ret;
 
     std::size_t pos = 0;
-    // std::cout << "[DEBUG] tmpLine with space: " << str << std::endl; 
     while (pos < str.size()) {
-        // std::string tmp = getIdentifier(str, pos, " \r\n");
         std::string tmp = getIdentifier(str, pos, " ", false);
         if (tmp.empty()) {
             break ;
