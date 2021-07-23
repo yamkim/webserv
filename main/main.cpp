@@ -64,6 +64,9 @@ int main(int argc, char *argv[])
                             timer.delObj(cSocket, ConnectionSocket::ConnectionSocketKiller);
                         } else if (kq.isReadEvent(i)) {
                             HTTPRequestHandler::Phase phase = cSocket->HTTPRequestProcess();
+                            if (phase < HTTPRequestHandler::FINISH) {
+                                kq.pairStopMaster(i);
+                            }
                             if (phase == HTTPRequestHandler::FINISH) {
                                 kq.deletePairEvent(i);
                                 kq.modEventToWriteEvent(i);
@@ -72,6 +75,9 @@ int main(int argc, char *argv[])
                             }
                         } else if (kq.isWriteEvent(i)) {
                             HTTPResponseHandler::Phase phase = cSocket->HTTPResponseProcess();
+                            if (phase < HTTPResponseHandler::FINISH) {
+                                kq.pairStopMaster(i);
+                            }
                             if (phase == HTTPResponseHandler::CGI_RECV_HEAD_LOOP) {
                                 kq.setPairEvent(i, cSocket->getCGIfd(), true);
                             } else if (phase == HTTPResponseHandler::FINISH) {

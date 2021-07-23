@@ -1,4 +1,5 @@
 #include "KernelQueue.hpp"
+#include <iostream>
 
 KernelQueue::KernelQueue(float pollingTime) {
     _kernelQueuefd = kqueue();
@@ -7,6 +8,7 @@ KernelQueue::KernelQueue(float pollingTime) {
     }
 	_pollingTime.tv_sec = long(pollingTime);
 	_pollingTime.tv_nsec = long(pollingTime * 1000000000L) % 1000000000L;
+    _setEventIndex = 0;
 }
 
 KernelQueue::~KernelQueue() {
@@ -14,24 +16,39 @@ KernelQueue::~KernelQueue() {
 }
 
 void KernelQueue::addEvent(int fd, int16_t event, void* instancePointer) {
-    EV_SET(&_eventSetting, fd, event, EV_ADD | EV_EOF, 0, 0, instancePointer);
-    if (kevent(_kernelQueuefd, &_eventSetting, 1, NULL, 0, NULL) == -1) {
-        throw ErrorHandler("Error: Kernel Queue addevent Error.", ErrorHandler::CRITICAL, "KernelQueue::addEvent");
-    }
+    EV_SET(&_setEvent[_setEventIndex++], fd, event, EV_ADD | EV_EOF, 0, 0, instancePointer);
 }
 
 void KernelQueue::removeEvent(int fd, int16_t event, void* instancePointer) {
-    EV_SET(&_eventSetting, fd, event, EV_DELETE, 0, 0, instancePointer);
-    if (kevent(_kernelQueuefd, &_eventSetting, 1, NULL, 0, NULL) == -1) {
-        throw ErrorHandler("Error: Kernel Queue removeEvent Error.", ErrorHandler::CRITICAL, "KernelQueue::addEvent");
-    }
+    EV_SET(&_setEvent[_setEventIndex++], fd, event, EV_DELETE, 0, 0, instancePointer);
 }
 
 int KernelQueue::getEventsIndex(void) {
-    int eventCount = kevent(_kernelQueuefd, NULL, 0, _getEvent, KERNELQUEUE_EVENTS_SIZE, &_pollingTime);
+    #if (0)
+    std::cout << "\033[0;33m";
+    for (int i = 0; i < _setEventIndex; i++) {
+        std::cout << "\t_setEventIndex : " << _setEventIndex << std::endl;
+        std::cout << "\t\t_setEvent.ident : " << _setEvent[i].ident << std::endl;
+        std::cout << "\t\t_setEvent.filter : " << _setEvent[i].filter << std::endl;
+        std::cout << "\t\t_setEvent.flags : " << _setEvent[i].flags << std::endl;
+    }
+    std::cout << "\033[0m";
+    #endif
+    int eventCount = kevent(_kernelQueuefd, _setEvent, _setEventIndex, _getEvent, KERNELQUEUE_EVENTS_SIZE, &_pollingTime);
     if (eventCount == -1) {
         throw ErrorHandler("Error: Kernel Queue getEvents Error.", ErrorHandler::CRITICAL, "KernelQueue::getEvents");
     }
+    #if (0)
+    std::cout << "\033[0;31m";
+    for (int i = 0; i < eventCount; i++) {
+        std::cout << "\t_getEventIndex : " << eventCount << std::endl;
+        std::cout << "\t\t_getEvent.ident : " << _getEvent[i].ident << std::endl;
+        std::cout << "\t\t_getEvent.filter : " << _getEvent[i].filter << std::endl;
+        std::cout << "\t\t_getEvent.flags : " << _getEvent[i].flags << std::endl;
+    }
+    std::cout << "\033[0m";
+    #endif
+    _setEventIndex = 0;
     return (eventCount);
 }
 
@@ -66,17 +83,20 @@ int KernelQueue::getFd(int index) const {
 }
 
 void* KernelQueue::getInstance(int index) {
+    return (_getEvent[index].udata);
+}
+
+void KernelQueue::pairStopMaster(int index) {
     if (_pair.find(int(_getEvent[index].ident)) != _pair.end()) {
         _pair[int(_getEvent[index].ident)]->stopMaster();
     }
-    return (_getEvent[index].udata);
 }
 
 long KernelQueue::getData(int index) {
     return (_getEvent[index].data);
 }
 
-KernelQueue::PairQueue::PairQueue(int kernelQueuefd) : Socket(-1) {
+KernelQueue::PairQueue::PairQueue(int kernelQueuefd, struct kevent* setEvent, int& setEventIndex) : Socket(-1), _setEvent(setEvent), _setEventIndex(setEventIndex) {
     _kernelQueuefd = kernelQueuefd;
     _master = NULL;
     _slave = NULL;
@@ -96,11 +116,11 @@ void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd, bool isRead) {
     struct kevent master;
     struct kevent slave;
 
-    _pair[_getEvent[masterIndex].ident] = new KernelQueue::PairQueue(this->_kernelQueuefd);
+    _pair[_getEvent[masterIndex].ident] = new KernelQueue::PairQueue(this->_kernelQueuefd, this->_setEvent, this->_setEventIndex);
     EV_SET( &master,
             _getEvent[masterIndex].ident,
             _getEvent[masterIndex].filter,
-            _getEvent[masterIndex].flags,
+            EV_DISABLE,
             0,
             0,
             _getEvent[masterIndex].udata);
@@ -112,10 +132,9 @@ void KernelQueue::setPairEvent(int masterIndex, int slaveReadFd, bool isRead) {
             0,
             reinterpret_cast<void*>(_pair[_getEvent[masterIndex].ident]));
     _pair[_getEvent[masterIndex].ident]->setPairQueue(master, slave);
-    if (kevent(_kernelQueuefd, &slave, 1, NULL, 0, NULL) == -1) {
-        throw ErrorHandler("Error: Kernel Queue setPairEvent Error.", ErrorHandler::CRITICAL, "KernelQueue::setPairEvent");
-    }
-    _pair[_getEvent[masterIndex].ident]->stopMaster();
+    _setEvent[_setEventIndex++] = master;
+    _setEvent[_setEventIndex++] = slave;
+    //_pair[_getEvent[masterIndex].ident]->stopMaster();
 }
 
 void KernelQueue::deletePairEvent(int masterIndex) {
@@ -132,9 +151,8 @@ void KernelQueue::PairQueue::stopMaster(void) {
     tmp[1] = *_slave;
     tmp[0].flags = EV_DISABLE;
     tmp[1].flags = EV_ENABLE;
-    if (kevent(_kernelQueuefd, tmp, 2, NULL, 0, NULL) == -1) {
-        throw ErrorHandler("Error: Kernel Queue setPairEvent Error.", ErrorHandler::CRITICAL, "KernelQueue::setPairEvent");
-    }
+    _setEvent[_setEventIndex++] = tmp[0];
+    _setEvent[_setEventIndex++] = tmp[1];
 }
 
 void KernelQueue::PairQueue::stopSlave(void) {
@@ -144,9 +162,8 @@ void KernelQueue::PairQueue::stopSlave(void) {
     tmp[1] = *_slave;
     tmp[0].flags = EV_ENABLE;
     tmp[1].flags = EV_DISABLE;
-    if (kevent(_kernelQueuefd, tmp, 2, NULL, 0, NULL) == -1) {
-        throw ErrorHandler("Error: Kernel Queue setPairEvent Error.", ErrorHandler::CRITICAL, "KernelQueue::setPairEvent");
-    }
+    _setEvent[_setEventIndex++] = tmp[0];
+    _setEvent[_setEventIndex++] = tmp[1];
 }
 
 int KernelQueue::PairQueue::runSocket(void) {
