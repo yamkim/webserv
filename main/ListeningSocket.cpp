@@ -36,17 +36,10 @@ void ListeningSocket::listenSocket() {
     }
 }
 
-void ListeningSocket::fcntlSocket() {
-    if (fcntl(_socket, F_SETFL, O_NONBLOCK) == -1) {
-        throw ErrorHandler("Error: server socket fcntl error.", ErrorHandler::CRITICAL, "ListeningSocket::fcntlSocket");
-    }
-}
-
 int ListeningSocket::runSocket() {
     this->setSocket();
     this->setSocketAddress();
     this->bindSocket();
     this->listenSocket();
-    //this->fcntlSocket();
     return (0);
 }

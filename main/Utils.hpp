@@ -1,7 +1,6 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-//#include "GlobalConfig.hpp"
 #include <string>
 #include <map>
 #include <sstream>

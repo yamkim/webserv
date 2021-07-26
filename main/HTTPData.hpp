@@ -7,7 +7,6 @@
 #include <map>
 #include "FileController.hpp"
 
-#include <iostream> //FIXME 디버깅용
 class HTTPData {
     public:
         // Connection Data

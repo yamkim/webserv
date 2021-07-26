@@ -9,43 +9,43 @@ ErrorHandler::ErrorHandler(std::string errmsg, ErrorHandler::ErrCode errcode, st
 ErrorHandler::~ErrorHandler() throw() {}
 
 ErrorHandler::ErrCode ErrorHandler::getErrorcode(void) const {
-	return (_errcode);
+    return (_errcode);
 }
 
 char * ErrorHandler::getTime(void) {
-	static char timeBuffer[20];
-	time_t rawtime;
-	struct tm *timeinfo;
+    static char timeBuffer[20];
+    time_t rawtime;
+    struct tm *timeinfo;
 
-	std::time(&rawtime);
-	timeinfo = std::localtime(&rawtime);
-	std::strftime(timeBuffer, 20, "%Y/%m/%d %H:%M:%S", timeinfo);
-	return (timeBuffer);
+    std::time(&rawtime);
+    timeinfo = std::localtime(&rawtime);
+    std::strftime(timeBuffer, 20, "%Y/%m/%d %H:%M:%S", timeinfo);
+    return (timeBuffer);
 }
 
 const char* ErrorHandler::what() const throw() {
-	static std::string rtn;
+    static std::string rtn;
 
     rtn.clear();
-	rtn.append(getTime());
-	if (_errcode == NORMAL) {
-		rtn.append("\033[0;32m [normal] ");
-	} else if (_errcode == ALERT) {
-		rtn.append("\033[0;33m [alert] ");
-	} else if (_errcode == CRITICAL) {
-		rtn.append("\033[0;31m [critical] ");
-	}
-	rtn.append(_errmsg);
-	if (errno != 0) {
-		rtn.append(" (");
-		rtn.append(std::strerror(errno));
-		rtn.append(")");
+    rtn.append(getTime());
+    if (_errcode == NORMAL) {
+        rtn.append("\033[0;32m [normal] ");
+    } else if (_errcode == ALERT) {
+        rtn.append("\033[0;33m [alert] ");
+    } else if (_errcode == CRITICAL) {
+        rtn.append("\033[0;31m [critical] ");
+    }
+    rtn.append(_errmsg);
+    if (errno != 0) {
+        rtn.append(" (");
+        rtn.append(std::strerror(errno));
+        rtn.append(")");
         errno = 0;
-	}
-	if (_at.empty() == false) {
-		rtn.append(" at ");
-		rtn.append(_at);
-	}
+    }
+    if (_at.empty() == false) {
+        rtn.append(" at ");
+        rtn.append(_at);
+    }
     rtn.append("\033[0m");
-	return (rtn.c_str());
+    return (rtn.c_str());
 }
