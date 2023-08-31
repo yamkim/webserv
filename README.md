@@ -24,6 +24,7 @@ C++98 Web Server는 **단일 프로세스 및 단일 스레드**만 사용합니
 ## 실행방법
 ```shell
 $ git clone git@github.com:yamkim/webserv.git
+$ cd webserv
 $ chmod +x run.sh && ./run.sh
 ```
 - `conf/` 폴더에는 설정을 위한 파일들이 있습니다. 
