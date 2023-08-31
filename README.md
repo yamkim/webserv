@@ -21,5 +21,13 @@ C++98 Web Server는 **단일 프로세스 및 단일 스레드**만 사용합니
 - nginx와 유사한 설정 파일 문법 지원
 - 클라이언트가 응답이 없을시 연결 종료 (Timeout)
 
+## 실행방법
+```shell
+$ git clone git@github.com:yamkim/webserv.git
+$ chmod +x run.sh && ./run.sh
+```
+- `conf/` 폴더에는 설정을 위한 파일들이 있습니다. 
+- `./run.sh` 쉘파일 실행 시, `conf/default.conf.template` 파일을 기준으로 웹서브를 설정하기 때문에, 필요시 해당 설정파일을 수정합니다.
+
 ## Docs
 go to [링크](./docs/README.md)

@@ -1,0 +1,60 @@
+
+http {
+  default_type  application/octet-stream;
+
+  types {
+        text/html html htm shtml bad_extension bla;
+        text/css  css;
+  }
+
+
+  server {
+    listen 4242;
+    root $ROOT_PATH;
+    index index.html pycgi.pya index.phpa hihi.htmla;
+    server_name webserv.0.1;
+    keepalive_timeout 2;
+    client_max_body_size 1000000;
+
+    autoindex on;
+
+    error_page 404 40x.html;
+
+    location / {
+      index index.html;
+      autoindex on;
+    }
+    location /php {
+      index phpinfo.php;
+      allowed_method GET;
+      error_page 404 403 /static_html/40x.html;
+      autoindex off;
+    }
+    location /static_html {
+      index index.html;
+      error_page 404 /40x.html;
+      autoindex off;
+    }
+    location /etc/foo {
+      error_page 404 40x.html;
+      index index.html;
+      autoindex on;
+    }
+    location /static_html/etc/data {
+      index data.html;
+      error_page 404 40x.html;
+      autoindex off;
+    }
+    location /etc/bar {
+      index hihi.html index.html index.php;
+      autoindex off;
+      return 301 http://localhost:4242/js/scripts.js;
+    }
+    location .py$ {
+        cgi_pass $PYTHON_BIN_PATH;
+    }
+    location .php$ {
+        cgi_pass $PHP_BIN_PATH;
+    }
+  }
+}

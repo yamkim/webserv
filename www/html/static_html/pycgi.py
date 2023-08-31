@@ -2,8 +2,7 @@
 import cgi
 import time
 
-print("Content-type: text/html")
-print("")
+print("Content-type: text/html\r\n\r\n")
 print('<html>')
 print('<head>')
 print('<title>HI</title>')
